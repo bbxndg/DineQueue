@@ -78,14 +78,14 @@ export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfTo
     <div className="grid gap-2">
       <label htmlFor="partySize" className="font-medium">Party size</label>
       <input id="partySize" name="partySize" type="number" inputMode="numeric" min={MIN} max={MAX} step={1} required
-        value={partySize} onChange={event => setPartySize(event.target.value)} disabled={pending} aria-describedby="partySizeHelp"
+        value={partySize} onChange={event => { setPartySize(event.target.value); if (error) setError(''); }} disabled={pending} aria-describedby="partySizeHelp"
         className="rounded-lg border border-ink/30 bg-white px-4 py-3 focus:outline-2 focus:outline-wine" />
       <p id="partySizeHelp" className="text-sm">Whole number from 1 to 16.</p>
     </div>
     {size >= LARGE_PARTY && size <= MAX && <p role="note" className="rounded-lg border border-ink/20 bg-white p-3 text-sm">
       Parties of {size} may be seated across connected tables. Combined seating is not guaranteed.
     </p>}
-    {error && <p role="alert" className="rounded-lg border border-wine/30 bg-white p-3 text-wine">{error}</p>}
+    {error && <p role="alert" aria-live="polite" className="rounded-lg border border-wine/30 bg-white p-3 text-wine">{error}</p>}
     <button disabled={pending} className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">{pending ? 'Joining…' : 'Join waitlist'}</button>
   </form>;
 }

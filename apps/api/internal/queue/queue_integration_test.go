@@ -224,6 +224,10 @@ func TestF02DuplicateSequentialJoinConflicts(t *testing.T) {
 	if count(t, f, "queue_entries") != 1 {
 		t.Fatal("T-013 duplicate row created")
 	}
+	var counterAfterReject int
+	if err := f.db.Table("queue_day_counters").Select("last_number").Where("queue_id = ?", auth.DemoQueueID).Scan(&counterAfterReject).Error; err != nil || counterAfterReject != 1 {
+		t.Fatalf("T-013 expected counter to remain 1 after rollback, got %d (err: %v)", counterAfterReject, err)
+	}
 	// The rejected attempt rolled back its counter increment: the next customer gets A-002.
 	if r := join(t, f, auth.DemoQueueID, `{"partySize":2}`, session(t, f, customer2), true); r.body["ticketCode"] != "A-002" {
 		t.Fatalf("counter gap after rejected duplicate: %v", r.body)

@@ -16,6 +16,7 @@ var (
 	ErrNotFound          = errors.New("queue not found")
 	ErrQueueInactive     = errors.New("queue is not accepting entries")
 	ErrActiveQueueExists = errors.New("customer already has an active entry")
+	ErrInvalidTimezone   = errors.New("restaurant timezone is not configured correctly")
 )
 
 type Queue struct {
@@ -122,7 +123,7 @@ func (s *Service) Join(ctx context.Context, user auth.User, queueID string, part
 		}
 		location, err := time.LoadLocation(queue.Timezone)
 		if err != nil {
-			return errors.New("restaurant timezone is not configured correctly")
+			return ErrInvalidTimezone
 		}
 		joinedAt := s.now().UTC().Truncate(time.Microsecond)
 		serviceDate := joinedAt.In(location).Format(time.DateOnly)

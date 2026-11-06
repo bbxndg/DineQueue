@@ -75,6 +75,8 @@ func (h *HTTP) join(c fiber.Ctx) error {
 		return failure(c, 409, "QUEUE_INACTIVE", "This queue is not accepting new entries.")
 	case errors.Is(err, ErrActiveQueueExists):
 		return failure(c, 409, "ACTIVE_QUEUE_EXISTS", "You already have an active ticket for this queue.")
+	case errors.Is(err, ErrInvalidTimezone):
+		return failure(c, 500, "INTERNAL_ERROR", "Restaurant timezone is not configured correctly.")
 	}
 	return err
 }

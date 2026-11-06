@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wine: #6c1728;
+  --color-paper: #fcf9f6;
+  --color-ink: #252725;
+}
+
+body { background: var(--color-paper); color: var(--color-ink); font-family: Arial, Helvetica, sans-serif; }

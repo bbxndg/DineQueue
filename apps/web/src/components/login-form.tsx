@@ -3,6 +3,17 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
+function rateLimitMessage(retryAfter: string | null) {
+  // The auth API emits delta-seconds. Unsupported/malformed values get a safe,
+  // generic message instead of inventing a delay for the user.
+  const value = retryAfter?.trim();
+  const seconds = value && /^\d+$/.test(value) ? Number(value) : NaN;
+  if (Number.isSafeInteger(seconds) && seconds > 0) {
+    return `Too many attempts. Please try again in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`;
+  }
+  return 'Too many attempts. Please try again shortly.';
+}
+
 export function LoginForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -18,7 +29,7 @@ export function LoginForm() {
         body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
       });
       if (!response.ok) {
-        setError(response.status === 401 ? 'Email or password is incorrect.' : response.status === 429 ? 'Too many attempts. Please wait a minute and try again.' : 'Unable to sign in. Please try again.');
+        setError(response.status === 401 ? 'Email or password is incorrect.' : response.status === 429 ? rateLimitMessage(response.headers.get('Retry-After')) : 'Unable to sign in. Please try again.');
         return;
       }
       const { user } = await response.json();

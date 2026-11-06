@@ -52,3 +52,22 @@ test('T-041 Invalid credentials and invalid session recover to login', async ({ 
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole('status')).toHaveText('Your session has ended. Please sign in again.');
 });
+
+for (const scenario of [
+  { name: 'attempt limit', retryAfter: '60', expected: 'Too many attempts. Please try again in 60 seconds.' },
+  { name: 'verification capacity', retryAfter: '1', expected: 'Too many attempts. Please try again in 1 second.' },
+  { name: 'missing header', retryAfter: undefined, expected: 'Too many attempts. Please try again shortly.' },
+  { name: 'invalid header', retryAfter: 'not-a-delay', expected: 'Too many attempts. Please try again shortly.' },
+]) {
+  test(`T-039 Login 429 feedback: ${scenario.name}`, async ({ page }) => {
+    await page.route('**/api/v1/auth/login', route => route.fulfill({
+      status: 429, contentType: 'application/json',
+      headers: scenario.retryAfter === undefined ? {} : { 'Retry-After': scenario.retryAfter },
+      body: JSON.stringify({ error: { code: 'RATE_LIMITED' } }),
+    }));
+    await signIn(page, 'customer1@example.test');
+    await expect(page.getByRole('alert').filter({ hasText: 'Too many attempts.' })).toHaveText(scenario.expected);
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled();
+    await expect(page).toHaveURL(/\/login$/);
+  });
+}

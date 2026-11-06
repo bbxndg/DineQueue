@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type User struct {
@@ -48,6 +49,14 @@ func (r *Repository) findCredentials(ctx context.Context, email string) (credent
 
 func (r *Repository) createSession(ctx context.Context, row sessionRow) error {
 	return r.db.WithContext(ctx).Table("sessions").Create(&row).Error
+}
+
+// r must be bound to the service-owned login transaction so the lock is held
+// through credential revalidation, session rotation and commit/rollback.
+func (r *Repository) credentialsForUpdate(ctx context.Context, userID string) (credentials, error) {
+	var current credentials
+	err := r.db.WithContext(ctx).Table("users").Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", userID).Take(&current).Error
+	return current, err
 }
 
 func (r *Repository) identity(ctx context.Context, hash string, now time.Time) (User, error) {

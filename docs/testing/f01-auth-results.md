@@ -4,7 +4,8 @@ Branch: `feat/F-01-auth-session-rbac`. Base HEAD: `42ebd66`.
 All results below describe the **modified worktree before commits**, not execution
 on a subsequently created commit. The user later authorized focused commits to
 capture this work; those commits do not retroactively change the tested version.
-No push, Issue, PR, teammate review, CI, release or deployment was performed.
+At that original checkpoint no push, Issue, PR, teammate review, CI, release or
+deployment had been performed. Later PR review work is recorded separately below.
 User authorized F-01 implementation and subsequent commits in chat.
 
 ## Implemented scope
@@ -93,6 +94,43 @@ finally cleanup. Final output: `/tmp/dineq-f01-final.log`. Scanner reports use
   and multi-instance behavior must be tested before deployment.
 - A dev-tool advisory and three module-only Go advisories remain for a separate
   reviewed dependency update. A clean scan is not an absolute security guarantee.
+
+## PR #1 review follow-up — 6 November 2026, around 22:05–22:09
+
+Source: [PR #1](https://github.com/bbxndg/DineQueue/pull/1), reviewer `softkoi`.
+User authorized addressing the three inline comments and non-blocking repository
+layering suggestion. Base HEAD: `ea76ba9`; results below describe the modified
+worktree before the follow-up commit. The user subsequently authorized committing
+these changes. No push, reply, thread resolution or approval was performed.
+
+| Review comment | Change |
+|---|---|
+| [Expiry test](https://github.com/bbxndg/DineQueue/pull/1#discussion_r4493847900) | Check Error/RowsAffected for both account-state updates; require existing session to return 200 after reactivation before advancing the clock and asserting expiry 401 |
+| [Retry-After feedback](https://github.com/bbxndg/DineQueue/pull/1#discussion_r4493851555) | Show the API's positive integer delta-seconds with correct singular/plural; missing, malformed or unsupported header values use generic retry guidance |
+| [Host current user](https://github.com/bbxndg/DineQueue/pull/1#discussion_r4493859300) | Explicit Host GET /api/v1/auth/me asserts status 200, returned ID equal to logged-in Host and role HOST (T-002) |
+| [Repository layering](https://github.com/bbxndg/DineQueue/pull/1#pullrequestreview-5802029964) | Move SELECT FOR UPDATE into credentialsForUpdate on the repository bound to the existing transaction; service retains transaction ownership and credential/session rules |
+
+Actual checks:
+
+- RED: four new mocked-429 browser tests ran against the prior production build;
+  all four failed on the hardcoded one-minute message. Output:
+  `/tmp/dineq-f01-review-red.log`. This is a worktree test sequence, not a RED commit.
+- GREEN: `go test -tags=integration -race -count=1 -v ./...` passed all 22 top-level
+  Go tests on a fresh isolated PostgreSQL 18.1 cluster, including strengthened
+  expiry/identity assertions and existing rotation rollback regression.
+- `npm run test:e2e --workspace @dinequeue/web`: **7 passed**, comprising 3 real
+  auth journeys and 4 browser tests with mocked 429 responses (60 seconds, 1 second,
+  missing header and invalid header). The mocked cases verify UI feedback only.
+- `go test -race ./...`, `go vet ./...`, `npm run lint`, `npm run typecheck`,
+  elevated `npm run build`, and `git diff --check`: passed.
+- The existing ephemeral harness ran the DB migration/seed CLI and production
+  Fiber/Next processes, checked runtime logs for generated passwords, stopped all
+  test processes and removed the cluster. GREEN output:
+  `/tmp/dineq-f01-review-green.log`.
+
+Changes remain within F-01: login feedback, identity/session tests and repository
+layering. Queue/ticket workflows and their pending acceptance are unchanged.
+The reviewer must review the follow-up; COMMENTED reviews are not approval.
 
 ## References used
 

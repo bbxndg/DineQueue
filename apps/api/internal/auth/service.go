@@ -14,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var (
@@ -82,15 +81,15 @@ func (s *Service) Login(ctx context.Context, email, password, oldToken string) (
 	row := sessionRow{ID: uuid.NewString(), UserID: account.ID, TokenHash: TokenHash(token), CreatedAt: now, ExpiresAt: expiry}
 	// Service coordinates rotation and creation as one business transaction.
 	if err := s.repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var current credentials
-		if err := tx.Table("users").Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", account.ID).Take(&current).Error; err != nil {
+		repository := NewRepository(tx)
+		current, err := repository.credentialsForUpdate(ctx, account.ID)
+		if err != nil {
 			return err
 		}
 		if !current.IsActive || current.PasswordHash != account.PasswordHash {
 			return ErrCredentials
 		}
 		account = current
-		repository := NewRepository(tx)
 		if oldHash := TokenHash(oldToken); oldHash != "" {
 			if err := repository.revoke(ctx, oldHash, now); err != nil {
 				return err

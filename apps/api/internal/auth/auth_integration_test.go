@@ -198,7 +198,10 @@ func TestF01InvalidDisabledAndExpiredIdentity(t *testing.T) {
 		}
 	}
 	token, _, user := login(t, f, "customer1@example.test")
-	f.db.Table("users").Where("id = ?", user.ID).Update("is_active", false)
+	disabled := f.db.Table("users").Where("id = ?", user.ID).Update("is_active", false)
+	if disabled.Error != nil || disabled.RowsAffected != 1 {
+		t.Fatal("could not disable exactly one test account")
+	}
 	if request(t, f, "GET", "/api/v1/auth/me", "", token, "", "").StatusCode != 401 {
 		t.Fatal("disabled user retained session access")
 	}
@@ -206,7 +209,13 @@ func TestF01InvalidDisabledAndExpiredIdentity(t *testing.T) {
 	if request(t, f, "POST", "/api/v1/auth/login", string(data), "", testOrigin, "").StatusCode != 401 {
 		t.Fatal("disabled account logged in")
 	}
-	f.db.Table("users").Where("id = ?", user.ID).Update("is_active", true)
+	reactivated := f.db.Table("users").Where("id = ?", user.ID).Update("is_active", true)
+	if reactivated.Error != nil || reactivated.RowsAffected != 1 {
+		t.Fatal("could not reactivate exactly one test account")
+	}
+	if request(t, f, "GET", "/api/v1/auth/me", "", token, "", "").StatusCode != 200 {
+		t.Fatal("reactivated account must have a valid session before testing expiry")
+	}
 	f.service.now = func() time.Time { return time.Now().Add(13 * time.Hour) }
 	if request(t, f, "GET", "/api/v1/auth/me", "", token, "", "").StatusCode != 401 {
 		t.Fatal("expired session accepted")
@@ -220,7 +229,20 @@ func TestF01RoleQueueAndOwnershipGuards(t *testing.T) {
 	f := setup(t)
 	customer, _, c1 := login(t, f, "customer1@example.test")
 	_, _, c2 := login(t, f, "customer2@example.test")
-	host, _, _ := login(t, f, "host@example.test")
+	host, _, hostUser := login(t, f, "host@example.test")
+	hostMe := request(t, f, "GET", "/api/v1/auth/me", "", host, "", "")
+	if hostMe.StatusCode != 200 {
+		t.Fatalf("Host current-user status %d, want 200", hostMe.StatusCode)
+	}
+	var identity struct {
+		User User `json:"user"`
+	}
+	if err := json.NewDecoder(hostMe.Body).Decode(&identity); err != nil {
+		t.Fatal("cannot decode Host current-user response")
+	}
+	if identity.User.ID != hostUser.ID || identity.User.Role != "HOST" {
+		t.Fatal("Host current-user response has incorrect persisted identity or role")
+	}
 	other, _, _ := login(t, f, "other-host@example.test")
 	for _, test := range []struct {
 		token string

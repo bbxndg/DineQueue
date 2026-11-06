@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { SignOut } from '@/components/sign-out';
@@ -16,8 +17,9 @@ export default async function Home() {
           Welcome, {session.user.displayName}
         </h1>
         <p className="mt-8 max-w-lg text-lg leading-relaxed">
-          You are signed in. Online queue entry is being prepared. Please check with your host for queue information.
+          Join the walk-in waitlist and the host will call your ticket number.
         </p>
+        <Link href="/join" className="mt-8 inline-block rounded-lg bg-wine px-6 py-3 font-semibold text-white">Join Waitlist</Link>
       </section>
       <footer className="border-t border-wine/20 pt-6 text-sm">Walk-in dining, together.</footer>
     </main>

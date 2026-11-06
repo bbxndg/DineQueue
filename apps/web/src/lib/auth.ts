@@ -7,16 +7,21 @@ export type CurrentSession = {
   csrfToken: string;
 };
 
-export async function currentSession(): Promise<CurrentSession | null> {
+// Server-side GET to the API, forwarding only the session cookie. Returns null without a session.
+export async function backendGet(path: string): Promise<Response | null> {
   const jar = await cookies();
   const session = jar.get('__Host-dineq_session') ?? jar.get('dineq_session');
   if (!session) return null;
   const origin = process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:8080';
-  const response = await fetch(`${origin}/api/v1/auth/me`, {
+  return fetch(`${origin}${path}`, {
     headers: { Cookie: `${session.name}=${encodeURIComponent(session.value)}` },
     cache: 'no-store', signal: AbortSignal.timeout(5000),
   });
-  if (response.status === 401) return null;
+}
+
+export async function currentSession(): Promise<CurrentSession | null> {
+  const response = await backendGet('/api/v1/auth/me');
+  if (!response || response.status === 401) return null;
   if (!response.ok) throw new Error('Sign-in service is temporarily unavailable.');
   return response.json();
 }

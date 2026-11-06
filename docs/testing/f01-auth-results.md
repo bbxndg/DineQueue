@@ -80,8 +80,9 @@ finally cleanup. Final output: `/tmp/dineq-f01-final.log`. Scanner reports use
   F-02..04 integration. Test-only protected routes are not deployed product routes.
   F-01 auth is locally verified; complete whole-Sprint AC-004/005 is not asserted.
 - T-009..036, queue concurrency, ticket privacy on real resources and all S2/S3
-  product behavior remain unimplemented/not run. The four-feature regrouping is
-  still a discussion; existing F IDs and scope were preserved.
+  product behavior remain unimplemented/not run. At execution time the four-feature
+  regrouping was still under discussion. Subsequent user-authorized DEC-028 groups
+  S1 into F-01..F-04, with F-05 retained inside F-04; this does not alter these results.
 - The original F-01 baseline contract was committed before implementation. The new
   addendum was written before code but committed afterward, with no separate pre-implementation commit;
   the RED/GREEN worktree sequence is not a historical commit sequence.

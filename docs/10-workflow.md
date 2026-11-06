@@ -24,6 +24,12 @@ feat/F-02-join-waitlist
 
 Authors **must not approve their own PRs**. A screenshot is supportive evidence, not a substitute for real tests or review history.
 
+Sprint 1 has four parent feature branches (DEC-028):
+`feat/F-01-auth-session-rbac`, `feat/F-02-join-waitlist-ticket`,
+`feat/F-03-my-ticket-privacy`, `feat/F-04-host-queue-operations`.
+F-04 covers board, call and completion. Retain F-05 as the completion traceability
+ID within the F-04 Issue/PR; it does not need a separate parent feature branch.
+
 ## 2. Proposed pair collaboration
 
 - Student A: draft queue SRS and F-02 AC; implement and test part of F-02, review F-04 PR.

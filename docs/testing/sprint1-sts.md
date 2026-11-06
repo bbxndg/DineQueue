@@ -1,7 +1,10 @@
 # 08. Software Test Specification (STS) — Sprint 1
 
 **Version:** DQ-STS-S1-1.2. F-01 has local execution evidence in
-[`f01-auth-results.md`](f01-auth-results.md); F-02..05 remain planned/not run.
+[`f01-auth-results.md`](f01-auth-results.md); F-02..F-04, including legacy F-05
+completion, remain planned/not run. DEC-028 groups S1 into four parent features;
+all T-001..041 and AC IDs are retained. Completion checks T-028..033 now belong
+to F-04's completion workflow (legacy F-05).
 T-005..008 currently have reusable-guard checks only: their real queue/ticket
 endpoint tests require F-02..04. Do not count test-only routes as shipped endpoints.
 

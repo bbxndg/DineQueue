@@ -9,13 +9,14 @@
 ## Current v2 baseline and implementation status
 
 - Party size: **1–16**; a physical table seats **1–8**.
-- Sprint 1: F-01..F-05, two core roles (`CUSTOMER`, `HOST`), manual waitlist completion.
+- Sprint 1: **4 parent features, F-01..F-04**, two core roles (`CUSTOMER`, `HOST`), manual waitlist completion. F-04 Host Queue Operations includes Complete (legacy F-05).
 - Sprint 2 design: approved connected sets of **1–3 tables**, atomic hold/call/seat,
   no-show, whole-group checkout and cleaning. These workflows are not implemented.
 - Present source: repository foundation + F-01 login/logout/me, secure sessions, reusable
-  backend guards and authenticated UI shells. F-02..F-05 remain unimplemented.
+  backend guards and authenticated UI shells. F-02..F-04, including legacy F-05 completion, remain unimplemented.
   See [F-01 execution evidence](docs/testing/f01-auth-results.md) for scope and pending
-  real queue/ticket endpoint tests. The four-feature regrouping remains a proposal.
+  real queue/ticket endpoint tests. User-authorized DEC-028 groups Sprint 1 into four
+  parent features while preserving F-05, FR/BR, AC and test IDs for traceability.
 - Git repository initialized on `main`, with `origin` connected to
   `https://github.com/bbxndg/DineQueue.git`. Commits import existing work as of
   6 November; they do not establish historical test-first or teammate-review evidence.

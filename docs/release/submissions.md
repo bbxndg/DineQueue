@@ -58,7 +58,7 @@ Project deliverables total **25%**, group Labs 5–7 total **15%**; combined the
 | SRS | GitHub URL `[fill]` | FR-001..022; SHA `[fill]` | Draft / reviewer confirmation `[fill]` |
 | Sprint 1 contract | GitHub URL `[fill]` | F-02, AC-006..010, T-009..017; SHA `[fill]` | Planned → implemented `[fill]` |
 | DB concurrency test | file/CI run URL `[fill]` | BR-001, T-014, SHA `[fill]` | NOT RUN |
-| Queue E2E | file/CI run URL `[fill]` | F-04/F-05, T-029, SHA `[fill]` | NOT RUN |
+| Queue E2E | file/CI run URL `[fill]` | F-04 (includes legacy F-05 completion), T-029, SHA `[fill]` | NOT RUN |
 | PR review | PR URL `[fill]` | linked Issue/F/AC `[fill]` | NOT DONE |
 | Release | tag URL `[fill]` | exact commit `[fill]` | NOT RELEASED |
 

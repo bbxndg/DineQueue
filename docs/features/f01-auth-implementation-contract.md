@@ -4,11 +4,13 @@ User authorization: implement F-01 on `feat/F-01-auth-session-rbac`. Base: `42eb
 This addendum was written before code and committed afterward with user authorization;
 no pre-implementation addendum commit, Issue, teammate review or TA approval is claimed.
 Existing F-01 contract was committed in
-the baseline. No change to the F-04/F-05 feature grouping is made here.
+the baseline. This F-01 addendum did not change F-04/F-05 grouping; subsequent
+user-authorized DEC-028 includes legacy F-05 completion under parent F-04.
 
 - Implement login/logout/me, login UI, authenticated Customer/Host shells and reusable
   backend role, queue-grant and ownership guards. Queue endpoints and ticket records
-  remain F-02..F-05; their end-to-end T-005..008 checks must run again when those exist.
+  remain F-02..F-04 (completion keeps legacy F-05); their end-to-end T-005..008
+  checks must run again when those exist.
 - Passwords: Argon2id v19, 64 MiB, 3 iterations, parallelism 2, random 16-byte salt;
   seed password 12–128 UTF-8 bytes, login max 128 bytes, generic invalid credentials.
 - Session: 32 random bytes, base64url cookie, only SHA-256 digest stored in PostgreSQL;

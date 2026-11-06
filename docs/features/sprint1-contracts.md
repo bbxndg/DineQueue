@@ -4,7 +4,14 @@
 
 ## F-01: Authentication, Session Lifecycle and RBAC
 
-**Depends on:** database users/sessions seed. **FR:** FR-001, FR-002. **NFR:** NFR-003, NFR-004.
+**Depends on:** database users/sessions seed. **FR:** FR-001, FR-002. **NFR:** NFR-003, NFR-004, NFR-015.
+
+Implementation details and added AC-022..026 / T-037..041:
+[`f01-auth-implementation-contract.md`](f01-auth-implementation-contract.md).
+Origin/CSRF defenses apply from S1; S2/S3 repeat these controls as regression tests.
+Existing F-01 pre-implementation baseline is preserved. The 6 Nov addendum was
+written before code but committed afterward with user authorization; this does
+not establish a pre-implementation addendum commit.
 
 **Feature SDS / workflow:** Seed 2 Customer and >=1 Host accounts. `/login` submits email+password; server verifies password hash, issues secure opaque cookie session. Guard resolves current user on protected requests; `/auth/me` identifies role. `/auth/logout` revokes session. Host actions and queue scoping denied at backend. Session expiration: 12h (proposal). Invalid/disabled account generic failure; never store plaintext password.
 

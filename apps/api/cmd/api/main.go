@@ -29,12 +29,16 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	pool, err := postgres.Open(ctx, cfg.DatabaseURL)
+	database, err := postgres.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
+	pool, err := database.DB()
+	if err != nil {
+		return fmt.Errorf("cannot access PostgreSQL pool")
+	}
 	defer pool.Close()
-	app := httptransport.New(health.New(postgres.NewReadiness(pool)))
+	app := httptransport.New(health.New(postgres.NewReadiness(database)))
 	listenError := make(chan error, 1)
 	go func() { listenError <- app.Listen(fmt.Sprintf(":%d", cfg.Port)) }()
 	select {

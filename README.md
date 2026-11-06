@@ -42,14 +42,14 @@ A walk-in restaurant operations platform: **Customer Waitlist Management**, **In
 14. [Security and quality review](docs/16-security-quality-review.md).
 15. [Workflow](docs/10-workflow.md), [Issue backlog](docs/14-issue-backlog.md), [Lab 5–7](docs/labs/labs5-7.md) and [submission requirements](docs/release/submissions.md).
 
-## Proposed stack (team to confirm)
+## Current implementation stack (DEC-026)
 
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js + TypeScript + Tailwind CSS |
 | Backend | **Go Fiber v3** + Go modules, handlers → services → repositories |
 | Database | PostgreSQL |
-| DB access | pgx + sqlc, SQL migration tool |
+| DB access | GORM + PostgreSQL driver; explicit versioned SQL migrations |
 | Authentication | server-backed opaque session cookie, password hashing, CSRF protection |
 | Testing | Go `testing`, PostgreSQL integration tests, Playwright E2E |
 | DevOps | Docker, GitHub Actions, GCP (Lab 5) |
@@ -98,9 +98,8 @@ apps/web/          Next.js + TypeScript + Tailwind; minimal landing shell
 apps/api/cmd/api/  Go Fiber entrypoint and graceful shutdown
 apps/api/internal/health/           bounded readiness service
 apps/api/internal/transport/http/   health handlers and generic errors
-apps/api/internal/platform/         validated config and pgx/sqlc adapter
-apps/api/internal/db/               sqlc-generated queries
-apps/api/db/                        schema placeholder and SELECT 1 query
+apps/api/internal/platform/         validated config and GORM adapter
+apps/api/db/migrations/             reserved for versioned domain SQL migrations
 ```
 
 ### Run the local Docker development environment
@@ -128,7 +127,8 @@ production image hardening and CI/GCP delivery remain Lab 5 work.
 
 ### Host tools and checks
 
-Pinned runtime targets: Node 22.23.4 (`.nvmrc`), Go 1.26.10, sqlc 1.31.1, PostgreSQL 18.6.
+Pinned runtime targets: Node 22.23.4 (`.nvmrc`), Go 1.26.10, PostgreSQL 18.6.
+Database access: GORM 1.31.2 + PostgreSQL driver 1.6.3.
 The web also supports the existing host Node 22.17.0 used for foundation validation.
 Direct dependencies and transitive resolution are recorded in `package-lock.json`,
 `go.mod` and `go.sum`. No external install script is required.
@@ -153,11 +153,15 @@ From `apps/api`, with Go on PATH:
 go test -race ./...
 go vet ./...
 go build -buildvcs=false -o /tmp/dinequeue-api ./cmd/api
-sqlc diff
 ```
 
-Run `sqlc generate` when changing query/schema inputs. Versioned domain migrations and
-demo seeds are deferred to the database/auth/queue Issues; the current SELECT 1 has no domain tables.
+GORM replaces the former sqlc generation and direct pgx pool. The official PostgreSQL
+driver still uses pgx internally. Readiness runs SELECT 1 through GORM; no application
+models or tables are created. Keep reviewed SQL migrations under `db/migrations`;
+never call AutoMigrate on startup. Domain migrations/seeds remain deferred to S1 Issues.
+Services must coordinate a single `db.Transaction` and pass its `tx` through repositories.
+See the [ORM change record](docs/testing/sprint1-gorm-results.md) for current checks;
+the original foundation evidence records the earlier database access approach.
 
 For a host API process, supply `APP_ENV`, `APP_ORIGIN`, `DATABASE_URL` and optional `PORT`
 through the process environment, then run `go run -buildvcs=false ./cmd/api` in `apps/api`.
@@ -167,8 +171,9 @@ the Compose-only hostname `db` will not resolve on the host.
 Production config rejects HTTP origins and database URLs without `sslmode=verify-full`.
 TLS termination and trusted-proxy/session policies still require implementation before release.
 
-For the opt-in integration test, set `TEST_DATABASE_URL` to a dedicated isolated PostgreSQL
-database and run `go test -tags=integration -race ./...` from `apps/api`. Missing configuration
+For the opt-in foundation integration tests, set `TEST_DATABASE_URL` to a dedicated isolated
+PostgreSQL database with an empty `public` schema and run `go test -tags=integration -race ./...`
+from `apps/api`. ORM writes use temporary test tables. Missing configuration
 fails explicitly instead of silently reporting a skipped integration check as success.
 
 The `-buildvcs=false` flag supports source archives without Git metadata; it does not create

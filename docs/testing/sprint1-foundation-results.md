@@ -1,5 +1,10 @@
 # Sprint 1 foundation execution evidence
 
+**Historical access-layer record:** these runs describe the original pgx/sqlc
+foundation. User-authorized DEC-026 later replaces that layer with GORM; see
+`sprint1-gorm-results.md` for the separate current implementation verification.
+Do not interpret successful sqlc checks below as tests of the ORM revision.
+
 Date: 6 November 2026 (client timezone Asia/Bangkok).
 Scope: FD-AC-01..07 in `../features/sprint1-foundation-contract.md`.
 Original foundation execution had no Git SHA / branch / PR / CI URL because Git was

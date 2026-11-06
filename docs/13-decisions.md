@@ -133,3 +133,16 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
   original context, with a later grouping note where needed.
 - No new implementation, test execution, teammate/TA approval, commit or release
   is implied by this documentation change.
+
+## DEC-029 — F-02 implementation details (6 November 2026) — pending team sign-off
+
+- Authorization: user requested implementation of F-02 on its feature branch.
+- Unknown/malformed queue ID → 404 `NOT_FOUND`; inactive queue → 409 `QUEUE_INACTIVE`
+  (T-016 allowed either; this fixes the choice).
+- Party size must be a plain JSON integer literal 1..16; `4.0`, `1e1`, strings and
+  unknown fields are 400. Client-supplied number/status/date fields are rejected.
+- Counter allocated by `INSERT … ON CONFLICT DO UPDATE … RETURNING` inside the join
+  transaction; a rejected duplicate rolls back and leaves no number gap.
+- Ticket code is derived (`prefix-%03d`), not stored. `GET /api/v1/queues` returns
+  active queues to any authenticated role.
+- `/join` shows the created ticket in place until F-03 adds `/my-queue`.

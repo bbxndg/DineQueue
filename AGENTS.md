@@ -12,7 +12,7 @@ Follow `README.md` → `docs/01-srs.md` → `docs/06-restaurant-operations.md` �
 
 ## Architecture and safety
 
-- Leading **proposed** backend: Go Fiber v3 + pgx/sqlc + PostgreSQL, Next.js frontend; do not scaffold until team confirms version and stack.
+- Current backend access choice (DEC-026, user authorized): Go Fiber v3 + GORM + PostgreSQL, Next.js frontend. Keep explicit SQL migrations; do not use startup AutoMigrate. Unresolved domain decisions still need team/TA resolution.
 - Module design: HTTP handler → business service (rules/transaction/permissions) → SQL repository; no transaction split across service calls.
 - PostgreSQL is authoritative: partial unique indexes, row locks in deterministic order, transactional table-group membership, concurrency/rollback tests. Never trust UI status, capacity, adjacency, ranks or user role.
 - Sessions: HttpOnly Secure cookie, opaque token hash in DB, logout revocation, CSRF defense and Origin restrictions, no secrets in client bundles. Strict input validation and parameterized SQL.

@@ -2,6 +2,14 @@
 
 **Status:** proposed implementation contract. API response shapes and status/error codes are team choices. They are not prescribed by the CPE 334 PDF.
 
+**Access-layer revision (DEC-026, 6 Nov 2026):** GORM + PostgreSQL driver replaces
+sqlc/direct pgx access. The schema, API, FR/BR IDs and database invariants below are
+unchanged. Use explicit versioned SQL migrations for checks, foreign keys and partial
+indexes; do not call AutoMigrate on startup. Keep persistence models separate from
+request/response DTOs. Services coordinate `db.Transaction` and pass the same `tx`
+to all repository calls; use explicit conditional updates and inspect affected rows.
+GORM's per-write default transactions are not a substitute for whole-use-case atomicity.
+
 ## Entity relationships (logical, conceptual)
 
 ```mermaid

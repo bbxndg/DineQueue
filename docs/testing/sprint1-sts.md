@@ -2,7 +2,7 @@
 
 **Version:** DQ-STS-S1-1.1 proposed; design only; NO TEST HAS BEEN EXECUTED.
 
-**Framework plan:** Go `testing`/`httptest` + Fiber test client + real isolated PostgreSQL via pgx; Playwright for selected browser journeys.
+**Framework plan:** Go `testing`/`httptest` + Fiber test client + real isolated PostgreSQL via GORM; Playwright for selected browser journeys.
 
 **Source:** CPE 334 §8.2 requires test IDs, inputs/preconditions, expected results, test level and AC coverage, including negative/boundary and true DB testing.
 

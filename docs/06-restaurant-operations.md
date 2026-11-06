@@ -152,7 +152,7 @@ The `seating_assignments` record moves `HELD → ACTIVE → CLOSED` or `HELD →
 
 - All mutations must enforce authentication, queue/restaurant scope, ownership and CSRF for cookie-based browser requests.
 - Do not trust client-supplied capacity, adjacency, table state, timestamps, ranking, role, ticket number or price-like values.
-- Prefer strict JSON schemas and field allowlists, parameterized SQL (`pgx/sqlc`), explicit transactions, minimal error details, limited request body sizes and rate limits on login/join.
+- Prefer strict JSON schemas and field allowlists, parameterized GORM queries / explicit SQL (DEC-026), explicit transactions, minimal error details, limited request body sizes and rate limits on login/join.
 - Public display only exposes ticket code + generic status, never customer details or staff-only notes.
 - No CDNs or third-party scripts necessary for product execution; pin versions and review dependencies before use. No tool can guarantee an app will never be hacked: perform tests, review and deployment security checks.
 

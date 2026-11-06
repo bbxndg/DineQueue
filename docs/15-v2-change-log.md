@@ -23,6 +23,13 @@
 
 ## Remaining team/TA decisions
 
+**6 November access-layer revision (DEC-026):** user authorized GORM + PostgreSQL
+driver in place of sqlc/direct pgx access. Foundation code, current SDS/contracts,
+security guidance and setup instructions now follow that choice. Explicit SQL
+migrations, transaction ownership, PostgreSQL constraints/locks and concurrency
+requirements are retained. The table above records the original v1-to-v2 proposal;
+it is historical rather than the current database-access selection.
+
 **6 November baseline clarification:** the user confirmed v2 as the latest project baseline.
 Stale SRS party-size text now reads 1–16 (physical tables remain 1–8), and AC-007 now
 requires a persisted WAITING ticket for a valid 10-person party. Existing IDs and the

@@ -4,7 +4,8 @@
 
 **Implementation boundary (6 Nov 2026):** repository foundation now lives in
 `apps/web` and `apps/api`; see `features/sprint1-foundation-contract.md` and
-`testing/sprint1-foundation-results.md`. Only web shell, config, health and pgx/sqlc
+`testing/sprint1-foundation-results.md` (historical) and `testing/sprint1-gorm-results.md`
+(current access-layer revision). Only web shell, config, health and GORM
 wiring exist. Auth/queue/floor/reporting modules below remain proposed designs.
 
 ## 1. Architecture and rationale
@@ -33,7 +34,7 @@ flowchart TD
 | Web UI | Next.js + TypeScript + Tailwind | Reusable responsive pages, type-safe UI |
 | Backend | Go Fiber v3 REST | Lightweight HTTP handlers with explicit domain services and authorization middleware |
 | Database | PostgreSQL | ACID transactions, row locks, partial unique indexes |
-| DB access | pgx + sqlc with SQL migrations | Typed SQL and explicit PostgreSQL transaction/locking control |
+| DB access | GORM + PostgreSQL driver with SQL migrations (DEC-026) | Familiar ORM models, explicit transaction/locking control and reviewed schema changes |
 | Auth | Opaque session cookie with hashed token in DB | Simple actual logout/revocation; easy expiry/ownership tests |
 | API spec | OpenAPI documented routes | Contract-first design |
 | Unit/integration | Go `testing` + Fiber test client + isolated PostgreSQL | Rule, HTTP and persistence verification |
@@ -47,7 +48,8 @@ flowchart TD
 - `internal/queue`: service queue scope, join, duplicate detection, daily ticket allocation, my ticket, host list, call and complete.
 - `internal/seating` (S2): table capacity, occupancy, assignment/release in transaction.
 - `internal/reporting` (S3): wait duration and counts, optional event history.
-- `internal/db`: SQL migrations, fixtures, transactional methods and database constraints.
+- `internal/platform/postgres`: GORM connection and bounded pool; module repositories
+  handle persistence models. SQL migrations and constraints live under `db/migrations`.
 
 All permissions are checked in backend guards **and** resource query/service methods. UI hiding an action is never sufficient.
 
@@ -131,10 +133,10 @@ internal/matching/{algorithm,service}.go
 internal/seating/{handler,service,repository}.go
 internal/analytics/{handler,service}.go
 internal/platform/{config,db,middleware}.go
-db/{migrations,queries}/
+db/migrations/
 ```
 
-Handlers validate and parse HTTP input. Services enforce BRs, role/queue scope and transaction boundaries. Repositories run parameterized SQL through pgx/sqlc. **Transactions belong to the service/transaction coordinator**, not independent repositories committing separately.
+Handlers validate and parse HTTP input. Services enforce BRs, role/queue scope and transaction boundaries. Repositories use GORM parameterized queries or reviewed SQL where PostgreSQL-specific behavior is needed. Pass the same `tx *gorm.DB` through each atomic operation; no startup AutoMigrate. **Transactions belong to the service/transaction coordinator**, not independent repositories committing separately.
 
 ## 6. Explicit status model
 
@@ -168,4 +170,4 @@ Validate DTOs, keep domain logic in services, do not trust status/number from cl
 
 ## 10. Backend stack decision and version caution
 
-The team explored Go Fiber; **Go Fiber v3 + pgx/sqlc** is now the leading proposed backend (DEC-023), not an irreversible requirement. Current Fiber v3 docs require Go 1.26+. Both team members must approve toolchain/framework and ensure versions are pinned. Session middleware ordering (session before CSRF) matters if using Fiber-provided sessions. Fiber request-scoped buffer values must not escape request lifetime. See `16-security-quality-review.md`.
+The team explored Go Fiber; DEC-023 originally proposed **Go Fiber v3 + pgx/sqlc**. User-authorized DEC-026 supersedes its access layer with **GORM + PostgreSQL driver**, retaining Fiber v3 and explicit SQL migrations. Current Fiber v3 docs require Go 1.26+. Both team members must approve toolchain/framework and ensure versions are pinned. Session middleware ordering (session before CSRF) matters if using Fiber-provided sessions. Fiber request-scoped buffer values must not escape request lifetime. See `16-security-quality-review.md`.

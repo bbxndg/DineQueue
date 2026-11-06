@@ -75,3 +75,23 @@ When asked about database access the user requested a recommendation. The implem
 recommended retaining pgx/sqlc from the current documents and proceeds on that basis; GORM was
 discussed but has not been approved as a replacement. This records the implementation assumption,
 not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-foundation-contract.md`.
+
+## DEC-026 — GORM database access (6 November 2026)
+
+- Authorization: the user explicitly requested switching to an ORM in chat.
+- Decision: use Go Fiber + GORM + the GORM PostgreSQL driver. This supersedes the
+  pgx/sqlc access-layer proposal in DEC-011/DEC-023 and the original foundation assumption above.
+- Scope: replace foundation database wiring only; F-01 and all queue/seating features remain unimplemented.
+- Keep explicit versioned SQL migrations, PostgreSQL constraints and deterministic row locks.
+  Do not call AutoMigrate during application startup.
+- Services coordinate one GORM transaction and pass its `tx` to every participating repository.
+  Per-write default ORM transactions do not replace the business transaction.
+- Keep DTOs/domain objects separate from persistence models; parameterize values and
+  allowlist dynamic SQL identifiers. Avoid unconditional Save for state transitions;
+  use explicit conditional updates and check affected rows, including deliberate zero-value updates.
+- Preserve lazy startup, bounded readiness, generic errors, finite pooling and shutdown cleanup.
+  Disable ORM SQL logging in the foundation so connection details/parameters are not exposed.
+- pgx may remain as an indirect dependency of the official PostgreSQL driver; the app
+  must not retain a separate pgx pool, sqlc generator or generated-query layer.
+- Team/TA approval of unrelated domain rules is not implied. Original test evidence and
+  earlier dependency proposals remain historical records, not GORM verification results.

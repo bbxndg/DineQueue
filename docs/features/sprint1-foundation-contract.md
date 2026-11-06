@@ -6,7 +6,8 @@ This does not approve the remaining proposed product rules or establish course/T
 ## Scope and design
 
 - Next.js App Router, TypeScript and Tailwind web shell; no fake login or queue actions.
-- One Go Fiber API process, pgx PostgreSQL pool, sqlc configuration for future repositories.
+- One Go Fiber API process, GORM PostgreSQL adapter and bounded database/sql pool (DEC-026).
+- Explicit versioned SQL migrations remain the schema authority; no startup AutoMigrate.
 - HTTP handlers call services; repositories own SQL execution, not business transactions.
 - Only liveness/readiness endpoints are public. No customer or operator endpoints exist yet.
 - Readiness performs a bounded PostgreSQL ping; failures return generic 503 without credentials.
@@ -24,8 +25,10 @@ This does not approve the remaining proposed product rules or establish course/T
 | FD-AC-03 | Liveness works without DB; readiness is 200 only on successful probe and otherwise generic 503 | Go HTTP tests |
 | FD-AC-04 | Requests have a request ID; unexpected routes/errors expose no internal details | Go HTTP tests |
 | FD-AC-05 | Local Compose has persistent DB, internal service DNS and required secrets | Compose validation; container smoke test if daemon available |
-| FD-AC-06 | Real PostgreSQL readiness uses pgx | Opt-in integration test against TEST_DATABASE_URL |
+| FD-AC-06 | Real PostgreSQL readiness queries through GORM | Opt-in integration test against TEST_DATABASE_URL |
 | FD-AC-07 | Environment files are ignored and Docker build contexts exclude secrets | Configuration review |
+| FD-AC-08 | GORM opens lazily without reachable DB; malformed config errors hide credentials; pool has a finite limit | Adapter unit tests |
+| FD-AC-09 | GORM commit/rollback behaves correctly on an isolated temporary fixture, without creating application tables on startup | Real PostgreSQL integration tests |
 
 ## Definition of done
 

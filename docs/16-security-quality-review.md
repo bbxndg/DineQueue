@@ -14,7 +14,7 @@ Browser client (untrusted) → Next.js UI/proxy → Go Fiber API (enforces ident
 | Sessions | cryptographically random opaque token, store **hash** in DB, HttpOnly Secure SameSite cookie, rotate on login, expire, revoke on logout | stolen/expired/revoked token negative tests |
 | CSRF | same-site deployment + origin allowlist and synchronizer/anti-CSRF token on unsafe cookie-auth requests | forged POST rejected |
 | Authorization | backend role+queue+restaurant checks, foreign ticket not-found response | 401/403/404 tests across routes |
-| SQL injection | SQL parameters (`pgx/sqlc`), never string-concatenate user IDs/SQL | invalid input tests + code review |
+| SQL injection | GORM placeholders / parameterized SQL, allowlist dynamic identifiers; never concatenate client SQL fragments | invalid input tests + code review |
 | XSS / content | React escapes by default, prohibit raw HTML rendering and unsafe `dangerouslySetInnerHTML`; sanitize optional notes | escaping test, CSP review |
 | Brute force / abuse | rate limit login/join/call; bounded payload sizes and numeric/UUID validation | 429 and boundary tests |
 | CORS / cookies | specific trusted origin(s), no wildcard credentialed CORS; secure cookie domain/path | deployment smoke test |
@@ -24,7 +24,21 @@ Browser client (untrusted) → Next.js UI/proxy → Go Fiber API (enforces ident
 | Observability | request ID, structured audit of transitions; avoid logging cookies/passwords/CSRF tokens | log review |
 | Reliability | idempotent actions, keep immutable action history, migration rollback plan | retries and failure injection |
 
-## 3. Go Fiber-specific considerations
+## 3. Backend-specific considerations
+
+### Database access revision — DEC-026
+
+- GORM PostgreSQL driver is the selected access layer. Do not use startup AutoMigrate;
+  reviewed SQL migrations own partial indexes and schema changes.
+- A business service must pass the same `tx *gorm.DB` to all participating repositories.
+  Retain deterministic lock order, authoritative DB constraints and real race/rollback tests.
+- Use conditional updates and check affected rows; avoid Save upsert behavior for transitions.
+  Specify zero-value updates intentionally and keep DTO fields separate from persistence models.
+- Keep SQL logging disabled in the foundation; future logging must redact credentials,
+  session data and private query parameters. Pass request deadlines/cancellation into ORM calls.
+- No ORM removes the need for authorization or safe handling of dynamic SQL fragments.
+
+### Go Fiber
 
 - Fiber v3 uses middleware for sessions; follow official v3 APIs and register session middleware before CSRF when using session-backed CSRF. The v3 docs say Go 1.26+ is required; lock the version the team actually uses and document it.
 - Request/context values from Fiber may be reused after a request; **copy** any data intentionally retained in goroutines or async processing, rather than keeping temporary request-scoped buffers/references.

@@ -114,3 +114,22 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
   Guard tests do not establish actual endpoint privacy before F-02..04 are integrated.
 - This records implementation choices under user authorization. No teammate/TA
   approval, pre-implementation addendum commit, PR or CI is asserted.
+
+## DEC-028 — Four Sprint 1 parent features (6 November 2026)
+
+- Authorization: user requested updating repository documents to four S1 features.
+- Current grouping: F-01 Authentication/Session/RBAC; F-02 Join Waitlist and Ticket
+  Issuance; F-03 My Ticket and Privacy; F-04 Host Queue Operations (board, strict
+  FIFO Call Next and Complete).
+- F-05 is retained as the legacy ID for Complete inside F-04, without a fifth
+  parent feature or separate feature branch. F-06..F-19 are not renumbered.
+- F-04 includes FR-006/007/008/009, BR-003/004/005/006 and all AC-014..021 with
+  their original test IDs, including completion T-028..033. Other scopes and IDs
+  are retained. No requirement, negative/concurrency check or DoD item is removed.
+- This changes feature organization only. S1 still uses manual waitlist completion;
+  the API/state model and S2 seating preconditions retain their versioned rules.
+- Contracts, inventory, sprint/backlog, traceability, workflow, release template,
+  README and AGENTS reflect the grouping. Historical execution records keep their
+  original context, with a later grouping note where needed.
+- No new implementation, test execution, teammate/TA approval, commit or release
+  is implied by this documentation change.

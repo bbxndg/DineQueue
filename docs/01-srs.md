@@ -23,6 +23,11 @@ Goal: Deliver a reliable, auditable waitlist flow for one pilot restaurant: regi
 
 ### 3.1 Sprint 1 committed scope
 
+Sprint 1 has four parent features (DEC-028): F-01 Authentication/Session/RBAC,
+F-02 Join Waitlist and Ticket Issuance, F-03 My Ticket and Privacy, and F-04 Host
+Queue Operations (board, FIFO Call Next, Complete). F-05 remains the legacy ID
+for completion within F-04. Existing requirements, rules and acceptance scope are retained.
+
 One seeded restaurant with one seeded service queue; predefined customer and host accounts; login, logout, current user; customer joins, retrieves and sees status of own ticket; host sees queue, calls FIFO next, completes ticket; unique ticket creation under concurrency; duplicate active-ticket rejection; state and date validation; authorization and persistence; automated evidence; release on `main` with setup guide.
 
 **Party size** is stored from Sprint 1 (integer 1–16 under the v2 BR-008 revision) but capacity matching starts in Sprint 2. The separate physical-table capacity limit is 1–8. Sprint 1 does **not** imply table matching, reservation calendar or public notifications.

@@ -1,6 +1,12 @@
 # 07. Sprint 1 Feature-Level Engineering Contracts
 
-**Version:** DQ-S1-Contracts-1.1 proposed, updated 5 Nov 2026 (design draft; must be committed **before implementation** to serve as pre-implementation history). Every contract includes behavior/workflow, relevant UI/API/data, validation/error/permissions, AC, STS linkage, dependencies and DoD as required by CPE 334 §8.2.
+**Version:** DQ-S1-Contracts-1.2, grouping revision 6 Nov 2026 (DEC-028, user authorized).
+Four parent features F-01..F-04; F-04 includes completion under retained legacy ID
+F-05. The original 1.1 contract/history remains in Git. This grouping revision
+retains scope and all FR/BR/AC/test IDs; it does not establish earlier approval or
+pre-implementation history. Every contract includes behavior/workflow, relevant
+UI/API/data, validation/error/permissions, AC, STS linkage, dependencies and DoD as
+required by CPE 334 §8.2.
 
 ## F-01: Authentication, Session Lifecycle and RBAC
 
@@ -63,9 +69,15 @@ not establish a pre-implementation addendum commit.
 
 **DoD:** read is DB-backed, no cross-user data exposed, one browser E2E demonstrates status after join.
 
-## F-04: Host Dashboard / FIFO Call Next
+## F-04: Host Queue Operations — Board, FIFO Call Next and Complete
 
-**Depends on:** F-01, F-02. **FR:** FR-006, FR-007. **BR:** BR-003, BR-005, BR-006.
+**Depends on:** F-01, F-02. **FR:** FR-006, FR-007, FR-008, FR-009. **BR:** BR-003, BR-004, BR-005, BR-006.
+
+This is one parent feature with two workflows. Complete retains legacy ID F-05
+for traceability; it has no separate parent feature or feature branch. Both
+workflows must satisfy their existing acceptance criteria for F-04 to be complete.
+
+### Queue board and FIFO Call Next
 
 **Feature SDS / workflow:** authorized Host enters `/host/queue`; backend lists WAITING entries FIFO, current CALLED entry; clicking Call Next obtains queue lock, rechecks active called state and selects earliest waiting ticket atomically; if no waiting ticket, return business error; if already called, reject. Concurrent Hosts never claim same ticket. Other queue's Host denied.
 
@@ -79,11 +91,12 @@ not establish a pre-implementation addendum commit.
 | AC-017 | Concurrent Call Next requests cannot double claim, and one CALLED/queue rule survives. | T-026 |
 | AC-018 | Unauthorized/other-queue Host cannot view/manage queue. | T-007,T-027 |
 
-**DoD:** real SQL locking, DB integration/race tests, visible UI transitions and reviewed code. Mock-only tests don't count as proof of persistence.
+**Workflow DoD:** real SQL locking, DB integration/race tests, visible UI transitions and reviewed code. Mock-only tests don't count as proof of persistence.
 
-## F-05: Complete Waitlist Service
+### Complete Waitlist Service (retained legacy ID F-05)
 
-**Depends on:** F-04. **FR:** FR-008, FR-009. **BR:** BR-004, BR-006.
+**Prerequisite within F-04:** an entry successfully moved to CALLED by Call Next.
+**FR:** FR-008, FR-009. **BR:** BR-004, BR-006.
 
 **Feature SDS / workflow:** Host marks current CALLED entry COMPLETED, records `completed_at`, `completed_by`. Completion means the queue/waitlist service finished, not meal completion. Reject status WAITING or terminal entry. Oldest waiting party can then be called. Sprint 2 will require table assignment before completion, through a versioned rule revision.
 
@@ -95,11 +108,17 @@ not establish a pre-implementation addendum commit.
 | AC-020 | WAITING/COMPLETED ticket cannot be directly/repeatedly completed. | T-030,T-031 |
 | AC-021 | Only authorized Host can complete and the next waiting entry becomes callable. | T-032,T-033 |
 
-**DoD:** positive/negative paths + scoped access + persistent DB check + E2E Host call/complete; documented transition rule.
+**Workflow DoD:** positive/negative paths + scoped access + persistent DB check + E2E Host call/complete; documented transition rule.
+
+**Combined F-04 DoD:** AC-014..021 and their existing T-007/T-022..033 checks cover
+the board, call, completion, permissions, concurrency and invalid transitions.
+The Host can complete the current call and then call the next waiting entry.
+Keep the two workflow APIs and all existing AC/test IDs; review and integrate
+them as one parent feature. S1 completion remains manual waitlist handling.
 
 ## Global Sprint 1 acceptance and DoD
 
-- All P0 features F-01..F-05 are present in web/API/DB and function without stubbed persistence.
+- All four P0 parent features F-01..F-04 are present in web/API/DB and function without stubbed persistence; F-04 includes the entire legacy F-05 completion workflow and AC-019..021.
 - At least one normal end-to-end journey, business-rule rejection and forbidden-role/cross-user journey automated and demonstrated.
 - Tests show meaningful TDD evidence: original failing test at earlier commit/log → code change → passing test on release commit.
 - `main` release tag/commit can be freshly installed from README instructions; migrations and seed reproducible.

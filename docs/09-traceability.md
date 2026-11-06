@@ -10,6 +10,9 @@ SHA to those runs. Subsequent checks must identify the source version actually t
 
 ## Sprint 1 traceability (complete design mapping)
 
+DEC-028 groups Sprint 1 into four parent features F-01..F-04. F-05 remains the
+legacy completion sub-scope of F-04; all FR/BR, AC and test IDs are retained.
+
 | Requirement / rule | Feature | Sprint | AC IDs | Test IDs | Current status |
 |---|---|---|---|---|---|
 | FR-001 | F-01 | 1 | AC-001..003 | T-001..004 | Local API/DB execution; see testing/f01-auth-results.md |
@@ -27,8 +30,8 @@ SHA to those runs. Subsequent checks must identify the source version actually t
 | FR-010 / BR-007 | F-03 | 1 | AC-013 | T-008,T-021 | Planned, not run |
 | FR-006 / BR-003 | F-04 | 1 | AC-014..015 | T-022,T-023 | Planned, not run |
 | FR-007 / BR-005 | F-04 | 1 | AC-016..017 | T-024..026 | Planned, not run |
-| BR-006 | F-04,F-05 | 1 | AC-018,021 | T-027,T-032 | Planned, not run |
-| FR-008 / BR-004 | F-05 | 1 | AC-019..021 | T-028..033 | Planned, not run |
+| BR-006 | F-04 (board + completion, legacy F-05) | 1 | AC-018,021 | T-027,T-032 | Planned, not run |
+| FR-008 / BR-004 | F-04 (completion, legacy F-05) | 1 | AC-019..021 | T-028..033 | Planned, not run |
 | FR-011 / NFR-005 | F-02,F-03 | 1 | AC-006,011 | T-010,T-019,T-035 | Planned, not run |
 | NFR-004 | F-01 | 1 | AC-001..004,023..024 | T-001..004,038,039 plus config review | Local auth execution; queue endpoint checks still pending |
 | NFR-006 | All S1 UI | 1 | AC-011..012,014 | T-010,T-019,T-020 plus manual check | Planned, not run |

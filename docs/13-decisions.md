@@ -95,3 +95,41 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
   must not retain a separate pgx pool, sqlc generator or generated-query layer.
 - Team/TA approval of unrelated domain rules is not implied. Original test evidence and
   earlier dependency proposals remain historical records, not GORM verification results.
+
+## DEC-027 — F-01 implementation details (6 November 2026)
+
+- Authorization: user requested implementation of F-01 on its feature branch.
+- Keep the existing 12-hour session proposal for this implementation: random 32-byte
+  cookie, SHA-256 hash in sessions, active account/role checked from DB on each request.
+- Argon2id v19 (64 MiB, t=3, p=2), 16-byte random salt; no hardcoded seed credentials.
+- Exact APP_ORIGIN on login and unsafe authenticated requests, per-session HMAC-SHA256
+  CSRF token on authenticated mutations. This brings NFR-015 initial verification into
+  S1; S2/S3 retain regression. No global SESSION_SECRET is needed by this design.
+- Explicit embedded SQL migrations via cmd/db, transaction/advisory lock/checksum;
+  opt-in demo seed disabled in production, preserving existing accounts/passwords/grants.
+- A local per-process login limiter and two concurrent password-verification slots
+  bound resource use. Shared proxy/rate-limit policy and expired-session retention
+  are deployment decisions before multi-instance operation.
+- Scope: authentication UI/API plus reusable guards; no queue/ticket operations.
+  Guard tests do not establish actual endpoint privacy before F-02..04 are integrated.
+- This records implementation choices under user authorization. No teammate/TA
+  approval, pre-implementation addendum commit, PR or CI is asserted.
+
+## DEC-028 — Four Sprint 1 parent features (6 November 2026)
+
+- Authorization: user requested updating repository documents to four S1 features.
+- Current grouping: F-01 Authentication/Session/RBAC; F-02 Join Waitlist and Ticket
+  Issuance; F-03 My Ticket and Privacy; F-04 Host Queue Operations (board, strict
+  FIFO Call Next and Complete).
+- F-05 is retained as the legacy ID for Complete inside F-04, without a fifth
+  parent feature or separate feature branch. F-06..F-19 are not renumbered.
+- F-04 includes FR-006/007/008/009, BR-003/004/005/006 and all AC-014..021 with
+  their original test IDs, including completion T-028..033. Other scopes and IDs
+  are retained. No requirement, negative/concurrency check or DoD item is removed.
+- This changes feature organization only. S1 still uses manual waitlist completion;
+  the API/state model and S2 seating preconditions retain their versioned rules.
+- Contracts, inventory, sprint/backlog, traceability, workflow, release template,
+  README and AGENTS reflect the grouping. Historical execution records keep their
+  original context, with a later grouping note where needed.
+- No new implementation, test execution, teammate/TA approval, commit or release
+  is implied by this documentation change.

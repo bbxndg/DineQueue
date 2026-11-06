@@ -11,8 +11,7 @@
 - F-01 Login/logout/current identity with seeded 2 roles and server-backed authorization.
 - F-02 Join active seeded service queue, validated party size, concurrency-safe unique ticket.
 - F-03 View own ticket/status; deny cross-customer access.
-- F-04 Host view waiting/called and `Call Next` in FIFO order; scoped permission.
-- F-05 Host complete called entry; reject invalid transitions.
+- F-04 Host Queue Operations: view waiting/called, `Call Next` in FIFO order, complete CALLED entry and reject invalid transitions; scoped permission. Complete retains legacy ID F-05 within F-04 (DEC-028).
 - Postgres schema/migrations/idempotent seed, local setup, automated unit/API-DB/E2E tests.
 - GitHub Issues + sprint staging + reviewed feature PRs + main release tag + reproducible demo.
 
@@ -30,7 +29,7 @@
 
 ### Definition of success
 
-All F-01..F-05 AC pass, state and unique-index invariants hold even under concurrent tests; local API/UI/database flows work; release in `main` with tagged commit, no cloud required **yet**.
+All AC for the four parent features F-01..F-04 pass, including legacy F-05 completion AC-019..021. State and unique-index invariants hold even under concurrent tests; local API/UI/database flows work; release in `main` with tagged commit, no cloud required **yet**.
 
 ## Sprint 2 — Core restaurant table workflows (complete by 29 Nov 2026)
 

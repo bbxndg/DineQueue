@@ -5,7 +5,7 @@ Follow `README.md` → `docs/01-srs.md` → `docs/06-restaurant-operations.md` �
 ## Scope and priorities
 
 - This is a walk-in **queue** product, not appointment booking, POS, payments or automatic restaurant reservations.
-- Preserve S1 F-01..F-05: login/logout/me; backend RBAC + own-ticket privacy; join party 1–16; daily unique queue number; FIFO call-next/complete and concurrency tests. S1 completion means *manual waitlist handling*.
+- Preserve S1's four parent features F-01..F-04: login/logout/me; backend RBAC + own-ticket privacy; join party 1–16; daily unique queue number; Host queue board, FIFO call-next/complete and concurrency tests. F-05 is the retained legacy ID for Complete within F-04, not a fifth parent feature (DEC-028). S1 completion means *manual waitlist handling*.
 - S2 requires F-06..09 and F-14..16: **interactive floor, approved adjacency graph, deterministic matching, atomic hold of 1–3 connected tables, seat, no-show, group checkout and cleaning**. Do not implement seating as a single `table_id` on ticket.
 - Sample 10-person group: T4(6)+T5(4) approved connected pair qualifies; T7(8) alone and unconnected sets do not. All chosen tables must share restaurant/zone and be AVAILABLE.
 - Keep old FR/F/BR IDs and explicitly version changed BR-008/010/011/013; new IDs FR-023..035, BR-015..025, F-14..19.

@@ -5,8 +5,9 @@
 **Implementation boundary (6 Nov 2026):** repository foundation now lives in
 `apps/web` and `apps/api`; see `features/sprint1-foundation-contract.md` and
 `testing/sprint1-foundation-results.md` (historical) and `testing/sprint1-gorm-results.md`
-(current access-layer revision). Only web shell, config, health and GORM
-wiring exist. Auth/queue/floor/reporting modules below remain proposed designs.
+(current access-layer revision). The foundation includes web/config/health/GORM
+wiring. F-01 auth has a branch implementation and local verification in
+`testing/f01-auth-results.md`; queue/floor/reporting modules remain proposed designs.
 
 ## 1. Architecture and rationale
 
@@ -79,7 +80,7 @@ Ownership failures must not reveal somebody else's private ticket; return 404 fo
 4. Guard checks hashed token against non-expired DB session; attaches user id, role. Unknown/expired session → 401.
 5. `GET /api/v1/auth/me`: reports id/name/role, not password hash.
 6. `POST /api/v1/auth/logout`: revokes session row and clears cookie; repeat post-logout access denied.
-7. CSRF: check origin and use SameSite policy or an anti-CSRF token on unsafe cookie-authenticated requests. Never rely solely on SameSite for all deployment scenarios.
+7. CSRF from S1: exact Origin on login; exact Origin plus per-session HMAC CSRF token on authenticated mutations. SameSite=Lax complements these checks. Login/me return csrfToken to same-origin UI memory; logout uses X-CSRF-Token. See DEC-027.
 8. Log auth failures without storing plaintext passwords/tokens. Secrets only in environment variables/secret manager.
 
 S1 can use predefined demo accounts; registration/password reset/email verification are not required.
@@ -157,7 +158,7 @@ Customer mobile-first: `/login`, `/`, `/join`, `/my-queue`. Host desktop-first: 
 
 ## 8. Configuration and operations
 
-- Config: `DATABASE_URL`, `SESSION_SECRET`, `APP_ORIGIN`, `APP_ENV`, `PORT`, `HOLD_TTL_MINUTES`, plus web `NEXT_PUBLIC_API_BASE_URL` if cross-origin. Provide `.env.example` placeholders only.
+- Current config: `DATABASE_URL`, `APP_ORIGIN`, `APP_ENV`, `PORT`, web server-only `API_INTERNAL_URL`; four `SEED_*_PASSWORD` values only for opt-in seed tooling. The custom opaque-session design requires no global SESSION_SECRET (DEC-027). HOLD_TTL_MINUTES is future S2 configuration; cross-origin frontend deployment is not implemented. Provide `.env.example` placeholders only.
 - API commands proposed: `go build ./...`, `go test ./...`, `go test -tags=integration ./...`, `go vet ./...`; SQL migrations and seeds via documented explicit scripts; Playwright frontend E2E. All need actual implementation first.
 - Health endpoints: `/health/live` and `/health/ready` for runtime and database readiness.
 - S1 local run: web, API and DB; real data persists between restarts; seed script idempotent.

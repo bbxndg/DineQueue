@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"dinequeue.local/api/internal/auth"
 	"dinequeue.local/api/internal/health"
 	"dinequeue.local/api/internal/platform/config"
 	"dinequeue.local/api/internal/platform/postgres"
@@ -39,6 +40,11 @@ func run() error {
 	}
 	defer pool.Close()
 	app := httptransport.New(health.New(postgres.NewReadiness(database)))
+	authService, err := auth.NewService(auth.NewRepository(database))
+	if err != nil {
+		return fmt.Errorf("cannot initialize authentication")
+	}
+	auth.NewHTTP(authService, cfg.AppOrigin).Register(app)
 	listenError := make(chan error, 1)
 	go func() { listenError <- app.Listen(fmt.Sprintf(":%d", cfg.Port)) }()
 	select {

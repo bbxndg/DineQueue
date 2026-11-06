@@ -8,13 +8,12 @@
 |---|---|---|---|
 | `docs: SRS, decisions, feature inventory, traceability` | Baseline | none | FR/BR/NFR, roles, exclusions, sprint allocation |
 | `docs: system architecture, DB design, API + UI contract` | Baseline | SRS | role matrix, constraints, endpoint shapes |
-| `test: contract-first STS for F-01..F-05` | Baseline | feature SDS | test IDs/preconditions/expected/AC coverage |
+| `test: contract-first STS for four S1 features F-01..F-04` | Baseline | feature SDS | test IDs/preconditions/expected/AC coverage, including legacy F-05 completion |
 | `chore: repo/monorepo setup and PostgreSQL migrations` | Infra | SDS | clean setup, constraints and idempotent seeds |
 | `feat: login/logout/me with session guards` | F-01 | DB | AC-001..005, API tests, password hashing |
 | `feat: atomic daily ticket allocation and join` | F-02 | F-01 | AC-006..010, duplicate + race tests |
 | `feat: customer own-ticket page and privacy` | F-03 | F-02 | AC-011..013, browser/API tests |
-| `feat: Host FIFO queue board and transactional call-next` | F-04 | F-02 | AC-014..018, race/permission tests |
-| `feat: Host complete queue service` | F-05 | F-04 | AC-019..021, negative transition tests |
+| `feat: Host queue board, FIFO call-next and complete` | F-04 (includes legacy F-05) | F-01, F-02 | AC-014..021, race/permission/negative transition tests |
 | `test: integrated demo, release setup, peer reviews` | Release | all S1 | real run logs, 3 key journeys, PR review, tag |
 | `release: sprint1 staging -> reviewed main/tag` | Release | integration | exact SHA and reproducible demo |
 

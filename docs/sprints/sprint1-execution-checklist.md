@@ -20,8 +20,8 @@ This is a timebox suggestion for a two-person team; the PDF requires a working S
 
 ## Day 3: Operator queue, transitions and end-to-end
 
-- [ ] F-04 authorized queue list, FIFO call-next inside transaction and concurrency integration test.
-- [ ] F-05 complete CALLED and invalid transitions tests.
+- [ ] F-04 Host Queue Operations: authorized queue list, FIFO call-next inside transaction and concurrency integration test.
+- [ ] F-04 completion workflow (legacy F-05): complete CALLED and invalid transitions tests; required for the same parent feature.
 - [ ] Run browser E2E Customer -> Host -> Customer and 2 negative journeys.
 - [ ] Fix integration bugs via fix PRs, update docs, traceability and test record.
 
@@ -35,7 +35,7 @@ This is a timebox suggestion for a two-person team; the PDF requires a working S
 
 ## Triage if behind schedule
 
-Keep first: F-01..05 actual UI/API/DB, 2 roles, key negative/concurrency tests, contracts and PR review. Defer: fancy animation, public digital display, cancellation, tables, reports, estimated wait times, multi-branch architecture.
+Keep first: four parent features F-01..F-04 (including legacy F-05 completion), actual UI/API/DB, 2 roles, key negative/concurrency tests, contracts and PR review. Defer: fancy animation, public digital display, cancellation, tables, reports, estimated wait times, multi-branch architecture.
 
 ## Submission blockers
 

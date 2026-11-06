@@ -43,5 +43,23 @@ services:
       - ./apps/web/src:/workspace/apps/web/src:ro
     depends_on:
       - api
+  db-tools:
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with db as hostname in .env}
+      SEED_CUSTOMER_PASSWORD: ${SEED_CUSTOMER_PASSWORD:-}
+      SEED_CUSTOMER2_PASSWORD: ${SEED_CUSTOMER2_PASSWORD:-}
+      SEED_HOST_PASSWORD: ${SEED_HOST_PASSWORD:-}
+      SEED_OTHER_HOST_PASSWORD: ${SEED_OTHER_HOST_PASSWORD:-}
+    command: [go, run, -buildvcs=false, ./cmd/db, migrate]
+    depends_on:
+      db:
+        condition: service_healthy
 volumes:
   postgres_data:

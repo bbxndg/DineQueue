@@ -2,6 +2,10 @@
 
 **Status:** design checklist, not an assurance of security. No production pentest has been run. Source references: OWASP Session Management / CSRF / Authorization Cheat Sheets; PostgreSQL row-level locks; Fiber v3 middleware documentation. The course requires authenticated API permission enforcement, tests, no real secrets, Docker/GCP deployment.
 
+F-01 implementation and local checks are recorded in `testing/f01-auth-results.md`.
+Origin/CSRF initial acceptance is S1 (AC-022/T-037), with regression S2/S3.
+Other checklist items remain planned unless that execution report gives evidence.
+
 ## 1. Trust boundary
 
 Browser client (untrusted) → Next.js UI/proxy → Go Fiber API (enforces identity, role, scope, validation, rate limits) → PostgreSQL (constraints, locks, durable state). The UI may hide controls but never grants access. Every Host action checks restaurant/queue grant AND resource association. Do not put sensitive DB state or raw stack trace in public JSON.

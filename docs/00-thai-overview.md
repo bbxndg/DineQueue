@@ -18,6 +18,12 @@ DineQueue เป็นระบบคิวร้านอาหาร Walk-in �
 
 ## Sprint 1: ขั้นต่ำที่ต้องทำให้เสร็จจริงก่อน 8 พ.ย.
 
+ตาม DEC-028 แบ่งเป็น **4 features หลัก**: F-01 Authentication/Session/RBAC,
+F-02 เข้าคิวและออกเลขคิว, F-03 ดูคิวของตนและความเป็นส่วนตัว,
+F-04 Host Queue Operations ซึ่งรวมดูคิว, FIFO Call Next และ Complete
+โดยเก็บ F-05 เป็นรหัสเดิมของงาน Complete ภายใต้ F-04 เพื่อ traceability
+รายละเอียดกฎ AC และ test IDs เดิมยังต้องทำครบ
+
 1. **Auth:** Login, Logout, Current User, password hashing, session lifecycle, RBAC ที่ตรวจบน Backend
 2. **Customer:** เข้าคิวโดยระบุ Party Size, ได้เลข A-001/A-002, ดูคิวตัวเองอย่างเป็นส่วนตัว
 3. **Host:** Login, ดูคิวที่ได้รับอนุญาต, Call Next ตาม FIFO, Complete คิวที่ถูกเรียก

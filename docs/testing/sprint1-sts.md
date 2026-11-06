@@ -1,6 +1,12 @@
 # 08. Software Test Specification (STS) — Sprint 1
 
-**Version:** DQ-STS-S1-1.1 proposed; design only; NO TEST HAS BEEN EXECUTED.
+**Version:** DQ-STS-S1-1.2. F-01 has local execution evidence in
+[`f01-auth-results.md`](f01-auth-results.md); F-02..F-04, including legacy F-05
+completion, remain planned/not run. DEC-028 groups S1 into four parent features;
+all T-001..041 and AC IDs are retained. Completion checks T-028..033 now belong
+to F-04's completion workflow (legacy F-05).
+T-005..008 currently have reusable-guard checks only: their real queue/ticket
+endpoint tests require F-02..04. Do not count test-only routes as shipped endpoints.
 
 **Framework plan:** Go `testing`/`httptest` + Fiber test client + real isolated PostgreSQL via GORM; Playwright for selected browser journeys.
 
@@ -60,6 +66,12 @@ Every test must record **actual** command, git commit, result, run date and link
 
 `T-034/035/036` give further boundary/persistence evidence. Add them to traceability after code implementation.
 
+| T-037 | API/DB | Missing/foreign Origin; invalid/missing CSRF on logout | 403 and session remains active | AC-022 |
+| T-038 | API/DB | Expired/revoked session; disabled user; HTTPS cookie | 401; HttpOnly/Secure/Lax/Path=/; hash only in DB | AC-023 |
+| T-039 | API/DB | Repeat login; unknown JSON field; >10 attempts/minute | token rotation, strict 400, bounded 429; insert failure rolls back revocation | AC-024 |
+| T-040 | DB | Migrate and seed twice; invalid role/FK/duplicate; seed conflict | idempotency, constraints, transaction rollback | AC-025 |
+| T-041 | Browser E2E | Customer/Host login, reload, wrong role route, logout, invalid session | role shell and login redirect; no browser auth storage | AC-026 |
+
 ## 3. Real TDD evidence plan
 
 ### BR-001 red → green → refactor (sample)
@@ -85,7 +97,9 @@ Every test must record **actual** command, git commit, result, run date and link
 | Go vet | `go vet ./...` | NOT RUN |
 | Docker smoke test (Lab 5) | `docker compose up --build` | NOT RUN |
 
-Actual scripts should be documented and created in repository implementation. The names above are proposed only.
+The table above describes the remaining whole-Sprint product verification plan.
+Actual F-01 commands/results, including foundation regression, are recorded in
+`f01-auth-results.md`; do not interpret this table as a status for all repository tests.
 
 ## 5. Test-result evidence template
 

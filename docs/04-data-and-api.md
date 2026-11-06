@@ -242,10 +242,17 @@ Recommended codes: 400 validation; 401 unauthenticated; 403 forbidden action/sco
 
 | Method | Path | Role | Request | Success |
 |---|---|---|---|---|
-| POST | `/auth/login` | Anonymous | `{email,password}` | 200 `{user:{id,displayName,role}}`, sets session cookie |
-| POST | `/auth/logout` | Authenticated | none | 204, invalidates session and cookie |
-| GET | `/auth/me` | Authenticated | none | 200 `{user:{...}}` |
-| GET | `/queues` | Authenticated | none | 200 list of active queues visible to user |
+| POST | `/auth/login` | Anonymous | `{email,password}` + exact Origin | 200 `{user:{id,displayName,role},csrfToken}`, sets session cookie |
+| POST | `/auth/logout` | Authenticated | exact Origin + X-CSRF-Token | 204, invalidates session and cookie |
+| GET | `/auth/me` | Authenticated | none | 200 `{user:{id,displayName,role},csrfToken}` |
+| GET | `/queues` | Authenticated | none | 200 list of active queues visible to user (F-02, not implemented in F-01) |
+
+F-01 implementation uses a 12h opaque session, SHA-256 token digest in DB and
+per-session HMAC CSRF token (DEC-027). No password hash/email/cookie-token value in user
+responses. HTTPS uses `__Host-dineq_session`; local HTTP uses `dineq_session`.
+Login allows only email/password JSON fields, limits body to 4 KiB and password
+to 128 UTF-8 bytes; invalid credentials are generic 401, per-IP limits return 429.
+No credentialed CORS is enabled. The frontend uses same-origin auth rewrites.
 
 ### Customer endpoints — S1
 

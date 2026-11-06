@@ -1,0 +1,2 @@
+-- Foundation only. No product schema exists yet.
+-- Versioned Sprint 1 domain migrations must precede auth/queue implementation.

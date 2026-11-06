@@ -1,0 +1,11 @@
+.git
+.aws
+**/.aws
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+!**/.env.example
+**/*.tsbuildinfo
+**/.npmrc
+docs

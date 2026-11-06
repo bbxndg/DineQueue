@@ -37,6 +37,9 @@ not establish a pre-implementation addendum commit.
 
 **Depends on:** F-01, seeded queue, allocator and constraints. **FR:** FR-003, FR-004, FR-009. **BR:** BR-001, BR-002, BR-008, BR-009.
 
+Implementation details and error-code choices (DEC-029):
+[`f02-join-implementation-contract.md`](f02-join-implementation-contract.md).
+
 **Feature SDS / workflow:** authenticated Customer opens join form; selects seeded active service queue, party size 1–16; server computes business date, atomically increments queue-day counter and inserts `WAITING` ticket with unique code; duplicate active customer ticket in same queue is forbidden by a partial unique DB index. Return entry summary and navigate to My Ticket. No client-supplied `ticketNumber` or status.
 
 **UI:** `/join`; invalid range error, loading submit, duplicate conflict banner. **API:** `POST /queues/{queueId}/entries`. **Data:** queue day counters, queue entries, indexes.

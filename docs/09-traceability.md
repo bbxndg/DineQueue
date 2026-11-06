@@ -21,11 +21,11 @@ legacy completion sub-scope of F-04; all FR/BR, AC and test IDs are retained.
 | NFR-004 | F-01 | 1 | AC-023..024 | T-038,039 | Session/hash/rotation/rollback execution in F-01 results |
 | FR-011 / NFR-005 (auth setup) | F-01 prerequisites | 1 | AC-025 | T-040 | Migration/seed executed; ticket persistence still pending |
 | FR-001 (browser) | F-01 | 1 | AC-026 | T-041 | Auth browser journey; not queue E2E |
-| FR-003 / FR-004 | F-02 | 1 | AC-006..007 | T-009..012 | Planned, not run |
-| FR-009 / BR-001 | F-02 | 1 | AC-008 | T-013,T-014 | Planned, not run |
-| BR-002 / BR-009 / NFR-001 | F-02 | 1 | AC-009 | T-015,T-034 | Planned, not run |
-| BR-008 / FR-023 | F-02 | 1 | AC-007 (+ valid 10) | T-011,T-012,T-036 | Planned, not run |
-| FR-003 inactive/role | F-02 | 1 | AC-010 | T-016,T-017 | Planned, not run |
+| FR-003 / FR-004 | F-02 | 1 | AC-006..007 | T-009..012 | T-009/011/012 local PASS, T-010 join part (f02-join-results.md); T-010 My Ticket view pending F-03 |
+| FR-009 / BR-001 | F-02 | 1 | AC-008 | T-013,T-014 | Local RED→GREEN worktree evidence (f02-join-results.md) |
+| BR-002 / BR-009 / NFR-001 | F-02 | 1 | AC-009 | T-015,T-034 | Local PASS (f02-join-results.md) |
+| BR-008 / FR-023 | F-02 | 1 | AC-007 (+ valid 10) | T-011,T-012,T-036 | Local PASS (f02-join-results.md) |
+| FR-003 inactive/role | F-02 | 1 | AC-010 | T-016,T-017 | Local PASS (f02-join-results.md) |
 | FR-005 | F-03 | 1 | AC-011..012 | T-018..020 | Planned, not run |
 | FR-010 / BR-007 | F-03 | 1 | AC-013 | T-008,T-021 | Planned, not run |
 | FR-006 / BR-003 | F-04 | 1 | AC-014..015 | T-022,T-023 | Planned, not run |

@@ -13,6 +13,7 @@ import (
 	"dinequeue.local/api/internal/health"
 	"dinequeue.local/api/internal/platform/config"
 	"dinequeue.local/api/internal/platform/postgres"
+	"dinequeue.local/api/internal/queue"
 	httptransport "dinequeue.local/api/internal/transport/http"
 )
 
@@ -44,7 +45,9 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("cannot initialize authentication")
 	}
-	auth.NewHTTP(authService, cfg.AppOrigin).Register(app)
+	authHTTP := auth.NewHTTP(authService, cfg.AppOrigin)
+	authHTTP.Register(app)
+	queue.NewHTTP(queue.NewService(queue.NewRepository(database)), authHTTP).Register(app)
 	listenError := make(chan error, 1)
 	go func() { listenError <- app.Listen(fmt.Sprintf(":%d", cfg.Port)) }()
 	select {

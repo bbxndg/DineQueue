@@ -1,8 +1,9 @@
 # 08. Software Test Specification (STS) — Sprint 1
 
 **Version:** DQ-STS-S1-1.2. F-01 has local execution evidence in
-[`f01-auth-results.md`](f01-auth-results.md); F-02..F-04, including legacy F-05
-completion, remain planned/not run. DEC-028 groups S1 into four parent features;
+[`f01-auth-results.md`](f01-auth-results.md); F-02 has local worktree evidence in
+[`f02-join-results.md`](f02-join-results.md) (T-009, T-011..017, T-034, T-036 and the
+join part of T-010); F-03..F-04, including legacy F-05 completion, remain planned/not run. DEC-028 groups S1 into four parent features;
 all T-001..041 and AC IDs are retained. Completion checks T-028..033 now belong
 to F-04's completion workflow (legacy F-05).
 T-005..008 currently have reusable-guard checks only: their real queue/ticket

@@ -11,6 +11,8 @@ const nextConfig = {
       { source: '/api/v1/auth/login', destination: `${backendOrigin}/api/v1/auth/login` },
       { source: '/api/v1/auth/me', destination: `${backendOrigin}/api/v1/auth/me` },
       { source: '/api/v1/auth/logout', destination: `${backendOrigin}/api/v1/auth/logout` },
+      { source: '/api/v1/queues', destination: `${backendOrigin}/api/v1/queues` },
+      { source: '/api/v1/queues/:queueId/entries', destination: `${backendOrigin}/api/v1/queues/:queueId/entries` },
     ];
   },
   async headers() {

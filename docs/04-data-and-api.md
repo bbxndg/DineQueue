@@ -245,7 +245,7 @@ Recommended codes: 400 validation; 401 unauthenticated; 403 forbidden action/sco
 | POST | `/auth/login` | Anonymous | `{email,password}` + exact Origin | 200 `{user:{id,displayName,role},csrfToken}`, sets session cookie |
 | POST | `/auth/logout` | Authenticated | exact Origin + X-CSRF-Token | 204, invalidates session and cookie |
 | GET | `/auth/me` | Authenticated | none | 200 `{user:{id,displayName,role},csrfToken}` |
-| GET | `/queues` | Authenticated | none | 200 list of active queues visible to user (F-02, not implemented in F-01) |
+| GET | `/queues` | Authenticated | none | 200 `{queues:[{id,name,restaurantName}]}` active queues only (F-02) |
 
 F-01 implementation uses a 12h opaque session, SHA-256 token digest in DB and
 per-session HMAC CSRF token (DEC-027). No password hash/email/cookie-token value in user

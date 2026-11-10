@@ -20,6 +20,7 @@ export default async function Home() {
           Join the walk-in waitlist and the host will call your ticket number.
         </p>
         <Link href="/join" className="mt-8 inline-block rounded-lg bg-wine px-6 py-3 font-semibold text-white">Join Waitlist</Link>
+        <Link href="/my-queue" prefetch={false} className="mt-4 ml-6 inline-block font-semibold text-wine underline">My Ticket</Link>
       </section>
       <footer className="border-t border-wine/20 pt-6 text-sm">Walk-in dining, together.</footer>
     </main>

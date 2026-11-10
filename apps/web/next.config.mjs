@@ -13,6 +13,8 @@ const nextConfig = {
       { source: '/api/v1/auth/logout', destination: `${backendOrigin}/api/v1/auth/logout` },
       { source: '/api/v1/queues', destination: `${backendOrigin}/api/v1/queues` },
       { source: '/api/v1/queues/:queueId/entries', destination: `${backendOrigin}/api/v1/queues/:queueId/entries` },
+      { source: '/api/v1/me/queue-entries/active', destination: `${backendOrigin}/api/v1/me/queue-entries/active` },
+      { source: '/api/v1/me/queue-entries/:entryId', destination: `${backendOrigin}/api/v1/me/queue-entries/:entryId` },
     ];
   },
   async headers() {

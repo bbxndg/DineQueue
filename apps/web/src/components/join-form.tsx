@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ServiceQueue } from '@/lib/queues';
-
-type Ticket = { id: string; ticketCode: string; serviceDate: string; partySize: number; status: string; joinedAt: string };
 
 const MIN = 1;
 const MAX = 16;
@@ -20,11 +20,12 @@ function errorMessage(status: number, code: string | undefined) {
 }
 
 export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfToken: string }) {
+  const router = useRouter();
   const [queueId, setQueueId] = useState(queues[0].id);
   const [partySize, setPartySize] = useState('2');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [duplicate, setDuplicate] = useState(false);
   const size = /^\d+$/.test(partySize) ? Number(partySize) : NaN;
   const queue = queues.find(value => value.id === queueId) ?? queues[0];
 
@@ -35,7 +36,7 @@ export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfTo
       setError('Party size must be a whole number from 1 to 16.');
       return;
     }
-    setPending(true); setError('');
+    setPending(true); setError(''); setDuplicate(false);
     try {
       const response = await fetch(`/api/v1/queues/${encodeURIComponent(queueId)}/entries`, {
         method: 'POST', credentials: 'same-origin',
@@ -45,25 +46,15 @@ export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfTo
       if (!response.ok) {
         const body = await response.json().catch(() => null);
         setError(errorMessage(response.status, body?.error?.code));
+        setDuplicate(response.status === 409 && body?.error?.code === 'ACTIVE_QUEUE_EXISTS');
         return;
       }
-      setTicket(await response.json());
+      // Finish reading the issued ticket before leaving the join form.
+      await response.json();
+      router.push('/my-queue');
+      router.refresh();
     } catch { setError('Unable to connect. Please try again.'); }
     finally { setPending(false); }
-  }
-
-  if (ticket) {
-    return <section aria-labelledby="ticket-heading" className="mt-8 rounded-2xl border border-wine/30 bg-white p-6">
-      <h2 id="ticket-heading" className="text-sm font-semibold uppercase tracking-widest text-wine">Your ticket</h2>
-      <p className="mt-3 text-5xl font-semibold tracking-tight" data-testid="ticket-code">{ticket.ticketCode}</p>
-      <dl className="mt-6 grid grid-cols-2 gap-3 text-sm">
-        <dt className="font-medium">Status</dt><dd data-testid="ticket-status">{ticket.status}</dd>
-        <dt className="font-medium">Party size</dt><dd>{ticket.partySize}</dd>
-        <dt className="font-medium">Queue</dt><dd>{queue.name}</dd>
-        <dt className="font-medium">Joined</dt><dd>{new Date(ticket.joinedAt).toLocaleString()}</dd>
-      </dl>
-      <p className="mt-6 leading-relaxed">Please stay nearby. The host will call your ticket number.</p>
-    </section>;
   }
 
   return <form onSubmit={submit} noValidate className="mt-8 grid gap-5" aria-busy={pending}>
@@ -86,6 +77,7 @@ export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfTo
       Parties of {size} may be seated across connected tables. Combined seating is not guaranteed.
     </p>}
     {error && <p role="alert" aria-live="polite" className="rounded-lg border border-wine/30 bg-white p-3 text-wine">{error}</p>}
+    {duplicate && <Link href="/my-queue" prefetch={false} className="font-semibold text-wine underline">View My Ticket</Link>}
     <button disabled={pending} className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">{pending ? 'Joining…' : 'Join waitlist'}</button>
   </form>;
 }

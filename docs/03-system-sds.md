@@ -6,8 +6,10 @@
 `apps/web` and `apps/api`; see `features/sprint1-foundation-contract.md` and
 `testing/sprint1-foundation-results.md` (historical) and `testing/sprint1-gorm-results.md`
 (current access-layer revision). The foundation includes web/config/health/GORM
-wiring. F-01 auth has a branch implementation and local verification in
-`testing/f01-auth-results.md`; queue/floor/reporting modules remain proposed designs.
+wiring. F-01 auth, F-02 join and F-03 own-ticket reads/UI are present; local
+execution evidence lives in `testing/f01-auth-results.md`, `testing/f02-join-results.md`
+and `testing/f03-my-ticket-results.md`. Host operations/floor/reporting remain
+proposed designs; local worktree evidence is not CI/release approval.
 
 ## 1. Architecture and rationale
 

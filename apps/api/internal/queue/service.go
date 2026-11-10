@@ -13,7 +13,7 @@ import (
 
 var (
 	ErrValidation        = errors.New("invalid queue entry request")
-	ErrNotFound          = errors.New("queue not found")
+	ErrNotFound          = errors.New("resource not found")
 	ErrQueueInactive     = errors.New("queue is not accepting entries")
 	ErrActiveQueueExists = errors.New("customer already has an active entry")
 	ErrInvalidTimezone   = errors.New("restaurant timezone is not configured correctly")
@@ -34,6 +34,24 @@ type Entry struct {
 	PartySize   int       `json:"partySize"`
 	Status      string    `json:"status"`
 	JoinedAt    time.Time `json:"joinedAt"`
+}
+
+// Ticket adds queue context to an owned read without changing the join response.
+type Ticket struct {
+	Entry
+	QueueName      string `json:"queueName"`
+	RestaurantName string `json:"restaurantName"`
+	Timezone       string `json:"timezone"`
+}
+
+func ticketFromRow(row entryDetail) Ticket {
+	return Ticket{
+		Entry: Entry{ID: row.ID, QueueID: row.QueueID,
+			TicketCode:  TicketCode(row.TicketPrefix, row.SequenceNumber),
+			ServiceDate: row.ServiceDate, PartySize: row.PartySize,
+			Status: row.Status, JoinedAt: row.JoinedAt.UTC()},
+		QueueName: row.QueueName, RestaurantName: row.RestaurantName, Timezone: row.Timezone,
+	}
 }
 
 type Service struct {
@@ -57,46 +75,37 @@ func (s *Service) ActiveQueues(ctx context.Context) ([]Queue, error) {
 	return queues, nil
 }
 
-func (s *Service) ActiveEntries(ctx context.Context, user auth.User) ([]Entry, error) {
+func (s *Service) ActiveEntries(ctx context.Context, user auth.User) ([]Ticket, error) {
+	if user.Role != "CUSTOMER" {
+		return nil, auth.ErrForbidden
+	}
 	rows, err := s.repository.activeEntries(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
-	entries := make([]Entry, 0, len(rows))
+	entries := make([]Ticket, 0, len(rows))
 	for _, row := range rows {
-		entries = append(entries, Entry{
-			ID:          row.ID,
-			QueueID:     row.QueueID,
-			TicketCode:  TicketCode(row.TicketPrefix, row.SequenceNumber),
-			ServiceDate: row.ServiceDate,
-			PartySize:   row.PartySize,
-			Status:      row.Status,
-			JoinedAt:    row.JoinedAt,
-		})
+		entries = append(entries, ticketFromRow(row))
 	}
 	return entries, nil
 }
 
-func (s *Service) EntryDetail(ctx context.Context, user auth.User, entryID string) (Entry, error) {
+func (s *Service) EntryDetail(ctx context.Context, user auth.User, entryID string) (Ticket, error) {
+	if user.Role != "CUSTOMER" {
+		return Ticket{}, auth.ErrForbidden
+	}
+	// uuid.Parse also accepts URNs/raw hex; HTTP IDs use the canonical UUID form.
+	if len(entryID) != 36 {
+		return Ticket{}, ErrNotFound
+	}
 	if _, err := uuid.Parse(entryID); err != nil {
-		return Entry{}, ErrNotFound
+		return Ticket{}, ErrNotFound
 	}
-	row, err := s.repository.entryByID(ctx, entryID)
+	row, err := s.repository.ownedEntryByID(ctx, user.ID, entryID)
 	if err != nil {
-		return Entry{}, err
+		return Ticket{}, err
 	}
-	if err := auth.RequireOwner(user, row.CustomerID); err != nil {
-		return Entry{}, ErrNotFound
-	}
-	return Entry{
-		ID:          row.ID,
-		QueueID:     row.QueueID,
-		TicketCode:  TicketCode(row.TicketPrefix, row.SequenceNumber),
-		ServiceDate: row.ServiceDate,
-		PartySize:   row.PartySize,
-		Status:      row.Status,
-		JoinedAt:    row.JoinedAt,
-	}, nil
+	return ticketFromRow(row), nil
 }
 
 // Join creates one WAITING entry in a single transaction: queue check, local service

@@ -146,3 +146,15 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
 - Ticket code is derived (`prefix-%03d`), not stored. `GET /api/v1/queues` returns
   active queues to any authenticated role.
 - `/join` shows the created ticket in place until F-03 adds `/my-queue`.
+
+## DEC-030 — F-03 read and UI details (10 November 2026) — pending team sign-off
+
+- User authorized F-03 implementation on its existing branch. Follow the committed
+  F-03 scope and `features/f03-my-ticket-implementation-contract.md` addendum.
+- My Ticket endpoints are CUSTOMER-only (Host 403); detail queries include owner
+  ID and return generic 404 for foreign, absent or malformed ticket IDs.
+- Active reads include WAITING/CALLED across service dates and inactive queues;
+  COMPLETED remains available by owned detail URL without a history-list feature.
+- Owned read summaries add queue/restaurant names and restaurant timezone; dates
+  use YYYY-MM-DD. Manual refresh loads persisted status; no ETA or polling.
+- Join now redirects to `/my-queue`; no F-04/S2 mutations are introduced.

@@ -60,6 +60,9 @@ Implementation details and error-code choices (DEC-029):
 
 **Depends on:** F-01, F-02. **FR:** FR-005, FR-010. **BR:** BR-007.
 
+Read DTO, role/error behavior and implementation checks (DEC-030):
+[`f03-my-ticket-implementation-contract.md`](f03-my-ticket-implementation-contract.md).
+
 **Feature SDS / workflow:** Customer opens `/my-queue` and sees own active queue ticket; if no active entry, show Join button. Direct ticket endpoint checks owner before return. After completed, entry moves to history (S1 ticket detail still accessible to its owner). No email/identity in public status.
 
 **UI:** status card + empty/error states. **API:** `GET /me/queue-entries/active`, `GET /me/queue-entries/{entryId}`. **Data:** queue_entries customer relation.

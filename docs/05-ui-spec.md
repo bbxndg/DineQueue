@@ -41,6 +41,13 @@ Inputs: Queue (seeded/readonly if only one); Party size control (1–16). Summar
 
 Fields: large human-readable ticket number, party size, current status, created/joined timestamp, selected queue. Optionally show **now called ticket** from privacy-safe data; must not expose names. For status WAITING show a waiting badge; CALLED show prominent 'Please go to the counter'; COMPLETED show 'Your waitlist service has finished'. Sprint 2 adds customer Cancel if WAITING.
 
+F-03 implements explicit Refresh status (no automatic refresh/ETA), queue and
+restaurant labels, joined time in the labelled restaurant timezone, and an empty
+state with Join Waitlist. `/my-queue/{entryId}` is an owner-only detail bookmark,
+including COMPLETED; inaccessible details show generic not-found feedback.
+Successful join navigates to `/my-queue`; duplicate feedback offers View My Ticket.
+Now-called public data and history listing remain outside F-03.
+
 ### P-05 `/host/queue` — Host dashboard, Sprint 1
 
 - Queue selector restricted to authorized queues; Sprint 1 only one.

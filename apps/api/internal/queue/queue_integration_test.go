@@ -462,7 +462,7 @@ func TestF03CrossUserPrivacy(t *testing.T) {
 		t.Errorf("T-021 guest expected 401, got %d", g.status)
 	}
 
-	// T-008: C2 reads C1 ticket → 404 (privacy via obscurity, not 403)
+	// T-008: owner-scoped authorization denies C2 without revealing C1's ticket.
 	req2 := httptest.NewRequest("GET", "/api/v1/me/queue-entries/"+entryID, nil)
 	req2.AddCookie(&http.Cookie{Name: f.auth.CookieName, Value: session(t, f, customer2)})
 	if other := send(t, f, req2); other.status != 404 {

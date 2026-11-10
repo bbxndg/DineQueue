@@ -25,16 +25,20 @@ test('T-010 Customer joins the waitlist and sees a WAITING ticket', async ({ pag
   const response = await created;
   expect(response.status()).toBe(201);
   const body = await response.json();
+  await expect(page).toHaveURL(/\/my-queue$/);
   await expect(page.getByTestId('ticket-code')).toHaveText(body.ticketCode);
   expect(body.ticketCode).toMatch(/^A-\d{3,}$/);
   await expect(page.getByTestId('ticket-status')).toHaveText('WAITING');
   expect(body.partySize).toBe(10);
 
   // A second join from the UI is rejected by the backend with a visible banner.
-  await page.reload();
+  await page.goto('/join');
   await page.getByLabel('Party size', { exact: true }).fill('2');
   await page.getByRole('button', { name: 'Join waitlist', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'You already have an active ticket for this queue.' })).toBeVisible();
+  await page.getByRole('link', { name: 'View My Ticket' }).click();
+  await expect(page).toHaveURL(/\/my-queue$/);
+  await expect(page.getByTestId('ticket-code')).toHaveText(body.ticketCode);
 });
 
 test('T-017 Host is redirected away from the join page', async ({ page }) => {

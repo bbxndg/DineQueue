@@ -27,6 +27,8 @@ func (h *HTTP) Register(router fiber.Router) {
 	meGroup := router.Group("/api/v1/me", deadline, h.auth.Authenticate, h.auth.RequireRole("CUSTOMER"))
 	meGroup.Get("/queue-entries/active", h.listActiveEntries)
 	meGroup.Get("/queue-entries/:entryId", h.getEntry)
+
+	h.registerHost(router)
 }
 
 func deadline(c fiber.Ctx) error {

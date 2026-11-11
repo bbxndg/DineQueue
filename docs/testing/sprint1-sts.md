@@ -3,11 +3,14 @@
 **Version:** DQ-STS-S1-1.2. F-01 has local execution evidence in
 [`f01-auth-results.md`](f01-auth-results.md); F-02 has local worktree evidence in
 [`f02-join-results.md`](f02-join-results.md) (T-009, T-011..017, T-034, T-036 and the
-join part of T-010); F-03..F-04, including legacy F-05 completion, remain planned/not run. DEC-028 groups S1 into four parent features;
+join part of T-010); F-03 has local worktree evidence in
+[`f03-my-ticket-results.md`](f03-my-ticket-results.md), covering T-008/T-010/T-018..021/T-035.
+F-04, including legacy F-05 completion, remains planned/not run. DEC-028 groups S1 into four parent features;
 all T-001..041 and AC IDs are retained. Completion checks T-028..033 now belong
 to F-04's completion workflow (legacy F-05).
-T-005..008 currently have reusable-guard checks only: their real queue/ticket
-endpoint tests require F-02..04. Do not count test-only routes as shipped endpoints.
+T-005 has a real join endpoint check and T-008 a real owner-scoped detail check;
+the Host endpoint checks T-006/T-007 still require F-04. Do not count test-only
+routes as shipped endpoints.
 
 **Framework plan:** Go `testing`/`httptest` + Fiber test client + real isolated PostgreSQL via GORM; Playwright for selected browser journeys.
 
@@ -19,6 +22,10 @@ endpoint tests require F-02..04. Do not count test-only routes as shipped endpoi
 - Migrations applied freshly; deterministic fixture with restaurant R1, queue Q1 and queue Q2 (Q2 for access-negative tests), Customers C1/C2 (plus 18 more for concurrency), assigned Hosts H1/H3 (Q1) and unassigned-to-Q1 Host H2 (Q2).
 - Use a fixed/injected clock for local business date boundaries and predictable FIFO timestamps; reset tables/transactions between cases.
 - E2E uses clean seeded demo accounts, no external API/payment services.
+- F-03 browser stored-state/read-error tests require psql and TEST_DATABASE_URL
+  for the same disposable seeded API database. They create/remove a fixture
+  customer, write lifecycle fixtures and temporarily rename/restore queue_entries.
+  Use one worker; these tests must not run against a shared or live database.
 - For concurrency tests send requests truly in parallel to **real database transactions**, not only mock service calls.
 
 ## 2. Test case catalog
@@ -100,7 +107,8 @@ Every test must record **actual** command, git commit, result, run date and link
 
 The table above describes the remaining whole-Sprint product verification plan.
 Actual F-01 commands/results, including foundation regression, are recorded in
-`f01-auth-results.md`; do not interpret this table as a status for all repository tests.
+`f01-auth-results.md`, `f02-join-results.md` and `f03-my-ticket-results.md`;
+do not interpret this table as a status for all repository tests.
 
 ## 5. Test-result evidence template
 

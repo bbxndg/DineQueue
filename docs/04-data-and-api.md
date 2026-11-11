@@ -259,8 +259,16 @@ No credentialed CORS is enabled. The frontend uses same-origin auth rewrites.
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|
 | POST | `/queues/{queueId}/entries` | `{ "partySize": 4 }` | 201 entry summary | 400,401,403,404,409 |
-| GET | `/me/queue-entries/active` | none | 200 list of own active entries (0 or 1 per queue) | 401 |
-| GET | `/me/queue-entries/{entryId}` | none | 200 own detail | 401,404 |
+| GET | `/me/queue-entries/active` | none | 200 `{entries:[...]}` own WAITING/CALLED entries (0 or 1 per queue) | 401,403 |
+| GET | `/me/queue-entries/{entryId}` | none | 200 own detail, including COMPLETED | 401,403,404 |
+
+Both read endpoints require CUSTOMER at HTTP and service layers (DEC-030).
+Read summaries contain the seven entry-summary fields below plus `queueName`,
+`restaurantName` and `timezone`. `serviceDate` is YYYY-MM-DD, `joinedAt` UTC;
+no customer identity or staff audit fields are returned. Active entries include
+prior business dates and inactive queues, ordered `(joined_at,id)`; detail queries
+bind both owner and entry ID. Malformed, missing and foreign ticket IDs produce
+the same 404 `NOT_FOUND` response. All private reads are `Cache-Control: no-store`.
 
 Example 201 response:
 

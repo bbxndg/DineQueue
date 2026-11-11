@@ -24,7 +24,7 @@ func (h *HTTP) Register(router fiber.Router) {
 	group.Get("/", h.list)
 	group.Post("/:queueId/entries", h.auth.CSRF, h.auth.RequireRole("CUSTOMER"), h.join)
 
-	meGroup := router.Group("/api/v1/me", deadline, h.auth.Authenticate)
+	meGroup := router.Group("/api/v1/me", deadline, h.auth.Authenticate, h.auth.RequireRole("CUSTOMER"))
 	meGroup.Get("/queue-entries/active", h.listActiveEntries)
 	meGroup.Get("/queue-entries/:entryId", h.getEntry)
 }
@@ -87,6 +87,9 @@ func (h *HTTP) listActiveEntries(c fiber.Ctx) error {
 		return failure(c, 401, "UNAUTHENTICATED", "Please sign in.")
 	}
 	entries, err := h.service.ActiveEntries(c.Context(), user)
+	if errors.Is(err, auth.ErrForbidden) {
+		return failure(c, 403, "FORBIDDEN", "Access denied.")
+	}
 	if err != nil {
 		return err
 	}
@@ -104,6 +107,8 @@ func (h *HTTP) getEntry(c fiber.Ctx) error {
 		return c.JSON(entry)
 	case errors.Is(err, ErrNotFound):
 		return failure(c, 404, "NOT_FOUND", "Resource not found.")
+	case errors.Is(err, auth.ErrForbidden):
+		return failure(c, 403, "FORBIDDEN", "Access denied.")
 	}
 	return err
 }

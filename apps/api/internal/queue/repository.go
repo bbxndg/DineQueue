@@ -71,26 +71,40 @@ RETURNING last_number`, queueID, serviceDate).Scan(&next).Error
 }
 
 type entryDetail struct {
-	entryRow
-	TicketPrefix string
+	ID             string
+	QueueID        string
+	ServiceDate    string
+	SequenceNumber int
+	PartySize      int
+	Status         string
+	JoinedAt       time.Time
+	TicketPrefix   string
+	QueueName      string
+	RestaurantName string
+	Timezone       string
 }
+
+// Explicit read projection: no customer/session/staff identity is loaded.
+const ticketProjection = `SELECT e.id, e.queue_id, e.service_date::text AS service_date,
+e.sequence_number, e.party_size, e.status, e.joined_at, q.ticket_prefix,
+q.name AS queue_name, r.name AS restaurant_name, r.timezone
+FROM queue_entries AS e JOIN service_queues AS q ON q.id = e.queue_id
+JOIN restaurants AS r ON r.id = q.restaurant_id`
 
 // activeEntries returns all WAITING/CALLED entries for the given customer across queues.
 func (r *Repository) activeEntries(ctx context.Context, customerID string) ([]entryDetail, error) {
 	var rows []entryDetail
-	err := r.db.WithContext(ctx).Raw(`SELECT e.id, e.queue_id, e.customer_id, e.service_date, e.sequence_number, e.party_size, e.status, e.joined_at, q.ticket_prefix
-FROM queue_entries AS e JOIN service_queues AS q ON q.id = e.queue_id
+	err := r.db.WithContext(ctx).Raw(ticketProjection+`
 WHERE e.customer_id = ? AND e.status IN ('WAITING','CALLED')
-ORDER BY e.joined_at`, customerID).Scan(&rows).Error
+ORDER BY e.joined_at, e.id`, customerID).Scan(&rows).Error
 	return rows, err
 }
 
-// entryByID returns entry with its queue ticket_prefix; returns ErrNotFound if no row matches.
-func (r *Repository) entryByID(ctx context.Context, entryID string) (entryDetail, error) {
+// ownedEntryByID scopes ownership in SQL, including for completed tickets.
+func (r *Repository) ownedEntryByID(ctx context.Context, customerID, entryID string) (entryDetail, error) {
 	var rows []entryDetail
-	err := r.db.WithContext(ctx).Raw(`SELECT e.id, e.queue_id, e.customer_id, e.service_date, e.sequence_number, e.party_size, e.status, e.joined_at, q.ticket_prefix
-FROM queue_entries AS e JOIN service_queues AS q ON q.id = e.queue_id
-WHERE e.id = ?`, entryID).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Raw(ticketProjection+`
+WHERE e.customer_id = ? AND e.id = ?`, customerID, entryID).Scan(&rows).Error
 	if err != nil {
 		return entryDetail{}, err
 	}

@@ -1,7 +1,7 @@
 # DineQueue v2 — Restaurant Waitlist, Floor & Seating Operations
 
 > **Engineering Package v2.0 — Current project baseline, clarified 6 November 2026.**
-> **F-01 authentication is implemented on its feature branch, pending review.** Queue workflows remain unimplemented;
+> **F-01 authentication and F-02 join are present; F-03 My Ticket is implemented on its feature branch.** Host queue operations remain unimplemented;
 > local checks are recorded separately below. No instructor approval, product acceptance,
 > deployment or release is claimed.
 > Grounded on CPE 334 `group_work_specs_v1.pdf` (15 pages, issued 6 Oct 2026, itself marked *Draft for instructor review*); Domain-specific table algorithms, seat limits, screens, schemas and Go Fiber are **proposed project decisions**, not requirements imposed by the PDF.
@@ -12,10 +12,13 @@
 - Sprint 1: **4 parent features, F-01..F-04**, two core roles (`CUSTOMER`, `HOST`), manual waitlist completion. F-04 Host Queue Operations includes Complete (legacy F-05).
 - Sprint 2 design: approved connected sets of **1–3 tables**, atomic hold/call/seat,
   no-show, whole-group checkout and cleaning. These workflows are not implemented.
-- Present source: repository foundation + F-01 login/logout/me, secure sessions, reusable
-  backend guards and authenticated UI shells. F-02..F-04, including legacy F-05 completion, remain unimplemented.
-  See [F-01 execution evidence](docs/testing/f01-auth-results.md) for scope and pending
-  real queue/ticket endpoint tests. User-authorized DEC-028 groups Sprint 1 into four
+- Present source: repository foundation + F-01 login/logout/me, secure sessions,
+  F-02 join/ticket issuance and F-03 own-ticket reads, privacy and My Ticket UI.
+  F-04, including legacy F-05 completion, remains unimplemented.
+  See [F-01 evidence](docs/testing/f01-auth-results.md),
+  [F-02 evidence](docs/testing/f02-join-results.md) and
+  [F-03 evidence](docs/testing/f03-my-ticket-results.md) for actual checks and limits.
+  User-authorized DEC-028 groups Sprint 1 into four
   parent features while preserving F-05, FR/BR, AC and test IDs for traceability.
 - Git repository initialized on `main`, with `origin` connected to
   `https://github.com/bbxndg/DineQueue.git`. Commits import existing work as of
@@ -82,7 +85,10 @@ Official Fiber v3 docs currently say Go 1.26+ is required. Framework selection i
 
 ## Important caveats
 
-- F-01 has local execution evidence; actual queue/ticket tests T-005..036 and S2 tests remain pending. Test-only guard equivalents are not shipped queue endpoints. Later feature specifications and unresolved domain decisions remain **PROPOSED / PENDING** unless team/TA signs off.
+- F-01/F-02 execution evidence is linked under `docs/testing`; F-03 checks and limits
+  are recorded in [My Ticket evidence](docs/testing/f03-my-ticket-results.md).
+  F-04 Host operations and S2 tests remain pending. Test-only guard equivalents
+  are not shipped Host endpoints. Unresolved domain decisions remain **PROPOSED / PENDING** unless team/TA signs off.
 - Sprint 1 minimum is deliberately preserved, with a versioned boundary change from max party 8 to 16. Do not silently backdate commits or claim previous tests had already validated 10 guests.
 - Matching is a deterministic heuristic, not an ML model and not guaranteed globally optimal. Floor adjacency must be manager-approved, not inferred from CSS coordinates.
 - If advanced scope threatens deadlines, prioritize strict S1 flow then S2 atomic combined-table seating with true DB tests; defer decorative maps, ML ETA, public display or floor editing before dropping engineering correctness.
@@ -104,6 +110,7 @@ apps/api/internal/health/           bounded readiness service
 apps/api/internal/transport/http/   health handlers and generic errors
 apps/api/internal/platform/         validated config and GORM adapter
 apps/api/internal/auth/             password/session service, repository and HTTP guards
+apps/api/internal/queue/            join and owner-scoped ticket reads (F-02/F-03)
 apps/api/cmd/db/                    explicit migrate/seed CLI
 apps/api/db/migrations/             versioned SQL migrations (F-01 schema)
 ```
@@ -154,7 +161,7 @@ npm run dev
 `API_INTERNAL_URL` is server-only and defaults to `http://127.0.0.1:8080` for host web
 development; Compose sets `http://api:8080`. Production builds bake Next.js rewrites
 using the build-time value, so rebuild when changing it. No database/session secret
-belongs in `NEXT_PUBLIC_*`. Only explicit health/auth paths are proxied; F-01 uses
+belongs in `NEXT_PUBLIC_*`. Only explicit health/auth/queue/ticket paths are proxied; the UI uses
 same-origin browser requests. No credentialed cross-origin CORS is enabled.
 
 From `apps/api`, with Go on PATH:
@@ -224,5 +231,13 @@ Browser checks require `npm ci --ignore-scripts`, the pinned Playwright Chromium
 (`npx playwright install chromium`), a built/running web/API and isolated demo seed.
 Set F01_BASE_URL to that web origin and F01_TEST_PASSWORD to the password used for
 all four isolated test accounts, then run `npm run test:e2e --workspace @dinequeue/web`.
+F-03 stored-state/error-recovery browser tests also require `psql` on PATH and
+`TEST_DATABASE_URL` pointing to the **same disposable seeded DB as the API**.
+They create/remove a temporary customer and briefly rename the ticket table to
+test a real read failure; use one worker as configured, never a shared/live DB.
 Never use live accounts. Reports stay under /tmp; traces/video are disabled to avoid
-recording credential-bearing requests. Product queue E2E comes with later features.
+recording credential-bearing requests. F-02/F-03 browser checks use the same fresh
+seeded environment. Customer home links to Join Waitlist and My Ticket; joining
+redirects to `/my-queue`. Refresh status loads persisted WAITING/CALLED entries.
+Owners may bookmark `/my-queue/{entryId}` for details, including COMPLETED.
+F-03 does not add Host transitions, cancellation, history listing or ETA.

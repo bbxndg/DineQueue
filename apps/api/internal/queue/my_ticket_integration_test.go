@@ -173,14 +173,30 @@ func TestF03ActiveAcrossQueuesHasStableOrderAndNoCache(t *testing.T) {
 	if first.status != 201 || second.status != 201 {
 		t.Fatal("multi-queue setup failed")
 	}
+	queue3 := uuid.NewString()
+	if err := f.db.Exec("INSERT INTO service_queues(id,restaurant_id,name,ticket_prefix,is_active) SELECT ?,restaurant_id,'Earlier queue','C',true FROM service_queues WHERE id=?", queue3, auth.DemoQueueID).Error; err != nil {
+		t.Fatal(err)
+	}
+	f.service.now = func() time.Time { return joined.Add(-time.Minute) }
+	earlier := join(t, f, queue3, `{"partySize":2}`, token, true)
+	if earlier.status != 201 {
+		t.Fatalf("earlier ticket setup failed: %d %v", earlier.status, earlier.body)
+	}
+	// The oldest ticket sorts last by ID, so ID-only ordering cannot satisfy this test.
+	earliestID := "ffffffff-ffff-ffff-ffff-ffffffffffff"
+	update := f.db.Exec("UPDATE queue_entries SET id=? WHERE id=?", earliestID, earlier.body["id"])
+	if update.Error != nil || update.RowsAffected != 1 {
+		t.Fatalf("earlier ID fixture: rows=%d error=%v", update.RowsAffected, update.Error)
+	}
 	entries := activeTickets(t, getTicket(t, f, "active", token))
 	ids := []string{first.body["id"].(string), second.body["id"].(string)}
 	sort.Strings(ids)
-	if len(entries) != 2 {
+	expectedIDs := append([]string{earliestID}, ids...)
+	if len(entries) != len(expectedIDs) {
 		t.Fatal("missing own queue")
 	}
 	for i, entry := range entries {
-		if entry.(map[string]any)["id"] != ids[i] {
+		if entry.(map[string]any)["id"] != expectedIDs[i] {
 			t.Fatal("unstable joined_at/id ordering")
 		}
 	}

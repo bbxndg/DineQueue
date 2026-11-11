@@ -46,6 +46,21 @@ test('F-03 stored status refresh, completed detail and real read-error retry', a
     await page.getByRole('button', { name: 'Refresh status', exact: true }).click();
     await expect(page.getByTestId('ticket-status')).toHaveText('CALLED');
     await expect(page.getByText('Your ticket has been called. Please go to the counter.', { exact: true })).toBeVisible();
+
+    // The active-list error must not masquerade as an empty list or a stale card.
+    fixtureSQL('ALTER TABLE queue_entries RENAME TO f03_temporarily_unavailable;');
+    renamed = true;
+    await page.getByRole('button', { name: 'Refresh status', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'We cannot load your ticket right now' })).toBeVisible();
+    await expect(page.getByText('You do not have an active ticket.', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('ticket-code')).toHaveCount(0);
+    fixtureSQL('ALTER TABLE f03_temporarily_unavailable RENAME TO queue_entries;');
+    renamed = false;
+    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(page).toHaveURL(/\/my-queue$/);
+    await expect(page.getByTestId('ticket-code')).toHaveText(ticket.ticketCode);
+    await expect(page.getByTestId('ticket-status')).toHaveText('CALLED');
+
     fixtureSQL(`UPDATE queue_entries SET status='COMPLETED',completed_at=now(),completed_by='${host}' WHERE customer_id='${customer}';`);
     await page.getByRole('button', { name: 'Refresh status', exact: true }).click();
     await expect(page.getByRole('status')).toContainText('You do not have an active ticket.');
@@ -62,6 +77,7 @@ test('F-03 stored status refresh, completed detail and real read-error retry', a
     fixtureSQL('ALTER TABLE f03_temporarily_unavailable RENAME TO queue_entries;');
     renamed = false;
     await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(page.getByTestId('ticket-code')).toHaveText(ticket.ticketCode);
     await expect(page.getByTestId('ticket-status')).toHaveText('COMPLETED');
   } finally {
     if (renamed) fixtureSQL('ALTER TABLE f03_temporarily_unavailable RENAME TO queue_entries;');

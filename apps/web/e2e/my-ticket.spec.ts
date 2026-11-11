@@ -62,6 +62,20 @@ test('T-010/018/019/020 My Ticket empty, join, persisted reload and cross-user p
   expect((await page.request.get(`/api/v1/me/queue-entries/${ticket.id}`)).status()).toBe(401);
   await page.goto(`/my-queue/${ticket.id}`);
   await expect(page).toHaveURL(/\/login$/);
+
+  // Reuse the same page/context: Customer 1's cached ticket must not survive login as C2.
+  await signIn(page, 'customer2@example.test');
+  await page.getByRole('link', { name: 'My Ticket', exact: true }).click();
+  await expect(page).toHaveURL(/\/my-queue$/);
+  const ownActive = await page.request.get('/api/v1/me/queue-entries/active');
+  expect(ownActive.status()).toBe(200);
+  const ownEntries: { id: string; ticketCode: string }[] = (await ownActive.json()).entries;
+  expect(ownEntries.some(entry => entry.id === ticket.id)).toBe(false);
+  await expect(page.getByTestId('ticket-code')).toHaveText(ownEntries.map(entry => entry.ticketCode));
+  await expect(page.locator(`a[href="/my-queue/${ticket.id}"]`)).toHaveCount(0);
+  await page.goto(`/my-queue/${ticket.id}`);
+  await expect(page.getByRole('heading', { name: 'Ticket not found' })).toBeVisible();
+  await expect(page.getByTestId('ticket-code')).toHaveCount(0);
 });
 
 test('T-021 My Ticket requires a session and redirects Hosts', async ({ page, context }) => {

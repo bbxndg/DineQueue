@@ -88,3 +88,43 @@ Temporary local logs are evidence for this session, not retained CI artifacts.
 CALLED/COMPLETED setup uses direct test-only SQL, not F-04 endpoints. These checks
 do not establish that Host Call Next/Complete exists. No history listing, rank,
 ETA, public display or cancellation has been added.
+
+## PR #4 review follow-up — 11 November 2026
+
+Source: base HEAD `9452aa3` plus the uncommitted review-test worktree on
+`feat/F-03-my-ticket-privacy`. The user authorized addressing the teammate's
+comments. The reviews are COMMENTED, not approval. At execution time no commit,
+push, review reply or thread resolution had been performed for this follow-up.
+The user subsequently requested two commits; the checks below precede them.
+
+| Review | Change |
+|---|---|
+| [Active-list read-error coverage](https://github.com/bbxndg/DineQueue/pull/4#discussion_r4526735585) | Extend `e2e/ticket-states.spec.ts` to fail the actual DB read on `/my-queue` while the ticket is CALLED. Assert error, no empty-state message and no stale card; restore DB and retry to recover the original code/status. Retain the existing COMPLETED detail recovery check |
+| [Primary timestamp ordering](https://github.com/bbxndg/DineQueue/pull/4#discussion_r4527139743) | Extend `TestF03ActiveAcrossQueuesHasStableOrderAndNoCache` with an earlier ticket in a third queue. Its ID sorts last, so ID-only sorting fails. Assert oldest-first ordering followed by the original equal-time ID tie-breaker |
+| [Same-context account switch](https://github.com/bbxndg/DineQueue/pull/4#pullrequestreview-5844358057) | Extend the My Ticket browser journey: sign out C1, sign in C2 using the same page/context, navigate via My Ticket, compare rendered tickets with C2's active API response, exclude C1's detail link and deny C1's bookmarked detail |
+
+Actual execution on 11 November, around 17:11 Asia/Bangkok:
+
+| Command / check | Result |
+|---|---|
+| `go test -tags=integration -race -count=1 -v -run TestF03 ./internal/queue` | PASS: six F-03 integration tests on real isolated PostgreSQL, no race report |
+| Playwright suite via temporary local Chrome config | PASS: all 12 browser tests, including the extended active/error/account-switch cases and existing F-01/F-02 regression |
+| `npm run lint` | PASS |
+| `npm run typecheck` | PASS |
+| Fresh compiled API/db commands, migration and seed | PASS |
+| Actual API process restart without DB reset (T-035) | PASS: same session retrieves the same active ticket |
+| API/web log scan and cleanup | Generated test passwords absent; processes stopped and disposable cluster removed |
+
+The temporary harness command was
+`python3 /tmp/dineq-f03-check.py --red --browser`; its historical `--red` option
+selects the focused F-03 tests and does **not** mean a failing result was expected
+or observed in this follow-up. Log: `/tmp/dineq-f03-review.log`.
+The first permission-review attempt timed out before execution; the authorized
+retry completed successfully. No product failure is inferred from that timeout.
+
+Changes are tests and documentation only. No product behavior, dependency,
+migration, feature scope or acceptance rule changed. Existing production Next.js
+build was reused because application source was unchanged; it was not rebuilt
+here. The earlier full 38-test Go run, vet, module verification and build results
+remain dated above and are not claimed as rerun in this follow-up. The same local
+Go/PostgreSQL/Chrome environment and Docker/CI/deployment limits apply.

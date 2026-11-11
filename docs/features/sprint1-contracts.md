@@ -79,6 +79,9 @@ Read DTO, role/error behavior and implementation checks (DEC-030):
 
 **Depends on:** F-01, F-02. **FR:** FR-006, FR-007, FR-008, FR-009. **BR:** BR-003, BR-004, BR-005, BR-006.
 
+Implementation details and error-code choices (DEC-031):
+[`f04-host-queue-implementation-contract.md`](f04-host-queue-implementation-contract.md).
+
 This is one parent feature with two workflows. Complete retains legacy ID F-05
 for traceability; it has no separate parent feature or feature branch. Both
 workflows must satisfy their existing acceptance criteria for F-04 to be complete.

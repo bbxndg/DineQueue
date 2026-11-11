@@ -5,11 +5,12 @@
 [`f02-join-results.md`](f02-join-results.md) (T-009, T-011..017, T-034, T-036 and the
 join part of T-010); F-03 has local worktree evidence in
 [`f03-my-ticket-results.md`](f03-my-ticket-results.md), covering T-008/T-010/T-018..021/T-035.
-F-04, including legacy F-05 completion, remains planned/not run. DEC-028 groups S1 into four parent features;
+F-04, including legacy F-05 completion, has local worktree evidence in
+[`f04-host-queue-results.md`](f04-host-queue-results.md) (T-005..007 Host endpoints, T-022..033). DEC-028 groups S1 into four parent features;
 all T-001..041 and AC IDs are retained. Completion checks T-028..033 now belong
 to F-04's completion workflow (legacy F-05).
-T-005 has a real join endpoint check and T-008 a real owner-scoped detail check;
-the Host endpoint checks T-006/T-007 still require F-04. Do not count test-only
+T-005 has real join and Host endpoint checks, T-006/T-007 real Host endpoint checks
+(F-04) and T-008 a real owner-scoped detail check. Do not count test-only
 routes as shipped endpoints.
 
 **Framework plan:** Go `testing`/`httptest` + Fiber test client + real isolated PostgreSQL via GORM; Playwright for selected browser journeys.

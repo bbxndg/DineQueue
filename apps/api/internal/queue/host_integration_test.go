@@ -5,7 +5,6 @@ package queue
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -309,7 +308,9 @@ func TestF04AccessControl(t *testing.T) {
 		t.Fatalf("rejected requests changed entry %+v", state)
 	}
 	// A grant that is revoked takes effect on the next request.
-	f.db.Exec("DELETE FROM operator_queue_permissions WHERE user_id = ?", host)
+	if result := f.db.Exec("DELETE FROM operator_queue_permissions WHERE user_id = ?", host); result.Error != nil || result.RowsAffected != 1 {
+		t.Fatalf("revoke grant fixture: %v rows=%d", result.Error, result.RowsAffected)
+	}
 	if r := hostCall(t, f, "POST", hostPath(auth.DemoQueueID, "/call-next"), assigned, true); r.status != 403 {
 		t.Errorf("revoked grant %d", r.status)
 	}
@@ -389,8 +390,12 @@ func TestF04InvalidCompletion(t *testing.T) {
 	}
 	// An entry from another queue is not reachable through this queue's path.
 	otherQueue := uuid.NewString()
-	f.db.Exec("INSERT INTO service_queues(id,restaurant_id,name,ticket_prefix) VALUES (?,?,?,?)", otherQueue, "30000000-0000-4000-8000-000000000001", "Patio", "B")
-	f.db.Exec("INSERT INTO operator_queue_permissions(user_id,queue_id) VALUES (?,?)", host, otherQueue)
+	if err := f.db.Exec("INSERT INTO service_queues(id,restaurant_id,name,ticket_prefix) VALUES (?,?,?,?)", otherQueue, "30000000-0000-4000-8000-000000000001", "Patio", "B").Error; err != nil {
+		t.Fatalf("second queue fixture: %v", err)
+	}
+	if err := f.db.Exec("INSERT INTO operator_queue_permissions(user_id,queue_id) VALUES (?,?)", host, otherQueue).Error; err != nil {
+		t.Fatalf("second queue grant fixture: %v", err)
+	}
 	foreign := waitingEntry(t, f, otherQueue, 1, time.Now().UTC().Add(-time.Minute))
 	if r := hostCall(t, f, "POST", hostPath(otherQueue, "/call-next"), token, true); r.status != 200 || r.body["id"] != foreign {
 		t.Fatalf("other queue call %d %v", r.status, r.body)
@@ -400,6 +405,22 @@ func TestF04InvalidCompletion(t *testing.T) {
 	}
 	if entryState(t, f, foreign).Status != "CALLED" || entryState(t, f, a2.body["id"].(string)).Status != "WAITING" {
 		t.Fatal("cross-queue complete changed data")
+	}
+}
+
+// A malformed entry ID is rejected before the transaction, so it never waits on
+// (or holds) the queue row lock that Call Next and Complete share.
+func TestF04MalformedEntryDoesNotTakeQueueLock(t *testing.T) {
+	f := setup(t)
+	holder := f.db.Begin()
+	defer holder.Rollback()
+	if err := holder.Exec("SELECT id FROM service_queues WHERE id = ? FOR UPDATE", auth.DemoQueueID).Error; err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if _, err := f.service.Complete(ctx, auth.User{ID: host, Role: "HOST"}, auth.DemoQueueID, "not-a-uuid"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("malformed entry while queue is locked: %v, want ErrNotFound without waiting", err)
 	}
 }
 
@@ -431,6 +452,6 @@ func TestF04ConcurrentCompleteSucceedsOnce(t *testing.T) {
 		}
 	}
 	if ok != 1 || entryState(t, f, a1.body["id"].(string)).Version != 3 {
-		t.Fatal(fmt.Sprintf("parallel complete ok=%d", ok))
+		t.Fatalf("parallel complete ok=%d", ok)
 	}
 }

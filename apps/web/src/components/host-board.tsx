@@ -28,7 +28,9 @@ export function HostBoard({ queueId, timezone, csrfToken, current, waiting }: {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const time = new Intl.DateTimeFormat('en-GB', { timeStyle: 'short', timeZone: timezone });
+  // FIFO spans service dates, so show the date too: a leftover ticket from an
+  // earlier day must not look like a recent one.
+  const time = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone });
   const busy = pending || refreshing;
 
   async function mutate(path: string, success: (entry: Entry) => string) {

@@ -70,3 +70,22 @@ integration, deployment, commit or push had been performed when these checks ran
   against a disposable seeded database only.
 - Logs were kept in the session scratchpad; the temporary cluster, servers and
   Playwright config were removed after the run.
+
+## PR review follow-up — 12 November 2026
+
+Base: committed F-04 branch HEAD `953a925` plus uncommitted review fixes. Same local
+environment as above (fresh disposable PostgreSQL 18.1 cluster and seeded database).
+
+| Review point | Change | Fail-first evidence |
+|---|---|---|
+| Malformed `entryId` was validated after the queue lock | `Complete` checks role and both IDs before opening the transaction | `TestF04MalformedEntryDoesNotTakeQueueLock` (queue row held by another transaction): before fix waited 2 s and failed with `context deadline exceeded`; after fix returns `ErrNotFound` immediately |
+| Host handlers ignored `auth.Identity` `ok` | All five Host handlers return 401 `UNAUTHENTICATED` without an identity, like the other queue handlers | `TestHostHandlersRequireIdentity` (unit, no DB): before fix panicked when an empty identity reached the service; after fix 401 on all five routes |
+| Test fixture writes ignored errors | Second-queue insert, its grant and the grant revocation now fail fast (revocation also requires one affected row); `t.Fatal(fmt.Sprintf(...))` → `t.Fatalf` | Test-only change |
+| Board showed time only | Host board shows date and time in the restaurant timezone | Covered by browser run below (no assertion on time text) |
+
+| Command / check | Actual result |
+|---|---|
+| `go test -tags=integration -count=1 -v ./...` (14:56 +07) | **PASS: 48 top-level tests, 0 failures** |
+| `go test -count=1 ./...`, `go vet` (with and without tag), `go build ./...` | PASS |
+| `npm run lint`, `typecheck`, `test`, `build` | PASS |
+| Playwright on fresh seeded DB (14:57 +07) | **15 PASS** |

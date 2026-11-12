@@ -191,14 +191,18 @@ func (s *Service) CallNext(ctx context.Context, user auth.User, queueID string) 
 
 // Complete finishes the waitlist service for a CALLED entry (BR-004, legacy F-05).
 func (s *Service) Complete(ctx context.Context, user auth.User, queueID, entryID string) (HostEntry, error) {
+	// Reject invalid input before opening a transaction, so it never takes the queue lock.
+	if user.Role != "HOST" {
+		return HostEntry{}, auth.ErrForbidden
+	}
+	if !canonicalID(queueID) || !canonicalID(entryID) {
+		return HostEntry{}, ErrNotFound
+	}
 	var entry HostEntry
 	err := s.repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		repository := NewRepository(tx)
 		if err := lockAuthorizedQueue(ctx, repository, user, queueID); err != nil {
 			return err
-		}
-		if !canonicalID(entryID) {
-			return ErrNotFound
 		}
 		rows, err := repository.entryForUpdate(ctx, queueID, entryID)
 		if err != nil {

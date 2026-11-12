@@ -39,7 +39,10 @@ func hostError(c fiber.Ctx, err error) error {
 func emptyBody(c fiber.Ctx) bool { return len(bytes.TrimSpace(c.Body())) == 0 }
 
 func (h *HTTP) hostQueues(c fiber.Ctx) error {
-	user, _ := auth.Identity(c)
+	user, ok := auth.Identity(c)
+	if !ok {
+		return failure(c, 401, "UNAUTHENTICATED", "Please sign in.")
+	}
 	queues, err := h.service.HostQueues(c.Context(), user)
 	if err != nil {
 		return hostError(c, err)
@@ -51,7 +54,10 @@ func (h *HTTP) waitingEntries(c fiber.Ctx) error {
 	if status := c.Query("status"); status != "" && status != "WAITING" {
 		return failure(c, 400, "VALIDATION_ERROR", "Only status=WAITING is supported.")
 	}
-	user, _ := auth.Identity(c)
+	user, ok := auth.Identity(c)
+	if !ok {
+		return failure(c, 401, "UNAUTHENTICATED", "Please sign in.")
+	}
 	entries, err := h.service.WaitingEntries(c.Context(), user, c.Params("queueId"))
 	if err != nil {
 		return hostError(c, err)
@@ -60,7 +66,10 @@ func (h *HTTP) waitingEntries(c fiber.Ctx) error {
 }
 
 func (h *HTTP) currentEntry(c fiber.Ctx) error {
-	user, _ := auth.Identity(c)
+	user, ok := auth.Identity(c)
+	if !ok {
+		return failure(c, 401, "UNAUTHENTICATED", "Please sign in.")
+	}
 	entry, err := h.service.CurrentEntry(c.Context(), user, c.Params("queueId"))
 	if err != nil {
 		return hostError(c, err)
@@ -72,7 +81,10 @@ func (h *HTTP) callNext(c fiber.Ctx) error {
 	if !emptyBody(c) {
 		return failure(c, 400, "VALIDATION_ERROR", "This request does not take a body.")
 	}
-	user, _ := auth.Identity(c)
+	user, ok := auth.Identity(c)
+	if !ok {
+		return failure(c, 401, "UNAUTHENTICATED", "Please sign in.")
+	}
 	entry, err := h.service.CallNext(c.Context(), user, c.Params("queueId"))
 	if err != nil {
 		return hostError(c, err)
@@ -84,7 +96,10 @@ func (h *HTTP) complete(c fiber.Ctx) error {
 	if !emptyBody(c) {
 		return failure(c, 400, "VALIDATION_ERROR", "This request does not take a body.")
 	}
-	user, _ := auth.Identity(c)
+	user, ok := auth.Identity(c)
+	if !ok {
+		return failure(c, 401, "UNAUTHENTICATED", "Please sign in.")
+	}
 	entry, err := h.service.Complete(c.Context(), user, c.Params("queueId"), c.Params("entryId"))
 	if err != nil {
 		return hostError(c, err)

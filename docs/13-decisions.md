@@ -158,3 +158,20 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
 - Owned read summaries add queue/restaurant names and restaurant timezone; dates
   use YYYY-MM-DD. Manual refresh loads persisted status; no ETA or polling.
 - Join now redirects to `/my-queue`; no F-04/S2 mutations are introduced.
+
+## DEC-031 — F-04 Host queue operation details (11 November 2026) — pending team sign-off
+
+- User authorized F-04 implementation on `feat/F-04-host-queue-operations`. Follow the
+  committed F-04 scope and `features/f04-host-queue-implementation-contract.md`.
+- Added `GET /api/v1/host/queues` (assigned queues only) so the board can find its
+  queue; the documented entries/current/call-next/complete routes are unchanged.
+- Customer → 403; Host without a grant → 403, including an unknown well-formed queue
+  UUID (no existence oracle); malformed queue/entry ID and an entry from another
+  queue → 404. Host mutations take no body (non-empty → 400).
+- Call Next and Complete lock the queue row `FOR UPDATE` first, then recheck the grant
+  in the same transaction; transitions use conditional `WHERE status=...` updates
+  with one-affected-row checks. A `uq_one_called_per_queue` violation maps to 409
+  `CALL_IN_PROGRESS`. Any granted Host may complete a ticket another Host called.
+- Host operations stay allowed on an inactive queue so existing tickets can drain.
+- Board shows ticket code, party size and times only; Complete needs an on-screen
+  confirmation. Manual refresh; no polling, no S2 table assignment.

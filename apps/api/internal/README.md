@@ -6,7 +6,8 @@ services enforce use-case rules, and GORM persistence adapters execute parameter
 The foundation contains health and GORM wiring. F-01 adds `internal/auth` for
 password/session service, repository and HTTP guards, and `cmd/db` for opt-in SQL
 migration/demo seed. F-02 adds `internal/queue` (active queue list and customer join
-with daily ticket allocation); Host operations and ticket reads remain later S1 work. A service must pass one transaction
+with daily ticket allocation), F-03 owner-scoped ticket reads and F-04 Host board,
+Call Next and Complete (queue row lock, grant recheck inside the transaction). A service must pass one transaction
 handle (`tx *gorm.DB`) through every repository call in an atomic business operation; repositories
 must never commit parts of a use case independently.
 

@@ -288,10 +288,16 @@ Example 201 response:
 
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|
-| GET | `/host/queues/{queueId}/entries?status=WAITING` | none | 200 oldest-first rows | 401,403,404 |
-| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null|...}` | 401,403 |
-| POST | `/host/queues/{queueId}/call-next` | none | 200 updated CALLED entry | 401,403,409 |
-| POST | `/host/queues/{queueId}/entries/{entryId}/complete` | none | 200 updated COMPLETED entry | 401,403,404,409 |
+| GET | `/host/queues` | none | 200 `{queues:[{id,name,restaurantName,timezone,isActive}]}` assigned only | 401,403 |
+| GET | `/host/queues/{queueId}/entries?status=WAITING` | none | 200 `{entries:[...]}` oldest first `(joined_at,id)` | 400,401,403,404 |
+| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null|...}` | 401,403,404 |
+| POST | `/host/queues/{queueId}/call-next` | empty body | 200 updated CALLED entry | 400,401,403,404,409 `CALL_IN_PROGRESS`/`QUEUE_EMPTY` |
+| POST | `/host/queues/{queueId}/entries/{entryId}/complete` | empty body | 200 updated COMPLETED entry | 400,401,403,404,409 `INVALID_TRANSITION` |
+
+All paths are under `/api/v1`, require role HOST plus a queue grant (unknown queue
+UUID → 403, malformed ID → 404), and mutations require Origin + CSRF (DEC-031).
+Host entry DTO: `id, queueId, ticketCode, serviceDate, partySize, status, joinedAt,
+calledAt, completedAt`; no customer identity or actor IDs.
 
 **S1 compatibility:** Host's `Complete` confirms party was seated/handled manually, before digital table assignment exists. S2 introduces table-assignment precondition via recorded contract revision.
 

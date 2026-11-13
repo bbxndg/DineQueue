@@ -117,7 +117,7 @@ func (s *Service) Join(ctx context.Context, user auth.User, queueID string, part
 	if partySize < MinPartySize || partySize > MaxPartySize {
 		return Entry{}, ErrValidation
 	}
-	if _, err := uuid.Parse(queueID); err != nil {
+	if !canonicalID(queueID) {
 		return Entry{}, ErrNotFound
 	}
 	var entry Entry

@@ -141,6 +141,10 @@ func (s *Service) RequireQueue(ctx context.Context, user User, queueID string) e
 	if user.Role != "HOST" {
 		return ErrForbidden
 	}
+	// Reject alternate UUID encodings before passing the original path value to SQL.
+	if len(queueID) != 36 {
+		return ErrNotFound
+	}
 	if _, err := uuid.Parse(queueID); err != nil {
 		return ErrNotFound
 	}

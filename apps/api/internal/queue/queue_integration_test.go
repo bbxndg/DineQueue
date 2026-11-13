@@ -244,7 +244,7 @@ func TestF02DuplicateSequentialJoinConflicts(t *testing.T) {
 func TestF02ConcurrentDuplicateJoinCreatesOne(t *testing.T) {
 	f := setup(t)
 	token := session(t, f, customer1)
-	results := make([]reply, 10)
+	results := make([]reply, 20)
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 	for i := range results {
@@ -268,7 +268,7 @@ func TestF02ConcurrentDuplicateJoinCreatesOne(t *testing.T) {
 			t.Errorf("T-014 unexpected %d %v", r.status, r.body)
 		}
 	}
-	if created != 1 || conflicts != 9 || count(t, f, "queue_entries") != 1 {
+	if created != 1 || conflicts != len(results)-1 || count(t, f, "queue_entries") != 1 {
 		t.Fatalf("T-014 created=%d conflicts=%d rows=%d", created, conflicts, count(t, f, "queue_entries"))
 	}
 }

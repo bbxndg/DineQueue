@@ -15,7 +15,7 @@ export default async function JoinPage() {
         <Link href="/" className="text-xl font-semibold tracking-tight text-wine">DineQueue</Link>
         <SignOut csrfToken={session.csrfToken} />
       </header>
-      <section className="max-w-xl py-14" aria-labelledby="join-heading">
+      <section className="min-w-0 max-w-xl py-14" aria-labelledby="join-heading">
         <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-wine">Walk-in waitlist</p>
         <h1 id="join-heading" className="text-3xl font-semibold sm:text-4xl">Join the waitlist</h1>
         <p className="mt-4 leading-relaxed">Tell us how many people are dining. Your ticket number is assigned when you join. We do not promise a wait time.</p>

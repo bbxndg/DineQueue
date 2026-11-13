@@ -57,12 +57,12 @@ export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfTo
     finally { setPending(false); }
   }
 
-  return <form onSubmit={submit} noValidate className="mt-8 grid gap-5" aria-busy={pending}>
+  return <form onSubmit={submit} noValidate className="mt-8 grid min-w-0 gap-5" aria-busy={pending}>
     {queues.length === 1
       ? <p><span className="font-medium">Queue:</span> {queue.name} · {queue.restaurantName}</p>
       : <div className="grid gap-2">
         <label htmlFor="queue" className="font-medium">Queue</label>
-        <select id="queue" value={queueId} onChange={event => setQueueId(event.target.value)} disabled={pending} className="rounded-lg border border-ink/30 bg-white px-4 py-3 focus:outline-2 focus:outline-wine">
+        <select id="queue" value={queueId} onChange={event => setQueueId(event.target.value)} disabled={pending} className="min-w-0 w-full rounded-lg border border-ink/30 bg-white px-4 py-3 focus:outline-2 focus:outline-wine">
           {queues.map(value => <option key={value.id} value={value.id}>{value.name} · {value.restaurantName}</option>)}
         </select>
       </div>}
@@ -70,7 +70,7 @@ export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfTo
       <label htmlFor="partySize" className="font-medium">Party size</label>
       <input id="partySize" name="partySize" type="number" inputMode="numeric" min={MIN} max={MAX} step={1} required
         value={partySize} onChange={event => { setPartySize(event.target.value); if (error) setError(''); }} disabled={pending} aria-describedby="partySizeHelp"
-        className="rounded-lg border border-ink/30 bg-white px-4 py-3 focus:outline-2 focus:outline-wine" />
+        className="min-w-0 w-full rounded-lg border border-ink/30 bg-white px-4 py-3 focus:outline-2 focus:outline-wine" />
       <p id="partySizeHelp" className="text-sm">Whole number from 1 to 16.</p>
     </div>
     {size >= LARGE_PARTY && size <= MAX && <p role="note" className="rounded-lg border border-ink/20 bg-white p-3 text-sm">

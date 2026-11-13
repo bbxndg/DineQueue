@@ -10,25 +10,37 @@ SHA to those runs. Subsequent checks must identify the source version actually t
 
 ## Sprint 1 traceability (complete design mapping)
 
+DEC-028 groups Sprint 1 into four parent features F-01..F-04. F-05 remains the
+legacy completion sub-scope of F-04; all FR/BR, AC and test IDs are retained.
+
+The 13 Nov review worktree based on integrated commit `d7f27a3` has full local
+regression evidence in [Sprint 1 review results](testing/sprint1-review-results.md):
+53 Go tests with race detection and 20 browser tests. Earlier per-feature records
+remain historical evidence. No later commit/merge, CI run or release is implied.
+
 | Requirement / rule | Feature | Sprint | AC IDs | Test IDs | Current status |
 |---|---|---|---|---|---|
-| FR-001 | F-01 | 1 | AC-001..003 | T-001..004 | Planned, not run |
-| FR-002 / NFR-003 | F-01 | 1 | AC-004..005 | T-005..008 | Planned, not run |
-| FR-003 / FR-004 | F-02 | 1 | AC-006..007 | T-009..012 | Planned, not run |
-| FR-009 / BR-001 | F-02 | 1 | AC-008 | T-013,T-014 | Planned, not run |
-| BR-002 / BR-009 / NFR-001 | F-02 | 1 | AC-009 | T-015,T-034 | Planned, not run |
-| BR-008 / FR-023 | F-02 | 1 | AC-007 (+ valid 10) | T-011,T-012,T-036 | Planned, not run |
-| FR-003 inactive/role | F-02 | 1 | AC-010 | T-016,T-017 | Planned, not run |
-| FR-005 | F-03 | 1 | AC-011..012 | T-018..020 | Planned, not run |
-| FR-010 / BR-007 | F-03 | 1 | AC-013 | T-008,T-021 | Planned, not run |
-| FR-006 / BR-003 | F-04 | 1 | AC-014..015 | T-022,T-023 | Planned, not run |
-| FR-007 / BR-005 | F-04 | 1 | AC-016..017 | T-024..026 | Planned, not run |
-| BR-006 | F-04,F-05 | 1 | AC-018,021 | T-027,T-032 | Planned, not run |
-| FR-008 / BR-004 | F-05 | 1 | AC-019..021 | T-028..033 | Planned, not run |
-| FR-011 / NFR-005 | F-02,F-03 | 1 | AC-006,011 | T-010,T-019,T-035 | Planned, not run |
-| NFR-004 | F-01 | 1 | AC-001..004 | T-001..007 plus config review | Planned, not run |
-| NFR-006 | All S1 UI | 1 | AC-011..012,014 | T-010,T-019,T-020 plus manual check | Planned, not run |
-| NFR-009 | All S1 | 1 | AC-001..021 | T-001..035 | Planned, not run |
+| FR-001 | F-01 | 1 | AC-001..003 | T-001..004 | Local API/DB execution; see testing/f01-auth-results.md |
+| FR-002 / NFR-003 | F-01 | 1 | AC-004..005 | T-005..008 | Join (T-005), foreign detail (T-008) and Host endpoints T-005..007 checked; testing/f04-host-queue-results.md |
+| NFR-015 | F-01 | 1 + regression S2/S3 | AC-022 | T-037 | Origin/CSRF starts S1; execution in F-01 results |
+| NFR-004 | F-01 | 1 | AC-023..024 | T-038,039 | Session/hash/rotation/rollback execution in F-01 results |
+| FR-011 / NFR-005 (auth setup) | F-01 prerequisites | 1 | AC-025 | T-040 | Migration/seed idempotency and ticket restart checks executed; review results |
+| FR-001 (browser) | F-01 | 1 | AC-026 | T-041 | Auth browser journey; not queue E2E |
+| FR-003 / FR-004 | F-02 | 1 | AC-006..007 | T-009..012 | F-02 local evidence; full T-010 My Ticket journey checked in F-03 worktree |
+| FR-009 / BR-001 | F-02 | 1 | AC-008 | T-013,T-014 | Local RED→GREEN worktree evidence (f02-join-results.md) |
+| BR-002 / BR-009 / NFR-001 | F-02 | 1 | AC-009 | T-015,T-034 | Local PASS (f02-join-results.md) |
+| BR-008 / FR-023 | F-02 | 1 | AC-007 (+ valid 10) | T-011,T-012,T-036 | Local PASS (f02-join-results.md) |
+| FR-003 inactive/role | F-02 | 1 | AC-010 | T-016,T-017 | Local PASS (f02-join-results.md) |
+| FR-005 | F-03 | 1 | AC-011..012 | T-018..020 | Local API/DB/browser PASS; testing/f03-my-ticket-results.md (uncommitted worktree) |
+| FR-010 / BR-007 | F-03 | 1 | AC-013 | T-008,T-021 | Local owner-scoped API and browser denial PASS; F-03 results |
+| FR-006 / BR-003 | F-04 | 1 | AC-014..015 | T-022,T-023 | Local API/DB PASS (f04-host-queue-results.md, uncommitted worktree) |
+| FR-007 / BR-005 | F-04 | 1 | AC-016..017 | T-024..026 | Local PASS incl. 10-way parallel Call Next (f04-host-queue-results.md) |
+| BR-006 | F-04 (board + completion, legacy F-05) | 1 | AC-018,021 | T-027,T-032 | Local API and browser denial PASS (f04-host-queue-results.md) |
+| FR-008 / BR-004 | F-04 (completion, legacy F-05) | 1 | AC-019..021 | T-028..033 | Local API/DB and browser T-029 PASS (f04-host-queue-results.md) |
+| FR-011 / NFR-005 | F-02,F-03 | 1 | AC-006,011 | T-010,T-019,T-035 | Local reload and actual API restart persistence PASS; F-03 results |
+| NFR-004 | F-01 | 1 | AC-001..004,023..024 | T-001..004,038,039 plus config review | Local auth and real queue endpoint regression executed; review results |
+| NFR-006 | All S1 UI | 1 | AC-011..012,014 | T-010,T-019,T-020 + completion UI cases | Keyboard/labels/status/layout cases at 360/1280px and agent visual review recorded in final completion results; human cross-team UAT remains Lab 6 |
+| NFR-009 | All S1 | 1 | AC-001..026 | T-001..041 + review regression | Local full Go/API/DB/browser suite passed; review results (worktree, no CI claim) |
 
 ## Sprint 2–3 and labs planned traceability
 

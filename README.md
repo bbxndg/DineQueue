@@ -1,18 +1,30 @@
 # DineQueue v2 — Restaurant Waitlist, Floor & Seating Operations
 
 > **Engineering Package v2.0 — Current project baseline, clarified 6 November 2026.**
-> **Product workflows remain unimplemented.** A local Sprint 1 repository foundation now exists;
-> foundation checks are recorded separately below. No instructor approval, product acceptance,
+> **F-01..F-04 are implemented in the Sprint 1 integration baseline**, including Host board, FIFO Call Next and manual Complete;
+> local checks are recorded separately below. No instructor approval, product acceptance,
 > deployment or release is claimed.
 > Grounded on CPE 334 `group_work_specs_v1.pdf` (15 pages, issued 6 Oct 2026, itself marked *Draft for instructor review*); Domain-specific table algorithms, seat limits, screens, schemas and Go Fiber are **proposed project decisions**, not requirements imposed by the PDF.
 
 ## Current v2 baseline and implementation status
 
 - Party size: **1–16**; a physical table seats **1–8**.
-- Sprint 1: F-01..F-05, two core roles (`CUSTOMER`, `HOST`), manual waitlist completion.
+- Sprint 1: **4 parent features, F-01..F-04**, two core roles (`CUSTOMER`, `HOST`), manual waitlist completion. F-04 Host Queue Operations includes Complete (legacy F-05).
 - Sprint 2 design: approved connected sets of **1–3 tables**, atomic hold/call/seat,
   no-show, whole-group checkout and cleaning. These workflows are not implemented.
-- Present source: repository foundation only. **F-01 has not started.**
+- Present source: repository foundation + F-01 login/logout/me, secure sessions,
+  F-02 join/ticket issuance, F-03 own-ticket reads/privacy and F-04 Host board,
+  FIFO Call Next and manual completion (legacy F-05).
+  See [F-01 evidence](docs/testing/f01-auth-results.md),
+  [F-02 evidence](docs/testing/f02-join-results.md) and
+  [F-03 evidence](docs/testing/f03-my-ticket-results.md),
+  [F-04 evidence](docs/testing/f04-host-queue-results.md) and
+  [Sprint 1 review regression](docs/testing/sprint1-review-results.md) for actual checks and limits.
+  The [Sprint 1 completion checklist](docs/testing/sprint1-completion-checklist.md)
+  maps every S1 functional/business rule, UI screen and applicable NFR to implementation
+  and verification, with human review/release evidence tracked separately.
+  User-authorized DEC-028 groups Sprint 1 into four
+  parent features while preserving F-05, FR/BR, AC and test IDs for traceability.
 - Git repository initialized on `main`, with `origin` connected to
   `https://github.com/bbxndg/DineQueue.git`. Commits import existing work as of
   6 November; they do not establish historical test-first or teammate-review evidence.
@@ -78,7 +90,9 @@ Official Fiber v3 docs currently say Go 1.26+ is required. Framework selection i
 
 ## Important caveats
 
-- F-01..F-19 remain proposed product specifications, not completed features. Product tests T-001..036 and S2 tests are **NOT RUN**. Foundation source/checks are recorded separately; decision statuses remain **PROPOSED / PENDING** unless team/TA signs off.
+- Dated F-01..F-04 and integration execution evidence is linked under `docs/testing`.
+  Worktree results do not establish release approval, a CI run or a tested future merge commit.
+  S2 operations remain pending. Unresolved domain decisions remain **PROPOSED / PENDING** unless team/TA signs off.
 - Sprint 1 minimum is deliberately preserved, with a versioned boundary change from max party 8 to 16. Do not silently backdate commits or claim previous tests had already validated 10 guests.
 - Matching is a deterministic heuristic, not an ML model and not guaranteed globally optimal. Floor adjacency must be manager-approved, not inferred from CSS coordinates.
 - If advanced scope threatens deadlines, prioritize strict S1 flow then S2 atomic combined-table seating with true DB tests; defer decorative maps, ML ETA, public display or floor editing before dropping engineering correctness.
@@ -91,7 +105,8 @@ Course: `group_work_specs_v1.pdf`, Sections 5, 6.9, 7–11. Official references 
 
 Scope: [foundation contract](docs/features/sprint1-foundation-contract.md).
 Results and limitations: [foundation evidence](docs/testing/sprint1-foundation-results.md).
-This is a web shell and API health/database wiring, not the Sprint 1 queue product.
+The foundation is extended by the four Sprint 1 features. Release review, CI and tagging
+are separate from local implementation and regression checks.
 
 ```text
 apps/web/          Next.js + TypeScript + Tailwind; minimal landing shell
@@ -99,7 +114,10 @@ apps/api/cmd/api/  Go Fiber entrypoint and graceful shutdown
 apps/api/internal/health/           bounded readiness service
 apps/api/internal/transport/http/   health handlers and generic errors
 apps/api/internal/platform/         validated config and GORM adapter
-apps/api/db/migrations/             reserved for versioned domain SQL migrations
+apps/api/internal/auth/             password/session service, repository and HTTP guards
+apps/api/internal/queue/            join and owner-scoped ticket reads (F-02/F-03)
+apps/api/cmd/db/                    explicit migrate/seed CLI
+apps/api/db/migrations/             versioned SQL migrations (F-01 schema)
 ```
 
 ### Run the local Docker development environment
@@ -113,7 +131,10 @@ Requires a running Docker daemon and Compose. It does not require host Go/Node.
    Replace the placeholder; if using a non-hex password, URL-encode its credential component.
    Match `POSTGRES_USER` and `POSTGRES_DB` if changing them. Never commit this file or print it in CI.
 4. Run `docker compose config --quiet`, then `docker compose up --build`.
-5. Open http://localhost:3000. Check `curl --fail http://localhost:8080/health/live`
+5. Run `docker compose run --rm db-tools` to apply migrations. Set the four blank
+   `SEED_*_PASSWORD` values in your local `.env` (12–128 UTF-8 bytes each), then run
+   `docker compose run --rm db-tools go run -buildvcs=false ./cmd/db seed` once.
+6. Open http://localhost:3000/login. Check `curl --fail http://localhost:8080/health/live`
    and `curl --fail http://localhost:3000/api/health/ready`.
 
 PostgreSQL is private to the Compose network. Web and API published ports bind only
@@ -145,7 +166,8 @@ npm run dev
 `API_INTERNAL_URL` is server-only and defaults to `http://127.0.0.1:8080` for host web
 development; Compose sets `http://api:8080`. Production builds bake Next.js rewrites
 using the build-time value, so rebuild when changing it. No database/session secret
-belongs in `NEXT_PUBLIC_*`. No general API proxy, authentication or CORS policy is implemented yet.
+belongs in `NEXT_PUBLIC_*`. Only explicit health/auth/queue/ticket paths are proxied; the UI uses
+same-origin browser requests. No credentialed cross-origin CORS is enabled.
 
 From `apps/api`, with Go on PATH:
 
@@ -157,8 +179,8 @@ go build -buildvcs=false -o /tmp/dinequeue-api ./cmd/api
 
 GORM replaces the former sqlc generation and direct pgx pool. The official PostgreSQL
 driver still uses pgx internally. Readiness runs SELECT 1 through GORM; no application
-models or tables are created. Keep reviewed SQL migrations under `db/migrations`;
-never call AutoMigrate on startup. Domain migrations/seeds remain deferred to S1 Issues.
+tables are created at API startup. Keep reviewed SQL migrations under `db/migrations`;
+never call AutoMigrate on startup. Apply F-01 schema/seed explicitly as below.
 Services must coordinate a single `db.Transaction` and pass its `tx` through repositories.
 See the [ORM change record](docs/testing/sprint1-gorm-results.md) for current checks;
 the original foundation evidence records the earlier database access approach.
@@ -169,7 +191,7 @@ Go does not automatically load `.env`. A host API needs a reachable PostgreSQL i
 the Compose-only hostname `db` will not resolve on the host.
 
 Production config rejects HTTP origins and database URLs without `sslmode=verify-full`.
-TLS termination and trusted-proxy/session policies still require implementation before release.
+TLS termination and deployment proxy/shared-limit policies still require verification before release.
 
 For the opt-in foundation integration tests, set `TEST_DATABASE_URL` to a dedicated isolated
 PostgreSQL database with an empty `public` schema and run `go test -tags=integration -race ./...`
@@ -179,3 +201,48 @@ fails explicitly instead of silently reporting a skipped integration check as su
 The `-buildvcs=false` flag supports source archives without Git metadata; it does not create
 release provenance. Foundation validation originally ran before Git initialization. Keep
 that execution record separate from subsequent commits, reviews, releases and CI results.
+
+### F-01 accounts and checks
+
+With server config exported in your shell, from `apps/api`:
+
+```bash
+go run -buildvcs=false ./cmd/db migrate
+# Set the four SEED_*_PASSWORD variables securely in the process environment first.
+go run -buildvcs=false ./cmd/db seed
+```
+
+Host Go commands do not load `.env` automatically. Demo seed is disabled when
+APP_ENV=production. Seed does not reset existing passwords, active flags or revoked
+grants. Use a dedicated local demo database. Accounts: `customer1@example.test`,
+`customer2@example.test`, `host@example.test` (grant to demo Q1) and
+`other-host@example.test` (no Q1 grant). Passwords are those you supply; none are
+printed or committed. Treat these accounts as local fixtures, not production users.
+
+Login returns an HttpOnly session cookie and a csrfToken. HTTPS uses a Secure
+`__Host-dineq_session`; HTTP development uses `dineq_session`. Unsafe calls must
+send exact APP_ORIGIN; logout and future cookie-auth mutations must include
+X-CSRF-Token from login/me. Sessions expire after 12h and logout revokes them in DB.
+The cookie token is never stored in browser localStorage or plaintext in DB.
+The per-process login limit uses the API socket IP. Behind the Next.js proxy,
+clients can share that quota; trusted-proxy/shared limiting must be configured
+and tested for deployment. Expired session records also need a retention policy.
+
+Integration tests require TEST_DATABASE_URL with an empty public schema and
+CREATE SCHEMA privilege in a disposable database. F-01 fixtures migrate/seed a
+random schema per test and drop it afterwards; foundation checks inspect public.
+
+Browser checks require `npm ci --ignore-scripts`, the pinned Playwright Chromium
+(`npx playwright install chromium`), a built/running web/API and isolated demo seed.
+Set F01_BASE_URL to that web origin and F01_TEST_PASSWORD to the password used for
+all four isolated test accounts, then run `npm run test:e2e --workspace @dinequeue/web`.
+F-03 stored-state/error-recovery browser tests also require `psql` on PATH and
+`TEST_DATABASE_URL` pointing to the **same disposable seeded DB as the API**.
+They create/remove a temporary customer and briefly rename the ticket table to
+test a real read failure; use one worker as configured, never a shared/live DB.
+Never use live accounts. Reports stay under /tmp; traces/video are disabled to avoid
+recording credential-bearing requests. F-02/F-03 browser checks use the same fresh
+seeded environment. Customer home links to Join Waitlist and My Ticket; joining
+redirects to `/my-queue`. Refresh status loads persisted WAITING/CALLED entries.
+Owners may bookmark `/my-queue/{entryId}` for details, including COMPLETED.
+F-03 does not add Host transitions, cancellation, history listing or ETA.

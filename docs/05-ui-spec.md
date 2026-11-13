@@ -41,13 +41,27 @@ Inputs: Queue (seeded/readonly if only one); Party size control (1–16). Summar
 
 Fields: large human-readable ticket number, party size, current status, created/joined timestamp, selected queue. Optionally show **now called ticket** from privacy-safe data; must not expose names. For status WAITING show a waiting badge; CALLED show prominent 'Please go to the counter'; COMPLETED show 'Your waitlist service has finished'. Sprint 2 adds customer Cancel if WAITING.
 
+F-03 implements explicit Refresh status (no automatic refresh/ETA), queue and
+restaurant labels, joined time in the labelled restaurant timezone, and an empty
+state with Join Waitlist. `/my-queue/{entryId}` is an owner-only detail bookmark,
+including COMPLETED; inaccessible details show generic not-found feedback.
+Successful join navigates to `/my-queue`; duplicate feedback offers View My Ticket.
+Now-called public data and history listing remain outside F-03.
+
 ### P-05 `/host/queue` — Host dashboard, Sprint 1
 
 - Queue selector restricted to authorized queues; Sprint 1 only one.
 - Current called card (ticket number/party size/join time) with **Complete** button when CALLED.
 - Waiting list sorted by server FIFO: ticket number, party size, joined time; no need to expose customer email.
+- On narrow screens the waiting table keeps readable column spacing inside a
+  labelled, keyboard-focusable horizontal scroll region; the document itself
+  must not overflow horizontally.
 - **Call Next** button enabled only if no current called ticket and a WAITING entry exists.
 - Important error: two Hosts racing to call next; losing request displays 'The queue has changed. Refreshing.' and refreshes state.
+- Complete confirmation belongs to one entry ID. When refresh shows a different
+  current ticket, discard the old confirmation and require a new Complete action.
+- Retry after a server read failure re-fetches server data without requiring the
+  Host to navigate away. A failed read must not be shown as an empty queue.
 - Empty state 'No waiting parties'. Pending state blocks repeated button presses. Backend always enforces rules independently.
 
 ### P-06 `/host/floor` — Interactive Floor Plan, Sprint 2

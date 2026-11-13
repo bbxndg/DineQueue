@@ -2,6 +2,10 @@
 
 **Status:** proposed implementation contract. API response shapes and status/error codes are team choices. They are not prescribed by the CPE 334 PDF.
 
+Machine-readable export of the implemented Sprint 1 routes:
+[`api/sprint1.openapi.json`](api/sprint1.openapi.json). S2 proposed routes below
+are excluded from that implemented API export.
+
 **Access-layer revision (DEC-026, 6 Nov 2026):** GORM + PostgreSQL driver replaces
 sqlc/direct pgx access. The schema, API, FR/BR IDs and database invariants below are
 unchanged. Use explicit versioned SQL migrations for checks, foreign keys and partial
@@ -242,18 +246,38 @@ Recommended codes: 400 validation; 401 unauthenticated; 403 forbidden action/sco
 
 | Method | Path | Role | Request | Success |
 |---|---|---|---|---|
-| POST | `/auth/login` | Anonymous | `{email,password}` | 200 `{user:{id,displayName,role}}`, sets session cookie |
-| POST | `/auth/logout` | Authenticated | none | 204, invalidates session and cookie |
-| GET | `/auth/me` | Authenticated | none | 200 `{user:{...}}` |
-| GET | `/queues` | Authenticated | none | 200 list of active queues visible to user |
+| POST | `/auth/login` | Anonymous | `{email,password}` + exact Origin | 200 `{user:{id,displayName,role},csrfToken}`, sets session cookie |
+| POST | `/auth/logout` | Authenticated | exact Origin + X-CSRF-Token | 204, invalidates session and cookie |
+| GET | `/auth/me` | Authenticated | none | 200 `{user:{id,displayName,role},csrfToken}` |
+| GET | `/queues` | Authenticated | none | 200 `{queues:[{id,name,restaurantName}]}` active queues only (F-02) |
+
+F-01 implementation uses a 12h opaque session, SHA-256 token digest in DB and
+per-session HMAC CSRF token (DEC-027). No password hash/email/cookie-token value in user
+responses. HTTPS uses `__Host-dineq_session`; local HTTP uses `dineq_session`.
+Login allows only email/password JSON fields, limits body to 4 KiB and password
+to 128 UTF-8 bytes; invalid credentials are generic 401, per-IP limits return 429.
+No credentialed CORS is enabled. The frontend uses same-origin auth rewrites.
 
 ### Customer endpoints — S1
+
+Queue path IDs in Join and Host routes use the 36-character UUID representation.
+Malformed IDs and alternate encodings (URN, braces or compact hex) return 404
+`NOT_FOUND` before SQL permission/resource queries. This preserves the existing
+not-found contract without letting PostgreSQL parsing errors become 500 responses.
 
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|
 | POST | `/queues/{queueId}/entries` | `{ "partySize": 4 }` | 201 entry summary | 400,401,403,404,409 |
-| GET | `/me/queue-entries/active` | none | 200 list of own active entries (0 or 1 per queue) | 401 |
-| GET | `/me/queue-entries/{entryId}` | none | 200 own detail | 401,404 |
+| GET | `/me/queue-entries/active` | none | 200 `{entries:[...]}` own WAITING/CALLED entries (0 or 1 per queue) | 401,403 |
+| GET | `/me/queue-entries/{entryId}` | none | 200 own detail, including COMPLETED | 401,403,404 |
+
+Both read endpoints require CUSTOMER at HTTP and service layers (DEC-030).
+Read summaries contain the seven entry-summary fields below plus `queueName`,
+`restaurantName` and `timezone`. `serviceDate` is YYYY-MM-DD, `joinedAt` UTC;
+no customer identity or staff audit fields are returned. Active entries include
+prior business dates and inactive queues, ordered `(joined_at,id)`; detail queries
+bind both owner and entry ID. Malformed, missing and foreign ticket IDs produce
+the same 404 `NOT_FOUND` response. All private reads are `Cache-Control: no-store`.
 
 Example 201 response:
 
@@ -273,10 +297,16 @@ Example 201 response:
 
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|
-| GET | `/host/queues/{queueId}/entries?status=WAITING` | none | 200 oldest-first rows | 401,403,404 |
-| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null|...}` | 401,403 |
-| POST | `/host/queues/{queueId}/call-next` | none | 200 updated CALLED entry | 401,403,409 |
-| POST | `/host/queues/{queueId}/entries/{entryId}/complete` | none | 200 updated COMPLETED entry | 401,403,404,409 |
+| GET | `/host/queues` | none | 200 `{queues:[{id,name,restaurantName,timezone,isActive}]}` assigned only | 401,403 |
+| GET | `/host/queues/{queueId}/entries?status=WAITING` | none | 200 `{entries:[...]}` oldest first `(joined_at,id)` | 400,401,403,404 |
+| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null|...}` | 401,403,404 |
+| POST | `/host/queues/{queueId}/call-next` | empty body | 200 updated CALLED entry | 400,401,403,404,409 `CALL_IN_PROGRESS`/`QUEUE_EMPTY` |
+| POST | `/host/queues/{queueId}/entries/{entryId}/complete` | empty body | 200 updated COMPLETED entry | 400,401,403,404,409 `INVALID_TRANSITION` |
+
+All paths are under `/api/v1`, require role HOST plus a queue grant (unknown queue
+UUID → 403, malformed ID → 404), and mutations require Origin + CSRF (DEC-031).
+Host entry DTO: `id, queueId, ticketCode, serviceDate, partySize, status, joinedAt,
+calledAt, completedAt`; no customer identity or actor IDs.
 
 **S1 compatibility:** Host's `Complete` confirms party was seated/handled manually, before digital table assignment exists. S2 introduces table-assignment precondition via recorded contract revision.
 

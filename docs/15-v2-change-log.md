@@ -23,6 +23,13 @@
 
 ## Remaining team/TA decisions
 
+**6 November Sprint 1 grouping revision (DEC-028):** user authorized four parent
+features F-01..F-04. F-04 Host Queue Operations includes the former standalone
+F-05 completion workflow. F-05 is kept as a legacy sub-scope ID; FR/BR/AC/test
+IDs and completion acceptance remain intact. F-06..F-19 are not renumbered.
+This is a documentation/scope-organization update; no test result or approval
+status is changed by regrouping.
+
 **6 November access-layer revision (DEC-026):** user authorized GORM + PostgreSQL
 driver in place of sqlc/direct pgx access. Foundation code, current SDS/contracts,
 security guidance and setup instructions now follow that choice. Explicit SQL

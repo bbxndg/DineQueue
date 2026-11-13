@@ -3,9 +3,11 @@
 One modular-monolith process. HTTP parsing/response concerns live in transport/http;
 services enforce use-case rules, and GORM persistence adapters execute parameterized queries.
 
-The foundation contains only the health service and GORM PostgreSQL connection/pool. Auth/queue
-modules are not implemented. Add their handler/service/repository code under their
-own modules when those contracts are authorized. A service must pass one transaction
+The foundation contains health and GORM wiring. F-01 adds `internal/auth` for
+password/session service, repository and HTTP guards, and `cmd/db` for opt-in SQL
+migration/demo seed. F-02 adds `internal/queue` (active queue list and customer join
+with daily ticket allocation), F-03 owner-scoped ticket reads and F-04 Host board,
+Call Next and Complete (queue row lock, grant recheck inside the transaction). A service must pass one transaction
 handle (`tx *gorm.DB`) through every repository call in an atomic business operation; repositories
 must never commit parts of a use case independently.
 
@@ -15,4 +17,7 @@ Avoid arbitrary client-supplied SQL fragments or implicit association writes.
 
 `db/migrations` is reserved for explicit versioned SQL migrations. No startup AutoMigrate,
 sqlc generation or direct pgx pool is used. pgx remains an indirect driver dependency.
-Domain models/migrations, seed accounts and authentication remain later S1 work.
+Future queue routes
+must use Authenticate plus role/queue/owner checks, and CSRF on unsafe requests.
+Ownership comparisons must use server-loaded owner IDs. No test-only guard route is
+registered by the production app.

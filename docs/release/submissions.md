@@ -16,6 +16,11 @@
 
 **Deliverable 1 must include:** runnable main release, exact tag/SHA, setup instructions, test commands/results and brief reproducible demo sequence. **Cloud deployment NOT required for D1.**
 
+Current local S1 implementation/verification evidence is indexed in the
+[completion checklist](../testing/sprint1-completion-checklist.md) and
+[execution results](../testing/sprint1-review-results.md). The template at the end
+of this document is not a claim that a release, teammate review or submission happened.
+
 ## Deliverable 2 — 29 Nov 2026, 70 raw points / 7% course
 
 | Rubric part | Points | Evidence |

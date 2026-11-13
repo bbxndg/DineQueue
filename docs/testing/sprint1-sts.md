@@ -1,6 +1,6 @@
 # 08. Software Test Specification (STS) — Sprint 1
 
-**Version:** DQ-STS-S1-1.2. F-01 has local execution evidence in
+**Version:** DQ-STS-S1-1.3. F-01 has local execution evidence in
 [`f01-auth-results.md`](f01-auth-results.md); F-02 has local worktree evidence in
 [`f02-join-results.md`](f02-join-results.md) (T-009, T-011..017, T-034, T-036 and the
 join part of T-010); F-03 has local worktree evidence in
@@ -12,6 +12,12 @@ to F-04's completion workflow (legacy F-05).
 T-005 has real join and Host endpoint checks, T-006/T-007 real Host endpoint checks
 (F-04) and T-008 a real owner-scoped detail check. Do not count test-only
 routes as shipped endpoints.
+
+13 Nov full local regression on `d7f27a3` plus the `fix/sprint1-review` worktree:
+53 Go tests with `-race`, 20 browser tests, web checks and actual API restart.
+Source-snapshot hash, commands, fail-first results and limitations are recorded in
+[`sprint1-review-results.md`](sprint1-review-results.md). These are local worktree
+results; release-commit/CI verification remains separate.
 
 **Framework plan:** Go `testing`/`httptest` + Fiber test client + real isolated PostgreSQL via GORM; Playwright for selected browser journeys.
 
@@ -28,6 +34,9 @@ routes as shipped endpoints.
   customer, write lifecycle fixtures and temporarily rename/restore queue_entries.
   Use one worker; these tests must not run against a shared or live database.
 - For concurrency tests send requests truly in parallel to **real database transactions**, not only mock service calls.
+- `sprint1-review.spec.ts` also requires that same disposable DB and `psql`.
+  It creates isolated users/sessions/queues, performs Host transitions and briefly
+  renames/restores `queue_entries` to exercise actual read-error recovery.
 
 ## 2. Test case catalog
 
@@ -99,17 +108,30 @@ Every test must record **actual** command, git commit, result, run date and link
 
 | Check | Proposed command after implementation | Status now |
 |---|---|---|
-| API build | `go build ./...` | NOT RUN |
-| Go unit tests | `go test ./...` | NOT RUN |
-| API/Postgres integration | `go test -tags=integration ./...` | NOT RUN |
-| Browser E2E | `npx playwright test` (web project) | NOT RUN |
-| Go vet | `go vet ./...` | NOT RUN |
-| Docker smoke test (Lab 5) | `docker compose up --build` | NOT RUN |
+| API/db CLI build | `go build -buildvcs=false ... ./cmd/api` and `./cmd/db` | Local PASS, 13 Nov review worktree |
+| Go unit + API/Postgres integration | `go test -tags=integration -race -count=1 -v ./...` | Local PASS, 53 top-level tests |
+| Browser E2E | `playwright test --config <temporary local Chrome config>` | Local PASS, 20 tests |
+| Web checks | `npm run lint`, `npm test`, `npm run build`, `npm run typecheck` | Local PASS in scratch checkout |
+| Go vet / module integrity | `go vet -tags=integration ./...`, `go mod verify` | Local PASS |
+| Docker local runtime | Compose build/start + health/login checks | See dated review results; cloud/CI separate |
 
-The table above describes the remaining whole-Sprint product verification plan.
-Actual F-01 commands/results, including foundation regression, are recorded in
-`f01-auth-results.md`, `f02-join-results.md` and `f03-my-ticket-results.md`;
-do not interpret this table as a status for all repository tests.
+The table describes actual local review-worktree checks, with details in the
+review results. Earlier F-01..F-04 records retain their original dates and scope.
+The result template below remains an unfilled example, not the current results.
+
+### Review regression mapping (existing AC/test IDs retained)
+
+| Regression | Existing coverage |
+|---|---|
+| `TestS1NoncanonicalQueueIDsReturnNotFound` | AC-010/018, T-016/027: malformed queue paths reject before SQL, no ticket/counter writes |
+| `TestS1HostDrainsInactiveQueueInFIFOIncludingTiesAndPreviousDays` | AC-014/015/019, T-022/023/028/033: timestamp/id ordering and inactive-queue draining |
+| `TestS1ConcurrentCompleteAndCallNextPreserveLifecycle` | AC-017/021, T-026/033: real parallel transactions preserve one CALLED and valid lifecycle |
+| `TestS1HostTransitionSQLFailureRollsBack` | AC-015/019: injected SQL errors preserve status, actor/time and version; recovery succeeds |
+| Browser Complete confirmation | AC-019, T-029: another Host changes current ticket; fresh confirmation required |
+| Browser Customer home states | UI P-02, AC-011/012: action follows persisted WAITING/CALLED/COMPLETED |
+| Browser Host read-error retry | NFR-006: real read failure recovers on the same route without a false empty queue |
+| `TestS1AuthFailureLogOmitsSensitiveData` | SDS auth lifecycle/NFR-004: rejected login/session events omit submitted email/password/token |
+| Browser completion keyboard/layout cases (360px and 1280px) | NFR-006 and UI P-01..P-05: labelled fields, keyboard join/call/confirm/cancel/refresh, text lifecycle status, usable form/table sizing, keyboard scroll region |
 
 ## 5. Test-result evidence template
 

@@ -1,17 +1,17 @@
 # DineQueue — Engineering Specification v2.0 (Consolidated)
 
-> Repository snapshot synchronized on **11 November 2026**, base HEAD `9452aa3`
-> plus the F-03 review follow-up, tested before its user-authorized commits.
+> Repository snapshot synchronized on **13 November 2026**, base HEAD `d7f27a3` plus the Sprint 1 review fix worktree.
+> Actual local checks and source fingerprint are recorded in the review results section.
 > The individual source files in this repository define the current project baseline.
 > `docs/reference/group_work_specs_v1.pdf` remains authoritative for course assessment.
-> This consolidation changes this file only; it does not introduce product requirements,
-> modify application code, rerun tests or establish teammate/TA approval, CI or deployment.
+> This generated copy adds no requirements beyond its canonical sources.
+> Synchronization alone does not rerun checks or establish teammate/TA approval, CI or deployment.
 
 ## Reconciliation with the imported 5 November package
 
 Compared all 24 original sections with their repository sources: 20 differed and
-4 already matched. Updated those sections and appended the 9 implementation
-contracts/evidence files added since the original package. All 33 current Markdown
+4 already matched. Updated those sections and appended the 13 implementation
+contracts/evidence files added since the original package. All 37 current Markdown
 source documents are included below. Existing FR/BR/NFR/F/AC/test IDs are retained.
 No additional product requirement was identified beyond the repository baseline.
 
@@ -22,7 +22,7 @@ No additional product requirement was identified beyond the repository baseline.
 | Party size | Some SRS text still said 1–8 | Party 1–16; physical table 1–8; 10-person join persists a WAITING ticket |
 | AC-007 | Incorrectly said accepted party 10 creates no DB entry | Invalid inputs create no entry; accepted party 10 creates a persisted ticket |
 | Configuration/security | SESSION_SECRET / optional public API URL; generic CSRF description | Server-only API_INTERNAL_URL, hashed opaque sessions, exact Origin and per-session CSRF token (DEC-027) |
-| Implementation/API/UI | Entire package described as unimplemented/not tested | Foundation and F-01..F-03 present; current response shapes and My Ticket behavior follow DEC-027/029/030 |
+| Implementation/API/UI | Entire package described as unimplemented/not tested | Foundation and F-01..F-04 present; Sprint 1 review fixes and regression evidence included |
 | Evidence | All tests described as NOT RUN | Dated local execution records included; no new execution implied by this synchronization |
 
 ## Reading current scope and historical records
@@ -31,8 +31,8 @@ No additional product requirement was identified beyond the repository baseline.
 |---|---|
 | F-01 | Login/logout/me, sessions and backend guards present |
 | F-02 | Join, persisted unique daily ticket and concurrency guards present |
-| F-03 | Owned active/detail reads and My Ticket UI present on its feature branch |
-| F-04, including legacy F-05 | Host board, FIFO Call Next and Complete remain unimplemented |
+| F-03 | Owned active/detail reads and My Ticket UI integrated; Customer home follows active state |
+| F-04, including legacy F-05 | Host board, FIFO Call Next and Complete integrated; confirmation/read-retry review fixes present |
 | Sprint 2 / Sprint 3 | Planned; floor/matching/table operations/history/analytics remain design scope |
 
 Original dates, proposals, unchecked acceptance templates and past execution results
@@ -80,6 +80,10 @@ links open the canonical repository files. The PDF is referenced, not embedded.
 - [31. docs/testing/f01-auth-results.md](#source-31)
 - [32. docs/testing/f02-join-results.md](#source-32)
 - [33. docs/testing/f03-my-ticket-results.md](#source-33)
+- [34. docs/features/f04-host-queue-implementation-contract.md](#source-34)
+- [35. docs/testing/f04-host-queue-results.md](#source-35)
+- [36. docs/testing/sprint1-review-results.md](#source-36)
+- [37. docs/testing/sprint1-completion-checklist.md](#source-37)
 
 ---
 
@@ -93,7 +97,7 @@ links open the canonical repository files. The PDF is referenced, not embedded.
 # DineQueue v2 — Restaurant Waitlist, Floor & Seating Operations
 
 > **Engineering Package v2.0 — Current project baseline, clarified 6 November 2026.**
-> **F-01 authentication and F-02 join are present; F-03 My Ticket is implemented on its feature branch.** Host queue operations remain unimplemented;
+> **F-01..F-04 are implemented in the Sprint 1 integration baseline**, including Host board, FIFO Call Next and manual Complete;
 > local checks are recorded separately below. No instructor approval, product acceptance,
 > deployment or release is claimed.
 > Grounded on CPE 334 `group_work_specs_v1.pdf` (15 pages, issued 6 Oct 2026, itself marked *Draft for instructor review*); Domain-specific table algorithms, seat limits, screens, schemas and Go Fiber are **proposed project decisions**, not requirements imposed by the PDF.
@@ -105,11 +109,16 @@ links open the canonical repository files. The PDF is referenced, not embedded.
 - Sprint 2 design: approved connected sets of **1–3 tables**, atomic hold/call/seat,
   no-show, whole-group checkout and cleaning. These workflows are not implemented.
 - Present source: repository foundation + F-01 login/logout/me, secure sessions,
-  F-02 join/ticket issuance and F-03 own-ticket reads, privacy and My Ticket UI.
-  F-04, including legacy F-05 completion, remains unimplemented.
+  F-02 join/ticket issuance, F-03 own-ticket reads/privacy and F-04 Host board,
+  FIFO Call Next and manual completion (legacy F-05).
   See [F-01 evidence](#source-31),
   [F-02 evidence](#source-32) and
-  [F-03 evidence](#source-33) for actual checks and limits.
+  [F-03 evidence](#source-33),
+  [F-04 evidence](#source-35) and
+  [Sprint 1 review regression](#source-36) for actual checks and limits.
+  The [Sprint 1 completion checklist](#source-37)
+  maps every S1 functional/business rule, UI screen and applicable NFR to implementation
+  and verification, with human review/release evidence tracked separately.
   User-authorized DEC-028 groups Sprint 1 into four
   parent features while preserving F-05, FR/BR, AC and test IDs for traceability.
 - Git repository initialized on `main`, with `origin` connected to
@@ -177,10 +186,9 @@ Official Fiber v3 docs currently say Go 1.26+ is required. Framework selection i
 
 ## Important caveats
 
-- F-01/F-02 execution evidence is linked under `docs/testing`; F-03 checks and limits
-  are recorded in [My Ticket evidence](#source-33).
-  F-04 Host operations and S2 tests remain pending. Test-only guard equivalents
-  are not shipped Host endpoints. Unresolved domain decisions remain **PROPOSED / PENDING** unless team/TA signs off.
+- Dated F-01..F-04 and integration execution evidence is linked under `docs/testing`.
+  Worktree results do not establish release approval, a CI run or a tested future merge commit.
+  S2 operations remain pending. Unresolved domain decisions remain **PROPOSED / PENDING** unless team/TA signs off.
 - Sprint 1 minimum is deliberately preserved, with a versioned boundary change from max party 8 to 16. Do not silently backdate commits or claim previous tests had already validated 10 guests.
 - Matching is a deterministic heuristic, not an ML model and not guaranteed globally optimal. Floor adjacency must be manager-approved, not inferred from CSS coordinates.
 - If advanced scope threatens deadlines, prioritize strict S1 flow then S2 atomic combined-table seating with true DB tests; defer decorative maps, ML ETA, public display or floor editing before dropping engineering correctness.
@@ -193,7 +201,8 @@ Course: `group_work_specs_v1.pdf`, Sections 5, 6.9, 7–11. Official references 
 
 Scope: [foundation contract](#source-25).
 Results and limitations: [foundation evidence](#source-29).
-The foundation is extended by F-01 authentication; the Sprint 1 queue product is still in progress.
+The foundation is extended by the four Sprint 1 features. Release review, CI and tagging
+are separate from local implementation and regression checks.
 
 ```text
 apps/web/          Next.js + TypeScript + Tailwind; minimal landing shell
@@ -814,14 +823,15 @@ F-06..F-19 or remove the original F-05 history.
 
 **Version:** DQ-SDS-2.0 proposed (2026-11-05), prior to implementation. Required by CPE 334 §§5.1–5.3, 8.1, Deliverable 1 rubric.
 
-**Implementation boundary (6 Nov 2026):** repository foundation now lives in
+**Implementation boundary (updated 13 Nov 2026):** repository foundation lives in
 `apps/web` and `apps/api`; see `features/sprint1-foundation-contract.md` and
 `testing/sprint1-foundation-results.md` (historical) and `testing/sprint1-gorm-results.md`
 (current access-layer revision). The foundation includes web/config/health/GORM
-wiring. F-01 auth, F-02 join and F-03 own-ticket reads/UI are present; local
-execution evidence lives in `testing/f01-auth-results.md`, `testing/f02-join-results.md`
-and `testing/f03-my-ticket-results.md`. Host operations/floor/reporting remain
-proposed designs; local worktree evidence is not CI/release approval.
+wiring. F-01 auth, F-02 join, F-03 own-ticket reads/UI and F-04 Host board/FIFO
+call/manual completion are implemented. Local integration and review evidence is
+recorded in `testing/sprint1-review-results.md`, alongside the historical per-feature
+records. Floor/reporting remain proposed designs for later sprints. Local worktree
+evidence is not CI/release approval.
 
 ## 1. Architecture and rationale
 
@@ -851,7 +861,7 @@ flowchart TD
 | Database | PostgreSQL | ACID transactions, row locks, partial unique indexes |
 | DB access | GORM + PostgreSQL driver with SQL migrations (DEC-026) | Familiar ORM models, explicit transaction/locking control and reviewed schema changes |
 | Auth | Opaque session cookie with hashed token in DB | Simple actual logout/revocation; easy expiry/ownership tests |
-| API spec | OpenAPI documented routes | Contract-first design |
+| API spec | [Sprint 1 OpenAPI](docs/api/sprint1.openapi.json) plus versioned route/DTO/error tables in `04-data-and-api.md` and feature addenda | Contract-first design |
 | Unit/integration | Go `testing` + Fiber test client + isolated PostgreSQL | Rule, HTTP and persistence verification |
 | Browser E2E | Playwright | Customer/Host critical journey |
 | Delivery | Docker + GitHub Actions + GCP | Required by Lab 5 |
@@ -859,7 +869,7 @@ flowchart TD
 ## 2. Module responsibilities
 
 - `internal/auth`: login, logout, current user, password hashes, session expiry/invalidations, request identity.
-- `internal/users`: seeded demo accounts and role assignment (account admin UI **not** needed S1).
+- `internal/auth/seed.go`: seeded demo accounts and initial role/grant assignment (account admin UI **not** needed S1).
 - `internal/queue`: service queue scope, join, duplicate detection, daily ticket allocation, my ticket, host list, call and complete.
 - `internal/seating` (S2): table capacity, occupancy, assignment/release in transaction.
 - `internal/reporting` (S3): wait duration and counts, optional event history.
@@ -904,7 +914,7 @@ S1 can use predefined demo accounts; registration/password reset/email verificat
 ### Ticket issuance under concurrent joins
 
 - Server validates account, queue, party size.
-- Within one DB transaction, check active ticket (fast path) and rely on **database partial unique index** on `(customer_id, queue_id) WHERE status IN ('WAITING', 'CALLED')` (authoritative protection against races).
+- Within one DB transaction, rely on the **database partial unique index** on `(customer_id, queue_id) WHERE status IN ('WAITING', 'CALLED')` to reject duplicate active entries. An optional precheck is not authoritative under races; the implementation handles the index conflict and rolls back the counter allocation.
 - Atomically upsert `queue_day_counters` by `(queue_id, service_date)` and increment `last_number`, returning new value.
 - Insert `queue_entries` with `queue_id`, `service_date`, `sequence_number`, `party_size`, status `WAITING` and server `joined_at`.
 - Unique index `(queue_id, service_date, sequence_number)` protects against duplicate numbers.
@@ -1000,6 +1010,10 @@ The team explored Go Fiber; DEC-023 originally proposed **Go Fiber v3 + pgx/sqlc
 # 04. Database Design and API Contract
 
 **Status:** proposed implementation contract. API response shapes and status/error codes are team choices. They are not prescribed by the CPE 334 PDF.
+
+Machine-readable export of the implemented Sprint 1 routes:
+[`api/sprint1.openapi.json`](docs/api/sprint1.openapi.json). S2 proposed routes below
+are excluded from that implemented API export.
 
 **Access-layer revision (DEC-026, 6 Nov 2026):** GORM + PostgreSQL driver replaces
 sqlc/direct pgx access. The schema, API, FR/BR IDs and database invariants below are
@@ -1255,6 +1269,11 @@ No credentialed CORS is enabled. The frontend uses same-origin auth rewrites.
 
 ### Customer endpoints — S1
 
+Queue path IDs in Join and Host routes use the 36-character UUID representation.
+Malformed IDs and alternate encodings (URN, braces or compact hex) return 404
+`NOT_FOUND` before SQL permission/resource queries. This preserves the existing
+not-found contract without letting PostgreSQL parsing errors become 500 responses.
+
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|
 | POST | `/queues/{queueId}/entries` | `{ "partySize": 4 }` | 201 entry summary | 400,401,403,404,409 |
@@ -1287,10 +1306,16 @@ Example 201 response:
 
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|
-| GET | `/host/queues/{queueId}/entries?status=WAITING` | none | 200 oldest-first rows | 401,403,404 |
-| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null|...}` | 401,403 |
-| POST | `/host/queues/{queueId}/call-next` | none | 200 updated CALLED entry | 401,403,409 |
-| POST | `/host/queues/{queueId}/entries/{entryId}/complete` | none | 200 updated COMPLETED entry | 401,403,404,409 |
+| GET | `/host/queues` | none | 200 `{queues:[{id,name,restaurantName,timezone,isActive}]}` assigned only | 401,403 |
+| GET | `/host/queues/{queueId}/entries?status=WAITING` | none | 200 `{entries:[...]}` oldest first `(joined_at,id)` | 400,401,403,404 |
+| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null|...}` | 401,403,404 |
+| POST | `/host/queues/{queueId}/call-next` | empty body | 200 updated CALLED entry | 400,401,403,404,409 `CALL_IN_PROGRESS`/`QUEUE_EMPTY` |
+| POST | `/host/queues/{queueId}/entries/{entryId}/complete` | empty body | 200 updated COMPLETED entry | 400,401,403,404,409 `INVALID_TRANSITION` |
+
+All paths are under `/api/v1`, require role HOST plus a queue grant (unknown queue
+UUID → 403, malformed ID → 404), and mutations require Origin + CSRF (DEC-031).
+Host entry DTO: `id, queueId, ticketCode, serviceDate, partySize, status, joinedAt,
+calledAt, completedAt`; no customer identity or actor IDs.
 
 **S1 compatibility:** Host's `Complete` confirms party was seated/handled manually, before digital table assignment exists. S2 introduces table-assignment precondition via recorded contract revision.
 
@@ -1589,8 +1614,15 @@ Now-called public data and history listing remain outside F-03.
 - Queue selector restricted to authorized queues; Sprint 1 only one.
 - Current called card (ticket number/party size/join time) with **Complete** button when CALLED.
 - Waiting list sorted by server FIFO: ticket number, party size, joined time; no need to expose customer email.
+- On narrow screens the waiting table keeps readable column spacing inside a
+  labelled, keyboard-focusable horizontal scroll region; the document itself
+  must not overflow horizontally.
 - **Call Next** button enabled only if no current called ticket and a WAITING entry exists.
 - Important error: two Hosts racing to call next; losing request displays 'The queue has changed. Refreshing.' and refreshes state.
+- Complete confirmation belongs to one entry ID. When refresh shows a different
+  current ticket, discard the old confirmation and require a new Complete action.
+- Retry after a server read failure re-fetches server data without requiring the
+  Host to navigate away. A failed read must not be shown as an empty queue.
 - Empty state 'No waiting parties'. Pending state blocks repeated button presses. Backend always enforces rules independently.
 
 ### P-06 `/host/floor` — Interactive Floor Plan, Sprint 2
@@ -1865,7 +1897,7 @@ Online reservations, actual POS/payment, SMS, restaurant ordering, predictive ML
 <!-- BEGIN SOURCE: docs/features/sprint1-contracts.md -->
 # 07. Sprint 1 Feature-Level Engineering Contracts
 
-**Version:** DQ-S1-Contracts-1.2, grouping revision 6 Nov 2026 (DEC-028, user authorized).
+**Version:** DQ-S1-Contracts-1.3, review clarification 13 Nov 2026; four-feature grouping remains the 6 Nov revision (DEC-028, user authorized).
 Four parent features F-01..F-04; F-04 includes completion under retained legacy ID
 F-05. The original 1.1 contract/history remains in Git. This grouping revision
 retains scope and all FR/BR/AC/test IDs; it does not establish earlier approval or
@@ -1944,6 +1976,9 @@ Read DTO, role/error behavior and implementation checks (DEC-030):
 
 **Depends on:** F-01, F-02. **FR:** FR-006, FR-007, FR-008, FR-009. **BR:** BR-003, BR-004, BR-005, BR-006.
 
+Implementation details and error-code choices (DEC-031):
+[`f04-host-queue-implementation-contract.md`](#source-34).
+
 This is one parent feature with two workflows. Complete retains legacy ID F-05
 for traceability; it has no separate parent feature or feature branch. Both
 workflows must satisfy their existing acceptance criteria for F-04 to be complete.
@@ -1996,6 +2031,31 @@ them as one parent feature. S1 completion remains manual waitlist handling.
 - Each feature has an Issue, branch, PR, substantive teammate review and integrated test evidence; both members understand design and tests.
 - Document actual results and evidence links; **this draft by itself is not evidence of execution**.
 
+### Review regression clarification — 13 November 2026
+
+User authorized fixes on `fix/sprint1-review`, based on integration commit `d7f27a3`.
+This is defect correction within the four existing parent features, not F-05 as a
+new parent. The clarification was recorded in the implementation worktree; it does
+not establish a separate pre-implementation commit, Issue or reviewer approval.
+
+- F-01/F-02/F-04: reject noncanonical queue IDs before SQL; preserve 404 error contracts.
+- F-03/UI P-02: derive the Customer home action from persisted WAITING/CALLED
+  tickets; show View My Queue while active, Join Waitlist after completion.
+- F-04: bind Complete confirmation and its request to the selected entry ID;
+  refresh to another current entry requires a fresh confirmation.
+- NFR-006: retry a Host read failure by refreshing server data as well as the
+  error boundary; no false empty state.
+- Regression adds deterministic equal-time FIFO, previous-day tickets, inactive
+  queue draining, mixed parallel Complete/Call Next and injected SQL failures.
+- Complete UI P-02/P-05 context and timestamps: Customer header shows restaurant,
+  queue, account navigation/identity; current Host card shows joined and called
+  time in the restaurant timezone.
+- Complete NFR-006 verification with labelled keyboard journeys and layout/visual
+  inspection at 360px and 1280px; the mobile queue selector and Host table must
+  remain usable without document overflow. Check SDS redacted auth-failure logging.
+
+Tests and actual source-snapshot evidence: [Sprint 1 review results](#source-36).
+
 
 ## v2 revision note — preserve S1 baseline contract history
 
@@ -2016,17 +2076,24 @@ them as one parent feature. S1 completion remains manual waitlist handling.
 <!-- BEGIN SOURCE: docs/testing/sprint1-sts.md -->
 # 08. Software Test Specification (STS) — Sprint 1
 
-**Version:** DQ-STS-S1-1.2. F-01 has local execution evidence in
+**Version:** DQ-STS-S1-1.3. F-01 has local execution evidence in
 [`f01-auth-results.md`](#source-31); F-02 has local worktree evidence in
 [`f02-join-results.md`](#source-32) (T-009, T-011..017, T-034, T-036 and the
 join part of T-010); F-03 has local worktree evidence in
 [`f03-my-ticket-results.md`](#source-33), covering T-008/T-010/T-018..021/T-035.
-F-04, including legacy F-05 completion, remains planned/not run. DEC-028 groups S1 into four parent features;
+F-04, including legacy F-05 completion, has local worktree evidence in
+[`f04-host-queue-results.md`](#source-35) (T-005..007 Host endpoints, T-022..033). DEC-028 groups S1 into four parent features;
 all T-001..041 and AC IDs are retained. Completion checks T-028..033 now belong
 to F-04's completion workflow (legacy F-05).
-T-005 has a real join endpoint check and T-008 a real owner-scoped detail check;
-the Host endpoint checks T-006/T-007 still require F-04. Do not count test-only
+T-005 has real join and Host endpoint checks, T-006/T-007 real Host endpoint checks
+(F-04) and T-008 a real owner-scoped detail check. Do not count test-only
 routes as shipped endpoints.
+
+13 Nov full local regression on `d7f27a3` plus the `fix/sprint1-review` worktree:
+53 Go tests with `-race`, 20 browser tests, web checks and actual API restart.
+Source-snapshot hash, commands, fail-first results and limitations are recorded in
+[`sprint1-review-results.md`](#source-36). These are local worktree
+results; release-commit/CI verification remains separate.
 
 **Framework plan:** Go `testing`/`httptest` + Fiber test client + real isolated PostgreSQL via GORM; Playwright for selected browser journeys.
 
@@ -2043,6 +2110,9 @@ routes as shipped endpoints.
   customer, write lifecycle fixtures and temporarily rename/restore queue_entries.
   Use one worker; these tests must not run against a shared or live database.
 - For concurrency tests send requests truly in parallel to **real database transactions**, not only mock service calls.
+- `sprint1-review.spec.ts` also requires that same disposable DB and `psql`.
+  It creates isolated users/sessions/queues, performs Host transitions and briefly
+  renames/restores `queue_entries` to exercise actual read-error recovery.
 
 ## 2. Test case catalog
 
@@ -2114,17 +2184,30 @@ Every test must record **actual** command, git commit, result, run date and link
 
 | Check | Proposed command after implementation | Status now |
 |---|---|---|
-| API build | `go build ./...` | NOT RUN |
-| Go unit tests | `go test ./...` | NOT RUN |
-| API/Postgres integration | `go test -tags=integration ./...` | NOT RUN |
-| Browser E2E | `npx playwright test` (web project) | NOT RUN |
-| Go vet | `go vet ./...` | NOT RUN |
-| Docker smoke test (Lab 5) | `docker compose up --build` | NOT RUN |
+| API/db CLI build | `go build -buildvcs=false ... ./cmd/api` and `./cmd/db` | Local PASS, 13 Nov review worktree |
+| Go unit + API/Postgres integration | `go test -tags=integration -race -count=1 -v ./...` | Local PASS, 53 top-level tests |
+| Browser E2E | `playwright test --config <temporary local Chrome config>` | Local PASS, 20 tests |
+| Web checks | `npm run lint`, `npm test`, `npm run build`, `npm run typecheck` | Local PASS in scratch checkout |
+| Go vet / module integrity | `go vet -tags=integration ./...`, `go mod verify` | Local PASS |
+| Docker local runtime | Compose build/start + health/login checks | See dated review results; cloud/CI separate |
 
-The table above describes the remaining whole-Sprint product verification plan.
-Actual F-01 commands/results, including foundation regression, are recorded in
-`f01-auth-results.md`, `f02-join-results.md` and `f03-my-ticket-results.md`;
-do not interpret this table as a status for all repository tests.
+The table describes actual local review-worktree checks, with details in the
+review results. Earlier F-01..F-04 records retain their original dates and scope.
+The result template below remains an unfilled example, not the current results.
+
+### Review regression mapping (existing AC/test IDs retained)
+
+| Regression | Existing coverage |
+|---|---|
+| `TestS1NoncanonicalQueueIDsReturnNotFound` | AC-010/018, T-016/027: malformed queue paths reject before SQL, no ticket/counter writes |
+| `TestS1HostDrainsInactiveQueueInFIFOIncludingTiesAndPreviousDays` | AC-014/015/019, T-022/023/028/033: timestamp/id ordering and inactive-queue draining |
+| `TestS1ConcurrentCompleteAndCallNextPreserveLifecycle` | AC-017/021, T-026/033: real parallel transactions preserve one CALLED and valid lifecycle |
+| `TestS1HostTransitionSQLFailureRollsBack` | AC-015/019: injected SQL errors preserve status, actor/time and version; recovery succeeds |
+| Browser Complete confirmation | AC-019, T-029: another Host changes current ticket; fresh confirmation required |
+| Browser Customer home states | UI P-02, AC-011/012: action follows persisted WAITING/CALLED/COMPLETED |
+| Browser Host read-error retry | NFR-006: real read failure recovers on the same route without a false empty queue |
+| `TestS1AuthFailureLogOmitsSensitiveData` | SDS auth lifecycle/NFR-004: rejected login/session events omit submitted email/password/token |
+| Browser completion keyboard/layout cases (360px and 1280px) | NFR-006 and UI P-01..P-05: labelled fields, keyboard join/call/confirm/cancel/refresh, text lifecycle status, usable form/table sizing, keyboard scroll region |
 
 ## 5. Test-result evidence template
 
@@ -2361,13 +2444,18 @@ SHA to those runs. Subsequent checks must identify the source version actually t
 DEC-028 groups Sprint 1 into four parent features F-01..F-04. F-05 remains the
 legacy completion sub-scope of F-04; all FR/BR, AC and test IDs are retained.
 
+The 13 Nov review worktree based on integrated commit `d7f27a3` has full local
+regression evidence in [Sprint 1 review results](#source-36):
+53 Go tests with race detection and 20 browser tests. Earlier per-feature records
+remain historical evidence. No later commit/merge, CI run or release is implied.
+
 | Requirement / rule | Feature | Sprint | AC IDs | Test IDs | Current status |
 |---|---|---|---|---|---|
 | FR-001 | F-01 | 1 | AC-001..003 | T-001..004 | Local API/DB execution; see testing/f01-auth-results.md |
-| FR-002 / NFR-003 | F-01 | 1 | AC-004..005 | T-005..008 | Actual join (T-005) and foreign detail (T-008) checked; Host endpoints T-006/007 pending F-04 |
+| FR-002 / NFR-003 | F-01 | 1 | AC-004..005 | T-005..008 | Join (T-005), foreign detail (T-008) and Host endpoints T-005..007 checked; testing/f04-host-queue-results.md |
 | NFR-015 | F-01 | 1 + regression S2/S3 | AC-022 | T-037 | Origin/CSRF starts S1; execution in F-01 results |
 | NFR-004 | F-01 | 1 | AC-023..024 | T-038,039 | Session/hash/rotation/rollback execution in F-01 results |
-| FR-011 / NFR-005 (auth setup) | F-01 prerequisites | 1 | AC-025 | T-040 | Migration/seed executed; ticket persistence still pending |
+| FR-011 / NFR-005 (auth setup) | F-01 prerequisites | 1 | AC-025 | T-040 | Migration/seed idempotency and ticket restart checks executed; review results |
 | FR-001 (browser) | F-01 | 1 | AC-026 | T-041 | Auth browser journey; not queue E2E |
 | FR-003 / FR-004 | F-02 | 1 | AC-006..007 | T-009..012 | F-02 local evidence; full T-010 My Ticket journey checked in F-03 worktree |
 | FR-009 / BR-001 | F-02 | 1 | AC-008 | T-013,T-014 | Local RED→GREEN worktree evidence (f02-join-results.md) |
@@ -2376,14 +2464,14 @@ legacy completion sub-scope of F-04; all FR/BR, AC and test IDs are retained.
 | FR-003 inactive/role | F-02 | 1 | AC-010 | T-016,T-017 | Local PASS (f02-join-results.md) |
 | FR-005 | F-03 | 1 | AC-011..012 | T-018..020 | Local API/DB/browser PASS; testing/f03-my-ticket-results.md (uncommitted worktree) |
 | FR-010 / BR-007 | F-03 | 1 | AC-013 | T-008,T-021 | Local owner-scoped API and browser denial PASS; F-03 results |
-| FR-006 / BR-003 | F-04 | 1 | AC-014..015 | T-022,T-023 | Planned, not run |
-| FR-007 / BR-005 | F-04 | 1 | AC-016..017 | T-024..026 | Planned, not run |
-| BR-006 | F-04 (board + completion, legacy F-05) | 1 | AC-018,021 | T-027,T-032 | Planned, not run |
-| FR-008 / BR-004 | F-04 (completion, legacy F-05) | 1 | AC-019..021 | T-028..033 | Planned, not run |
+| FR-006 / BR-003 | F-04 | 1 | AC-014..015 | T-022,T-023 | Local API/DB PASS (f04-host-queue-results.md, uncommitted worktree) |
+| FR-007 / BR-005 | F-04 | 1 | AC-016..017 | T-024..026 | Local PASS incl. 10-way parallel Call Next (f04-host-queue-results.md) |
+| BR-006 | F-04 (board + completion, legacy F-05) | 1 | AC-018,021 | T-027,T-032 | Local API and browser denial PASS (f04-host-queue-results.md) |
+| FR-008 / BR-004 | F-04 (completion, legacy F-05) | 1 | AC-019..021 | T-028..033 | Local API/DB and browser T-029 PASS (f04-host-queue-results.md) |
 | FR-011 / NFR-005 | F-02,F-03 | 1 | AC-006,011 | T-010,T-019,T-035 | Local reload and actual API restart persistence PASS; F-03 results |
-| NFR-004 | F-01 | 1 | AC-001..004,023..024 | T-001..004,038,039 plus config review | Local auth execution; queue endpoint checks still pending |
-| NFR-006 | All S1 UI | 1 | AC-011..012,014 | T-010,T-019,T-020 plus manual check | F-03 empty/status/error-retry browser checks PASS; F-04/manual accessibility pending |
-| NFR-009 | All S1 | 1 | AC-001..021 | T-001..035 | Planned, not run |
+| NFR-004 | F-01 | 1 | AC-001..004,023..024 | T-001..004,038,039 plus config review | Local auth and real queue endpoint regression executed; review results |
+| NFR-006 | All S1 UI | 1 | AC-011..012,014 | T-010,T-019,T-020 + completion UI cases | Keyboard/labels/status/layout cases at 360/1280px and agent visual review recorded in final completion results; human cross-team UAT remains Lab 6 |
+| NFR-009 | All S1 | 1 | AC-001..026 | T-001..041 + review regression | Local full Go/API/DB/browser suite passed; review results (worktree, no CI claim) |
 
 ## Sprint 2–3 and labs planned traceability
 
@@ -2710,6 +2798,23 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
 - Owned read summaries add queue/restaurant names and restaurant timezone; dates
   use YYYY-MM-DD. Manual refresh loads persisted status; no ETA or polling.
 - Join now redirects to `/my-queue`; no F-04/S2 mutations are introduced.
+
+## DEC-031 — F-04 Host queue operation details (11 November 2026) — pending team sign-off
+
+- User authorized F-04 implementation on `feat/F-04-host-queue-operations`. Follow the
+  committed F-04 scope and `features/f04-host-queue-implementation-contract.md`.
+- Added `GET /api/v1/host/queues` (assigned queues only) so the board can find its
+  queue; the documented entries/current/call-next/complete routes are unchanged.
+- Customer → 403; Host without a grant → 403, including an unknown well-formed queue
+  UUID (no existence oracle); malformed queue/entry ID and an entry from another
+  queue → 404. Host mutations take no body (non-empty → 400).
+- Call Next and Complete lock the queue row `FOR UPDATE` first, then recheck the grant
+  in the same transaction; transitions use conditional `WHERE status=...` updates
+  with one-affected-row checks. A `uq_one_called_per_queue` violation maps to 409
+  `CALL_IN_PROGRESS`. Any granted Host may complete a ticket another Host called.
+- Host operations stay allowed on an inactive queue so existing tickets can drain.
+- Board shows ticket code, party size and times only; Complete needs an on-screen
+  confirmation. Manual refresh; no polling, no S2 table assignment.
 <!-- END SOURCE: docs/13-decisions.md -->
 
 ---
@@ -3104,6 +3209,11 @@ Write one **action-oriented interpretation <=100 words** based on actual figures
 | **Total** | **80** | | |
 
 **Deliverable 1 must include:** runnable main release, exact tag/SHA, setup instructions, test commands/results and brief reproducible demo sequence. **Cloud deployment NOT required for D1.**
+
+Current local S1 implementation/verification evidence is indexed in the
+[completion checklist](#source-37) and
+[execution results](#source-36). The template at the end
+of this document is not a claim that a release, teammate review or submission happened.
 
 ## Deliverable 2 — 29 Nov 2026, 70 raw points / 7% course
 
@@ -4026,3 +4136,475 @@ here. The earlier full 38-test Go run, vet, module verification and build result
 remain dated above and are not claimed as rerun in this follow-up. The same local
 Go/PostgreSQL/Chrome environment and Docker/CI/deployment limits apply.
 <!-- END SOURCE: docs/testing/f03-my-ticket-results.md -->
+
+---
+
+<a id="source-34"></a>
+
+## 34. `docs/features/f04-host-queue-implementation-contract.md`
+
+> Source: [docs/features/f04-host-queue-implementation-contract.md](docs/features/f04-host-queue-implementation-contract.md)
+
+<!-- BEGIN SOURCE: docs/features/f04-host-queue-implementation-contract.md -->
+# F-04 implementation contract — Host Queue Operations (board, Call Next, Complete)
+
+Date: 11 November 2026. User authorized implementation on
+`feat/F-04-host-queue-operations`, base `acc51aa` (sprint-1-staging after F-03).
+The committed F-04 baseline (including the legacy F-05 completion workflow) is in
+`sprint1-contracts.md`. This addendum was written in the worktree before code. It
+does not establish an Issue, a pre-implementation addendum commit or TA approval.
+
+## Behavior, API and data
+
+All routes require a valid session cookie, role `HOST` and a grant in
+`operator_queue_permissions` for the path queue. Mutations also require exact
+Origin and `X-CSRF-Token`. The service rechecks role and grant independently of the
+HTTP middleware; mutations recheck the grant inside their own transaction.
+
+| Method / path (`/api/v1` prefix) | Success | Errors |
+|---|---|---|
+| GET `/host/queues` | 200 `{queues:[{id,name,restaurantName,timezone,isActive}]}` (assigned only) | 401, 403 |
+| GET `/host/queues/{queueId}/entries?status=WAITING` | 200 `{entries:[...]}` WAITING, oldest first by `(joined_at,id)` | 400 (other status), 401, 403, 404 |
+| GET `/host/queues/{queueId}/current` | 200 `{entry: null \| entry}` (the queue's CALLED entry) | 401, 403, 404 |
+| POST `/host/queues/{queueId}/call-next` | 200 updated CALLED entry | 400 (non-empty body), 401, 403, 404, 409 `CALL_IN_PROGRESS` / `QUEUE_EMPTY` |
+| POST `/host/queues/{queueId}/entries/{entryId}/complete` | 200 updated COMPLETED entry | 400, 401, 403, 404, 409 `INVALID_TRANSITION` |
+
+- Host entry DTO: `id, queueId, ticketCode, serviceDate, partySize, status,
+  joinedAt, calledAt, completedAt`. No customer ID/name/email, no actor IDs,
+  no raw sequence number.
+- Customer → 403 `FORBIDDEN`. Host without a grant for the queue (including an
+  unknown but well-formed queue UUID) → 403. Malformed queue/entry ID → 404.
+  Entry that does not exist or belongs to another queue → 404 `NOT_FOUND`.
+- **Call Next** (BR-003/005): one transaction locks the queue row `FOR UPDATE`,
+  rechecks the grant, rejects 409 `CALL_IN_PROGRESS` if a CALLED entry exists,
+  otherwise selects the oldest WAITING entry by `(joined_at,id)` (409
+  `QUEUE_EMPTY` if none) and updates it with `WHERE status='WAITING'`, checking
+  one affected row. Sets `called_at`, `called_by`, `version+1`. The existing
+  `uq_one_called_per_queue` index is the DB backstop; a violation maps to
+  `CALL_IN_PROGRESS`.
+- **Complete** (BR-004/006, legacy F-05): same queue lock order, grant recheck,
+  loads the entry scoped to the path queue `FOR UPDATE`; only CALLED → COMPLETED
+  with `WHERE status='CALLED'` and one affected row; sets `completed_at`,
+  `completed_by`, `version+1`. WAITING or COMPLETED → 409 `INVALID_TRANSITION`,
+  no change. Afterwards the next WAITING entry becomes callable.
+- Timestamps come from the server clock (truncated to microseconds) and are
+  never earlier than the previous lifecycle timestamp. Host operations remain
+  allowed on an inactive queue so existing tickets can be drained.
+- No schema change: migration 0002 already contains the lifecycle CHECK and the
+  one-CALLED-per-queue partial unique index. No Save-based transitions.
+
+## UI
+
+- `/host/queue` (HOST only; Customer redirected to `/`) keeps the welcome
+  heading, lists assigned queues (selector when more than one, `?queue=`), shows
+  the current called card and the WAITING table (ticket code, party size, joined
+  time in restaurant timezone). No customer identity is displayed.
+- Call Next button (disabled while a ticket is called or the list is empty, but
+  the server decides). Complete on the current card asks for confirmation text
+  before sending. Refresh reloads persisted state. Loading/disabled states and
+  mapped 409/403/401 messages; unassigned Host sees "No queue is assigned".
+- Review clarification, 13 Nov: confirmation is keyed by the selected entry ID;
+  a different current ticket after refresh needs its own Complete confirmation.
+  Host read-error Retry refreshes server data and resets the error boundary.
+
+## Acceptance and STS
+
+| AC / tests | Observable acceptance |
+|---|---|
+| AC-014; T-022 | WAITING list oldest first with fixed timestamps; tie broken by id; no private fields |
+| AC-015; T-023 | Call Next promotes A-001 to CALLED with `called_at/called_by`; A-002 stays WAITING |
+| AC-016; T-024,T-025 | Empty queue 409 `QUEUE_EMPTY`; existing CALLED 409 `CALL_IN_PROGRESS`; rows unchanged |
+| AC-017; T-026 | Parallel Call Next from two authorized Hosts (H1/H3): exactly one 200, one CALLED row |
+| AC-004/018; T-005..007,T-027 | Guest 401; Customer 403; Host without grant 403 on board/call/complete; no writes |
+| AC-019; T-028,T-029 | Complete persists COMPLETED with `completed_at/completed_by`; customer sees COMPLETED in browser |
+| AC-020; T-030,T-031 | WAITING or COMPLETED completion 409 `INVALID_TRANSITION`, unchanged |
+| AC-021; T-032,T-033 | Customer complete 403; after completing A-001, Call Next calls A-002 |
+| Regression | CSRF/Origin on mutations; entry from another queue 404; service-level role/grant checks; parallel complete succeeds once |
+
+Tests run against isolated real PostgreSQL, fail-first for the transition and
+locking rules. Browser test drives a real Host Call Next / Complete. Record actual
+commands and results in `../testing/f04-host-queue-results.md`.
+
+DoD: AC-014..021 and T-005..007/T-022..033 executed, persisted DB checks, E2E
+Host call/complete, synchronized API/traceability docs. Teammate review,
+integration, CI and release remain separate workflow steps.
+
+13 Nov integration review fixes and full local regression are recorded in
+[`sprint1-review-results.md`](#source-36); earlier results
+remain dated worktree evidence, not a tested future release commit.
+<!-- END SOURCE: docs/features/f04-host-queue-implementation-contract.md -->
+
+---
+
+<a id="source-35"></a>
+
+## 35. `docs/testing/f04-host-queue-results.md`
+
+> Source: [docs/testing/f04-host-queue-results.md](docs/testing/f04-host-queue-results.md)
+
+<!-- BEGIN SOURCE: docs/testing/f04-host-queue-results.md -->
+# F-04 local execution evidence — 11 November 2026
+
+Branch: `feat/F-04-host-queue-operations`. Base HEAD: `acc51aa` (sprint-1-staging
+after the F-03 merge). Results below describe the **uncommitted worktree**, not a
+release commit or CI run. The implementation addendum
+(`../features/f04-host-queue-implementation-contract.md`) was written in the
+worktree before code, without a separate commit. No Issue, teammate review,
+integration, deployment, commit or push had been performed when these checks ran.
+
+## Scope and environment
+
+- `internal/queue`: Host board reads (assigned queues, FIFO WAITING list, current
+  CALLED), Call Next and Complete (legacy F-05) with queue row lock `FOR UPDATE`,
+  grant recheck inside the transaction, conditional updates and affected-row checks.
+- Web: `/host/queue` board (current card, waiting table, Call next, Complete with
+  confirmation, refresh, error/notice messages); Next rewrites for Host routes.
+- No new migration or dependency: migration 0002 already has the lifecycle CHECK
+  and `uq_one_called_per_queue`.
+- Windows 11 amd64; Go 1.26.10 (go.dev archive, SHA-256 verified); Node 24.14.0
+  (runtime target remains Node 22); PostgreSQL 18.1 local binaries.
+- PostgreSQL ran as a disposable local cluster (port 55432, random credentials).
+  Go integration fixtures migrate/seed independent schemas and drop them.
+- Browser: Playwright 1.65.0 with locally installed Chromium revision 1243 via a
+  temporary config outside the repository; production `next start` (port 3100)
+  and compiled Fiber API (port 8080) against a freshly migrated/seeded database.
+- `-race` was not run: only a 32-bit GCC is available on this machine (cgo).
+  Docker/CI were not run.
+
+## Actual checks
+
+| Command / check | Actual result |
+|---|---|
+| `go test -tags=integration -count=1 -run TestF04 ./internal/queue` with stub service and no routes (RED) | FAIL: all 8 F-04 tests failed (Host endpoints returned 404) |
+| Same, after implementation (first run) | 7 PASS, 1 FAIL: test helper built a doubled My Ticket path; fixed the test call, no production change |
+| `go test -tags=integration -count=1 -v ./...` (final, 22:23 +07) | **PASS: 46 top-level tests, 0 failures**, including 8 F-04 tests plus F-01/F-02/F-03 regression |
+| `go test -count=1 ./...` | PASS |
+| `go vet ./...` and `go vet -tags=integration ./...` | PASS |
+| `go build ./...`, `go mod verify` | PASS, all modules verified |
+| `gofmt -l` on new files | Clean after formatting the test fixture struct |
+| `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` | PASS; `/host/queue` builds as dynamic route |
+| Browser run 1 | 12 PASS, 3 FAIL: new spec hit the 10 logins/minute limiter (`Too many attempts`). Added a 61 s wait before the F-04 spec |
+| Browser run 2 | 14 PASS, 1 FAIL: test opened `/join` before customer sign-in finished. Test now waits for the signed-in home page |
+| Browser run 3, fresh seeded DB (22:21 +07) | **15 PASS** (7 F-01, 2 F-02, 3 F-03 incl. stored-state test, 3 F-04) |
+| DB check after browser run | A-003 (party 3) COMPLETED, `called_by`/`completed_by` = seeded Host, version 3; no CALLED rows remain |
+| API log scan | No 5xx, no panic, generated seed password absent |
+
+## Test mapping
+
+| Test IDs | Test | Notes |
+|---|---|---|
+| T-022 | `TestF04WaitingListIsFIFO` | Fixed out-of-order `joined_at`; status filter default/400; assigned-queue list; no private fields |
+| T-023 | `TestF04CallNextCallsOldestWaiting` | A-001 CALLED with `called_at/called_by`, version 2; A-002 WAITING; current endpoint |
+| T-024, T-025 | `TestF04CallNextBusinessConflicts` | `QUEUE_EMPTY` writes nothing; `CALL_IN_PROGRESS` leaves versions unchanged |
+| T-026 | `TestF04ConcurrentCallNextClaimsOnce` | 10 parallel requests from H1 + H3: exactly one 200, nine `CALL_IN_PROGRESS`, oldest entry called |
+| T-005..007, T-027, T-032 | `TestF04AccessControl` | Guest 401; Customer 403; unassigned Host 403 on list/current/call/complete; unknown queue 403, malformed 404; CSRF/Origin; non-empty body 400; service-level role/grant recheck; revoked grant denied |
+| T-028, T-033 | `TestF04CompleteThenCallNext` | H3 completes H1's call; `completed_by` = H3; owner reads COMPLETED via F-03; A-002 called next |
+| T-030, T-031 | `TestF04InvalidCompletion` | WAITING and repeated completion 409 `INVALID_TRANSITION`, unchanged; unknown/malformed 404; other queue's entry 404 |
+| Regression | `TestF04ConcurrentCompleteSucceedsOnce` | 6 parallel completes: one 200, five 409 |
+| T-029 | `e2e/queue-operations.spec.ts` | Real browser Host call/complete; customer sees CALLED then COMPLETED; board shows no customer identity; Cancel keeps CALLED |
+| T-027 (browser) | `e2e/queue-operations.spec.ts` | Unassigned Host sees "No queue is assigned"; API 403 |
+| T-006 (browser) | `e2e/queue-operations.spec.ts` | Customer redirected from `/host/queue`; call-next 403 |
+
+## Limits
+
+- RED was shown against stubs (endpoints absent), not by removing the queue lock;
+  the partial unique index `uq_one_called_per_queue` is a second DB guard.
+- No `-race`, Docker smoke test, CI run or Node 22 run on this machine.
+- The F-04 browser spec waits 61 s for the login rate limit window and drains
+  earlier specs' active tickets through real Host transitions; run with one worker
+  against a disposable seeded database only.
+- Logs were kept in the session scratchpad; the temporary cluster, servers and
+  Playwright config were removed after the run.
+
+## PR review follow-up — 12 November 2026
+
+Base: committed F-04 branch HEAD `953a925` plus uncommitted review fixes. Same local
+environment as above (fresh disposable PostgreSQL 18.1 cluster and seeded database).
+
+| Review point | Change | Fail-first evidence |
+|---|---|---|
+| Malformed `entryId` was validated after the queue lock | `Complete` checks role and both IDs before opening the transaction | `TestF04MalformedEntryDoesNotTakeQueueLock` (queue row held by another transaction): before fix waited 2 s and failed with `context deadline exceeded`; after fix returns `ErrNotFound` immediately |
+| Host handlers ignored `auth.Identity` `ok` | All five Host handlers return 401 `UNAUTHENTICATED` without an identity, like the other queue handlers | `TestHostHandlersRequireIdentity` (unit, no DB): before fix panicked when an empty identity reached the service; after fix 401 on all five routes |
+| Test fixture writes ignored errors | Second-queue insert, its grant and the grant revocation now fail fast (revocation also requires one affected row); `t.Fatal(fmt.Sprintf(...))` → `t.Fatalf` | Test-only change |
+| Board showed time only | Host board shows date and time in the restaurant timezone | Covered by browser run below (no assertion on time text) |
+
+| Command / check | Actual result |
+|---|---|
+| `go test -tags=integration -count=1 -v ./...` (14:56 +07) | **PASS: 48 top-level tests, 0 failures** |
+| `go test -count=1 ./...`, `go vet` (with and without tag), `go build ./...` | PASS |
+| `npm run lint`, `typecheck`, `test`, `build` | PASS |
+| Playwright on fresh seeded DB (14:57 +07) | **15 PASS** |
+<!-- END SOURCE: docs/testing/f04-host-queue-results.md -->
+
+---
+
+<a id="source-36"></a>
+
+## 36. `docs/testing/sprint1-review-results.md`
+
+> Source: [docs/testing/sprint1-review-results.md](docs/testing/sprint1-review-results.md)
+
+<!-- BEGIN SOURCE: docs/testing/sprint1-review-results.md -->
+# Sprint 1 review fixes — local execution evidence, 13 November 2026
+
+Branch: `fix/sprint1-review`. Base HEAD:
+`d7f27a325b95fdb437a851e5e76947f74ea813e7` (merged F-04 integration baseline).
+The user authorized correcting the Sprint 1 review findings. These results cover
+that base **plus the uncommitted fix worktree**, not a later commit, main merge,
+CI run, teammate approval or release. Existing F/FR/BR/AC/T identifiers are retained.
+The final completion checkpoint below supersedes the initial counts and source fingerprint.
+
+The initial review code/test snapshot used for GREEN has SHA-256:
+`cf68f2d4ed91d291d067aba31b6a627702adc25fcfd7c6f2b6e2a31fc0e9f271`.
+It hashes sorted relative paths and bytes of files under `apps/api/internal`,
+`apps/api/db`, `apps/api/cmd`, `apps/web/src`, `apps/web/e2e`, `apps/web/config`
+and `apps/web/tests`. Documentation and the pre-existing generated
+`apps/web/next-env.d.ts` change are excluded from this source fingerprint.
+
+## Changes and demonstrated failures
+
+| Finding / regression | Before production fixes | Final behavior |
+|---|---|---|
+| Queue ID validation | URN queue IDs returned 500 on Join and four protected Host routes; compact UUID allowed Join | Noncanonical queue IDs return 404 before SQL; no ticket/counter writes |
+| Complete confirmation | With two real Host contexts, confirmation remained visible after another Host completed A and called B | Confirmation component is keyed by entry ID and submits that selected ID; B needs a fresh confirmation |
+| Customer home | After a persisted join, View My Queue was absent | WAITING/CALLED shows View My Queue; COMPLETED returns the Join Waitlist action |
+| Host read-error Retry | After restoring the temporarily renamed ticket table, Retry did not restore the board | Retry refreshes server data and resets the boundary; same-route board recovers |
+| FIFO/inactive queue | New coverage, already correct before fixes | Equal timestamps use ID order, previous-day entries stay eligible, inactive queue can be drained |
+| Mixed concurrent transitions | New coverage, already correct before fixes | Complete and Call Next serialize; an early call conflicts or the next ticket is called once |
+| SQL failure rollback | New coverage, already correct before fixes | Trigger-injected update errors preserve status, version and audit metadata; retry after removing trigger succeeds |
+
+RED Go command used the new four `TestS1*` tests: one validation test failed and
+three other regression tests passed. RED browser run selected the three
+`Sprint 1 review` cases; all three failed on the original UI for the expected
+assertions. This is recorded worktree fail-first evidence, not a RED commit.
+
+## Environment and isolation
+
+- Linux amd64; Go 1.26.10, Node 22.17.0, PostgreSQL 18.1.
+- Existing pinned dependencies; no package/version changes or installs.
+- Fresh temporary PostgreSQL cluster with generated credentials and loopback
+  ports. Go fixtures each migrate/seed/drop a separate schema.
+- Web production build runs from a scratch copy of the web workspace with
+  existing node_modules. It does not overwrite the developer's `.next` or
+  generated `next-env.d.ts`. API and web use unused ephemeral ports.
+- Playwright 1.65.0, one worker, locally installed Chrome 157.0.8103.50 using a
+  temporary config. This is not execution on Playwright's pinned browser binary.
+- Browser fixtures use the same disposable DB as their API. Real read-error
+  tests rename/restore `queue_entries`; never run them on a shared/demo/live DB.
+- Temporary API/web processes and DB cluster were stopped; scratch DB/build
+  directories removed after both RED and GREEN runs. The running Docker demo
+  database was not used for destructive regression fixtures.
+
+## Initial review checks (completed about 22:57 Asia/Bangkok)
+
+| Command / check | Observed result |
+|---|---|
+| `go test -tags=integration -race -count=1 -v ./...` from `apps/api` | PASS: 52 top-level tests, no failures or race reports; includes F-01..F-04 regression and four new API/DB tests |
+| `go vet -tags=integration ./...` | PASS |
+| `go mod verify` | PASS: all modules verified |
+| `go build -buildvcs=false -o <temporary binary> ./cmd/api` and `./cmd/db` | PASS |
+| Fresh db CLI `migrate`, `seed` | Both exit 0 |
+| `npm run lint` | PASS in scratch checkout |
+| `npm test` | PASS: 2 web configuration tests |
+| `npm run build`, then `npm run typecheck` | PASS in scratch checkout |
+| `playwright test --config <temporary local Chrome config>` | PASS: all 18 browser tests, including three new review cases |
+| T-035 actual API process stop/restart without DB reset | PASS: same cookie/session retrieves identical persisted active ticket |
+| Generated DB/seed credential scan of isolated service logs | PASS: generated passwords absent |
+
+Local orchestration: `python3 /tmp/dineq-s1-review-check.py`. It supplies generated
+environment values, runs the commands above, then cleans up. Local captured logs:
+`/tmp/dineq-s1-review-red-go.log`, `/tmp/dineq-s1-review-red-browser.log`,
+`/tmp/dineq-s1-review-green.log`. These are local session artifacts, not published
+CI evidence. Reproduce the repository tests using dedicated `TEST_DATABASE_URL`,
+the documented seed/setup, and browser environment/config on a disposable DB.
+
+## Local Docker follow-up
+
+After GREEN, ran:
+
+```bash
+docker compose -f compose.yaml -f /tmp/dinequeue-local-ports.yaml up --build -d
+```
+
+The existing local override avoids unrelated services on ports 3000/8080:
+web `127.0.0.1:3001`, API `127.0.0.1:8081`, APP_ORIGIN `http://localhost:3001`.
+It is outside the repository and is not required on another developer's machine
+when the default ports are available.
+
+- API and web images built; Go module download and npm install layers were CACHED.
+- API/web containers restarted, PostgreSQL 18.6 container remained healthy.
+- API `/health/live`: 200 `{"status":"ok"}`.
+- Web `/api/health/ready`: 200 `{"status":"ready"}`.
+- Web `/login`: HTTP 200.
+- No new SQL migration or seed rerun was needed for these code fixes. Existing
+  demo data and local credentials were retained.
+
+This Docker follow-up verifies build/start/readiness, not a second full browser
+suite on Docker's Node 22.23.4/PostgreSQL 18.6 environment. No cloud deployment,
+CI, manual accessibility acceptance, teammate approval or release tag is claimed.
+Record checks on the eventual release/merge commit separately.
+
+## Final Sprint 1 completion checkpoint — 13 Nov, about 23:29 Asia/Bangkok
+
+The user requested one complete audit/fix of the required S1 scope. The resulting
+[completion checklist](#source-37) maps all S1 FRs, BRs,
+applicable NFRs, UI P-01..P-05 and existing AC/test IDs. Additional corrections:
+
+- Customer header now shows available/active restaurant and queue context, current
+  account identity, My Queue navigation and logout. Active tickets retain their
+  context even when the queue no longer accepts joins.
+- Host current card includes both joined/called timestamps, visibly labelled in
+  the restaurant timezone. Table columns are spaced and use a focusable horizontal
+  scroll region on small screens instead of squeezing labels/values together.
+- Queue selector/input sizing prevents document overflow at 360px.
+- Auth failure events use fixed redacted messages, without submitted identity,
+  password or session token. The new real-DB log test failed before logging was
+  added and passed afterwards.
+- Duplicate-active race test now sends 20 requests from the same Customer,
+  requiring one success and 19 conflicts; the separate 20-distinct-Customer
+  unique-number race remains.
+- The implemented API is exported in `../api/sprint1.openapi.json` (14 paths and
+  operations). JSON parsing and local structure/reference checks passed. This is
+  a documentation check, not a claim that an external OpenAPI validator ran.
+- System SDS implementation/module/cache descriptions and status were synchronized.
+
+Final code/test snapshot SHA-256 (same path/byte hashing procedure as above):
+`2072d652f4981f16d65cb4bdbba7bb75f9b23f18633a821a4a8aa7cb0921d150`.
+
+| Final check | Actual result |
+|---|---|
+| `go test -tags=integration -race -count=1 -v ./...` | PASS: 53 top-level tests; no race report |
+| `go vet -tags=integration ./...`, `go mod verify`, API/db builds | PASS |
+| Fresh temporary DB migrate/seed; actual API restart | PASS; session and ticket preserved |
+| `npm run lint`, `npm test`, `npm run build`, `npm run typecheck` in scratch build | PASS; 2 web unit tests |
+| Complete browser suite | PASS: 20 tests, including both viewport keyboard/layout cases |
+| Generated test credential scan | PASS; no generated DB/seed passwords in service logs |
+| Final Docker rebuild/start | PASS; dependency install layers CACHED; existing DB retained |
+| Final API live / web ready / login | 200 `ok`, 200 `ready`, HTTP 200 |
+
+The first added UI-field run failed on missing header context and Host joined
+time. The first expanded layout run had 18 pass/2 fail: mobile Join overflow and
+a test locator matching both the app alert and Next route announcer. After fixing
+the form and narrowing that locator, visual inspection found cramped Host columns;
+the initial scroll-wrapper attempt then exposed a grid minimum-width overflow
+(19 pass/1 fail). `min-w-0` fixed the grid item. Both targeted keyboard/layout cases
+passed before the final full combined run above. Assertions were retained, including
+12px header-text separation and actual ArrowRight scrolling of the focusable region.
+
+Agent visual inspection covered captured login, home, join, ticket WAITING/COMPLETED,
+Host waiting and current-called screens at 360px and 1280px. Labels and lifecycle
+status text are visible; controls are keyboard-reachable and activatable; no document
+horizontal overflow. CSS foreground/background contrast calculations: wine/paper
+11.18:1, white/wine 11.73:1, ink/paper 14.35:1. Disabled controls and full WCAG
+certification are not inferred from these calculations. This is local agent
+verification, not another student's UAT or approval.
+
+Final local artifacts: `/tmp/dineq-s1-final-green.log`,
+`/tmp/dineq-s1-completion-red.log`, `/tmp/dineq-s1-completion-auth-red.log`,
+`/tmp/dineq-s1-completion-green.log`, `/tmp/dineq-s1-completion-table-red.log`,
+`/tmp/dineq-s1-completion-layout-check.log`, `/tmp/dineq-s1-final-docker.log`,
+`/tmp/dineq-s1-final-smoke.log`, screenshots under `/tmp/dineq-s1-completion-ui/`.
+Final harness: `/tmp/dineq-s1-final-check.py`, using the same isolated setup and
+commands as the earlier harness. The first local Docker health probe arrived
+while `go run` was still compiling startup code and got an empty reply; after the
+server reported listening, the final health/login checks above all passed.
+
+The source fingerprint excludes documentation and generated local type declarations.
+No application/test source changed after this final verified snapshot. Tests did
+not use the developer's Docker database; no migration/seed or password change was
+needed for the running demo. Peer review, committing/pushing and release/tagging
+remain real team workflow steps. CI/GCP are Lab 5 and independent UAT is Lab 6.
+<!-- END SOURCE: docs/testing/sprint1-review-results.md -->
+
+---
+
+<a id="source-37"></a>
+
+## 37. `docs/testing/sprint1-completion-checklist.md`
+
+> Source: [docs/testing/sprint1-completion-checklist.md](docs/testing/sprint1-completion-checklist.md)
+
+<!-- BEGIN SOURCE: docs/testing/sprint1-completion-checklist.md -->
+# Sprint 1 requirement completion checklist
+
+Scope: course PDF §§5.2, 6.9 and 7 plus the repository's Sprint 1 SRS, feature
+contracts, UI/API/data specifications and STS. Four parent features F-01..F-04;
+manual Complete retains legacy F-05. This checklist audits implementation and
+local verification separately from human review and release/submission history.
+
+Source: `fix/sprint1-review`, integrated base `d7f27a3` plus the fix worktree.
+Exact tested source fingerprints, environments, commands and results are recorded
+in [Sprint 1 review results](#source-36). A future commit or merge
+does not inherit an execution claim automatically.
+
+## Functional and business requirements
+
+| Requirement | Implemented behavior | Verification |
+|---|---|---|
+| FR-001; AC-001..003,026 | Login/logout/me; role-directed UI, reload and logout revocation | F-01 API/DB tests; auth browser journeys |
+| FR-002; AC-004..005 | Backend role, per-queue grant and ownership enforcement | Guest/Customer/unassigned Host API denial and browser route checks |
+| FR-003; AC-006,010 | Choose an active seeded queue and provide party size; closed/unknown queues reject | F-02 positive/negative HTTP+DB tests; join UI |
+| FR-004; BR-002/009; AC-006,009 | Persist WAITING, unique daily number in restaurant timezone; reject supplied status/number/date | Counter transaction/index tests, strict JSON validation, local-midnight boundary |
+| FR-005; AC-011..012 | Own active status/number/size/issue time, empty state and persisted refresh | F-03 exact persisted-value/read/UI tests |
+| FR-006; BR-003; AC-014 | Assigned Host board, WAITING FIFO and current CALLED | Host list/current API and browser tests; timestamp/id tie fixtures |
+| FR-007; BR-003/005; AC-015..018 | Strict FIFO Call Next; no skip and no second CALLED | Queue lock, conditional update, partial unique index; parallel Host tests |
+| FR-008; BR-004/006; AC-019..021 | Only authorized Host completes CALLED; actor/time/version persist | Positive/negative/repeated/cross-queue tests; customer observes completion |
+| FR-009; BR-001/004/008 | Duplicate active ticket and invalid input/transition reject | Same-customer 20-way join, distinct-customer 20-way join, invalid body/range/state tests |
+| FR-010; BR-007; AC-005,013 | Only owner reads detail; foreign/missing/malformed returns non-revealing 404 | F-03 role/ownership API tests and account-switch/browser checks |
+| FR-011; AC-025 | Explicit repeatable migrations/seeds; ticket/session survives API restart | Fresh isolated setup, migrate/seed idempotency tests and real process restart |
+| FR-023; BR-008 and S1 portion of BR-015 | Party 1..16, including 10, joins without table allocation; physical-table limit remains independent | Bounds/raw-number tests, party-10 persisted ticket, large-party UI notice |
+| BR-001 | At most one WAITING/CALLED per customer/queue, even across days | Partial unique index plus sequential/parallel tests; completion permits rejoin |
+| BR-002 | Unique number scoped to queue/local service date | Unique index, counter lock/upsert, midnight reset and concurrent numbering |
+| BR-003 | `(joined_at,id)` ascending without skipping; older-day tickets still eligible | Board and selection tests with reversed fixture insertion and equal-time ID order |
+| BR-004 | WAITING → CALLED → COMPLETED only | Conditional SQL and lifecycle CHECK; WAITING/repeated completion rejected |
+| BR-005 | One CALLED per queue | Queue-row lock plus DB partial unique index and real concurrent requests |
+| BR-006 | Assigned Host only; grant rechecked in mutation transaction | HTTP/service denial tests and revoked-grant checks |
+| BR-007 | Customer ownership is in SQL | Queries bind authenticated customer and requested entry; foreign 404 |
+| BR-008 | Integer inclusive 1..16 | Client and server validation; database CHECK |
+| BR-009 | Backend assigns date/number/status | Strict DTO, server clock/timezone and transaction; supplied extra fields reject |
+
+## UI and nonfunctional requirements
+
+| Item | Implementation / local verification |
+|---|---|
+| UI P-01 Login | Associated email/password labels, pending/error states, role routing and expired-session feedback; keyboard focus order checked |
+| UI P-02 Customer home | Restaurant/queue context, identity/logout, My Queue navigation, Join or View My Queue based on persisted active state |
+| UI P-03 Join | Queue label/selector, party validation and 9+ notice, pending/error/conflict feedback, successful ticket navigation; long queue selector fits mobile |
+| UI P-04 My Ticket/detail | Persisted fields, timezone-labelled joined time, text WAITING/CALLED/COMPLETED messages, refresh, empty/error/retry, owner-only completed bookmark |
+| UI P-05 Host | Assigned selector, waiting FIFO, current joined/called times, Call/Complete/Cancel/Refresh, keyed confirmation and conflict/read-error recovery |
+| NFR-001 | Both identical-customer and distinct-customer 20-way joins checked against real PostgreSQL |
+| NFR-002 | Parallel Call Next and Complete, plus mixed Complete/Call Next, preserve lifecycle and one CALLED |
+| NFR-003 | Server-side roles and resource scope, independently of UI controls |
+| NFR-004 | Argon2id with random salt; opaque hashed DB sessions, expiry/rotation/revocation; local secrets excluded from Git |
+| NFR-005 | PostgreSQL persistence, migration/seed idempotency, actual API process restart |
+| NFR-006 | Labels, keyboard activation, status text, success/empty/error/loading states, local visual/layout checks at 360px and 1280px; see final completion checkpoint in results |
+| NFR-009 | Unit + real DB integration/concurrency/rollback + selected browser tests mapped to existing AC/T IDs |
+| NFR-010 | Public display is later scope; shipped private DTO projections and Host UI omit customer identity |
+| NFR-015 | Exact Origin and per-session CSRF on mutations; strict validation; backend role/resource checks |
+| SDS auth failure logging | Fixed redacted event messages; automated log test checks submitted email/password/token do not appear |
+| Data/transactions | Explicit SQL migrations; unique/FK/lifecycle constraints; service-owned transaction, deterministic queue-first locks and rollback tests |
+| SDS API contract | [Implemented S1 OpenAPI export](docs/api/sprint1.openapi.json), 14 paths/operations, JSON/local schema-reference checks; matches documented route/DTO/error contracts |
+| Local setup | Docker build/start/health verified with local port override; no new migration/seed needed for fixes |
+
+NFR-007 performance load target is scheduled for S3; NFR-008 CI/deployment is Lab 5.
+Floor-related NFR-011..014 and table constraints/algorithms belong to S2/S3.
+Signup, password recovery and email verification are not required by course §5.2
+for Sprint 1. No later-sprint feature is needed to complete this local queue slice.
+
+## Release and human evidence boundary
+
+The course and Sprint 1 DoD also require the team's real Git/review/release evidence.
+Code changes cannot manufacture prior Issues, a pre-implementation commit, a
+teammate approval, contributions by another student or an assessment submission.
+
+| Item | Observed evidence / next release action |
+|---|---|
+| Existing feature PR history | [F-01 #1](https://github.com/bbxndg/DineQueue/pull/1), [F-02 #3](https://github.com/bbxndg/DineQueue/pull/3), [F-03 #4](https://github.com/bbxndg/DineQueue/pull/4), [F-04 #5](https://github.com/bbxndg/DineQueue/pull/5) exist; approval is not inferred from existence |
+| Issues / board / contributions | GitHub read-only issue search on 13 Nov returned no Issues. Team must provide actual process/contribution evidence; this checklist does not backdate any |
+| Current fixes | Local worktree; commit/push and peer-reviewed fix PR into sprint staging still required |
+| Release | Reviewed sprint-staging → main PR, actual submitted SHA/tag, and checks tied to that source remain release actions |
+| Submission | Use the actual main release, setup/demo, executed test results and direct evidence links per `../release/submissions.md` |
+
+Human cross-team UAT is a separate Lab 6 activity. Agent-run keyboard/layout/visual
+verification is identified as such and does not claim another student's acceptance.
+<!-- END SOURCE: docs/testing/sprint1-completion-checklist.md -->

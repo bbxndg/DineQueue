@@ -55,6 +55,9 @@ HTTP middleware; mutations recheck the grant inside their own transaction.
   the server decides). Complete on the current card asks for confirmation text
   before sending. Refresh reloads persisted state. Loading/disabled states and
   mapped 409/403/401 messages; unassigned Host sees "No queue is assigned".
+- Review clarification, 13 Nov: confirmation is keyed by the selected entry ID;
+  a different current ticket after refresh needs its own Complete confirmation.
+  Host read-error Retry refreshes server data and resets the error boundary.
 
 ## Acceptance and STS
 
@@ -77,3 +80,7 @@ commands and results in `../testing/f04-host-queue-results.md`.
 DoD: AC-014..021 and T-005..007/T-022..033 executed, persisted DB checks, E2E
 Host call/complete, synchronized API/traceability docs. Teammate review,
 integration, CI and release remain separate workflow steps.
+
+13 Nov integration review fixes and full local regression are recorded in
+[`sprint1-review-results.md`](../testing/sprint1-review-results.md); earlier results
+remain dated worktree evidence, not a tested future release commit.

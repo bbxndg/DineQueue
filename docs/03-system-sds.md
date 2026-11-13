@@ -2,14 +2,15 @@
 
 **Version:** DQ-SDS-2.0 proposed (2026-11-05), prior to implementation. Required by CPE 334 §§5.1–5.3, 8.1, Deliverable 1 rubric.
 
-**Implementation boundary (6 Nov 2026):** repository foundation now lives in
+**Implementation boundary (updated 13 Nov 2026):** repository foundation lives in
 `apps/web` and `apps/api`; see `features/sprint1-foundation-contract.md` and
 `testing/sprint1-foundation-results.md` (historical) and `testing/sprint1-gorm-results.md`
 (current access-layer revision). The foundation includes web/config/health/GORM
-wiring. F-01 auth, F-02 join and F-03 own-ticket reads/UI are present; local
-execution evidence lives in `testing/f01-auth-results.md`, `testing/f02-join-results.md`
-and `testing/f03-my-ticket-results.md`. Host operations/floor/reporting remain
-proposed designs; local worktree evidence is not CI/release approval.
+wiring. F-01 auth, F-02 join, F-03 own-ticket reads/UI and F-04 Host board/FIFO
+call/manual completion are implemented. Local integration and review evidence is
+recorded in `testing/sprint1-review-results.md`, alongside the historical per-feature
+records. Floor/reporting remain proposed designs for later sprints. Local worktree
+evidence is not CI/release approval.
 
 ## 1. Architecture and rationale
 
@@ -39,7 +40,7 @@ flowchart TD
 | Database | PostgreSQL | ACID transactions, row locks, partial unique indexes |
 | DB access | GORM + PostgreSQL driver with SQL migrations (DEC-026) | Familiar ORM models, explicit transaction/locking control and reviewed schema changes |
 | Auth | Opaque session cookie with hashed token in DB | Simple actual logout/revocation; easy expiry/ownership tests |
-| API spec | OpenAPI documented routes | Contract-first design |
+| API spec | [Sprint 1 OpenAPI](api/sprint1.openapi.json) plus versioned route/DTO/error tables in `04-data-and-api.md` and feature addenda | Contract-first design |
 | Unit/integration | Go `testing` + Fiber test client + isolated PostgreSQL | Rule, HTTP and persistence verification |
 | Browser E2E | Playwright | Customer/Host critical journey |
 | Delivery | Docker + GitHub Actions + GCP | Required by Lab 5 |
@@ -47,7 +48,7 @@ flowchart TD
 ## 2. Module responsibilities
 
 - `internal/auth`: login, logout, current user, password hashes, session expiry/invalidations, request identity.
-- `internal/users`: seeded demo accounts and role assignment (account admin UI **not** needed S1).
+- `internal/auth/seed.go`: seeded demo accounts and initial role/grant assignment (account admin UI **not** needed S1).
 - `internal/queue`: service queue scope, join, duplicate detection, daily ticket allocation, my ticket, host list, call and complete.
 - `internal/seating` (S2): table capacity, occupancy, assignment/release in transaction.
 - `internal/reporting` (S3): wait duration and counts, optional event history.
@@ -92,7 +93,7 @@ S1 can use predefined demo accounts; registration/password reset/email verificat
 ### Ticket issuance under concurrent joins
 
 - Server validates account, queue, party size.
-- Within one DB transaction, check active ticket (fast path) and rely on **database partial unique index** on `(customer_id, queue_id) WHERE status IN ('WAITING', 'CALLED')` (authoritative protection against races).
+- Within one DB transaction, rely on the **database partial unique index** on `(customer_id, queue_id) WHERE status IN ('WAITING', 'CALLED')` to reject duplicate active entries. An optional precheck is not authoritative under races; the implementation handles the index conflict and rolls back the counter allocation.
 - Atomically upsert `queue_day_counters` by `(queue_id, service_date)` and increment `last_number`, returning new value.
 - Insert `queue_entries` with `queue_id`, `service_date`, `sequence_number`, `party_size`, status `WAITING` and server `joined_at`.
 - Unique index `(queue_id, service_date, sequence_number)` protects against duplicate numbers.

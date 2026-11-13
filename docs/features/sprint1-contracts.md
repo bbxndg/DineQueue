@@ -1,6 +1,6 @@
 # 07. Sprint 1 Feature-Level Engineering Contracts
 
-**Version:** DQ-S1-Contracts-1.2, grouping revision 6 Nov 2026 (DEC-028, user authorized).
+**Version:** DQ-S1-Contracts-1.3, review clarification 13 Nov 2026; four-feature grouping remains the 6 Nov revision (DEC-028, user authorized).
 Four parent features F-01..F-04; F-04 includes completion under retained legacy ID
 F-05. The original 1.1 contract/history remains in Git. This grouping revision
 retains scope and all FR/BR/AC/test IDs; it does not establish earlier approval or
@@ -133,6 +133,31 @@ them as one parent feature. S1 completion remains manual waitlist handling.
 - `main` release tag/commit can be freshly installed from README instructions; migrations and seed reproducible.
 - Each feature has an Issue, branch, PR, substantive teammate review and integrated test evidence; both members understand design and tests.
 - Document actual results and evidence links; **this draft by itself is not evidence of execution**.
+
+### Review regression clarification — 13 November 2026
+
+User authorized fixes on `fix/sprint1-review`, based on integration commit `d7f27a3`.
+This is defect correction within the four existing parent features, not F-05 as a
+new parent. The clarification was recorded in the implementation worktree; it does
+not establish a separate pre-implementation commit, Issue or reviewer approval.
+
+- F-01/F-02/F-04: reject noncanonical queue IDs before SQL; preserve 404 error contracts.
+- F-03/UI P-02: derive the Customer home action from persisted WAITING/CALLED
+  tickets; show View My Queue while active, Join Waitlist after completion.
+- F-04: bind Complete confirmation and its request to the selected entry ID;
+  refresh to another current entry requires a fresh confirmation.
+- NFR-006: retry a Host read failure by refreshing server data as well as the
+  error boundary; no false empty state.
+- Regression adds deterministic equal-time FIFO, previous-day tickets, inactive
+  queue draining, mixed parallel Complete/Call Next and injected SQL failures.
+- Complete UI P-02/P-05 context and timestamps: Customer header shows restaurant,
+  queue, account navigation/identity; current Host card shows joined and called
+  time in the restaurant timezone.
+- Complete NFR-006 verification with labelled keyboard journeys and layout/visual
+  inspection at 360px and 1280px; the mobile queue selector and Host table must
+  remain usable without document overflow. Check SDS redacted auth-failure logging.
+
+Tests and actual source-snapshot evidence: [Sprint 1 review results](../testing/sprint1-review-results.md).
 
 
 ## v2 revision note — preserve S1 baseline contract history

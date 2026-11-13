@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"mime"
 	"net/mail"
 	"strings"
@@ -80,6 +81,7 @@ func (h *HTTP) login(c fiber.Ctx) error {
 	}
 	result, err := h.service.Login(c.Context(), input.Email, input.Password, c.Cookies(h.CookieName))
 	if errors.Is(err, ErrCredentials) {
+		log.Print("authentication rejected: invalid credentials")
 		return failure(c, 401, "INVALID_CREDENTIALS", "Email or password is incorrect.")
 	}
 	if errors.Is(err, ErrBusy) {
@@ -100,6 +102,7 @@ func (h *HTTP) setCookie(c fiber.Ctx, value string, expiry time.Time, maxAge int
 func (h *HTTP) Authenticate(c fiber.Ctx) error {
 	user, err := h.service.Identity(c.Context(), c.Cookies(h.CookieName))
 	if errors.Is(err, ErrUnauthenticated) {
+		log.Print("session rejected: unauthenticated")
 		h.setCookie(c, "", time.Unix(1, 0), -1)
 		return failure(c, 401, "UNAUTHENTICATED", "Please sign in.")
 	}

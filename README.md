@@ -1,7 +1,7 @@
 # DineQueue v2 — Restaurant Waitlist, Floor & Seating Operations
 
 > **Engineering Package v2.0 — Current project baseline, clarified 6 November 2026.**
-> **F-01 authentication and F-02 join are present; F-03 My Ticket is implemented on its feature branch.** Host queue operations remain unimplemented;
+> **F-01..F-04 are implemented in the Sprint 1 integration baseline**, including Host board, FIFO Call Next and manual Complete;
 > local checks are recorded separately below. No instructor approval, product acceptance,
 > deployment or release is claimed.
 > Grounded on CPE 334 `group_work_specs_v1.pdf` (15 pages, issued 6 Oct 2026, itself marked *Draft for instructor review*); Domain-specific table algorithms, seat limits, screens, schemas and Go Fiber are **proposed project decisions**, not requirements imposed by the PDF.
@@ -13,11 +13,16 @@
 - Sprint 2 design: approved connected sets of **1–3 tables**, atomic hold/call/seat,
   no-show, whole-group checkout and cleaning. These workflows are not implemented.
 - Present source: repository foundation + F-01 login/logout/me, secure sessions,
-  F-02 join/ticket issuance and F-03 own-ticket reads, privacy and My Ticket UI.
-  F-04, including legacy F-05 completion, remains unimplemented.
+  F-02 join/ticket issuance, F-03 own-ticket reads/privacy and F-04 Host board,
+  FIFO Call Next and manual completion (legacy F-05).
   See [F-01 evidence](docs/testing/f01-auth-results.md),
   [F-02 evidence](docs/testing/f02-join-results.md) and
-  [F-03 evidence](docs/testing/f03-my-ticket-results.md) for actual checks and limits.
+  [F-03 evidence](docs/testing/f03-my-ticket-results.md),
+  [F-04 evidence](docs/testing/f04-host-queue-results.md) and
+  [Sprint 1 review regression](docs/testing/sprint1-review-results.md) for actual checks and limits.
+  The [Sprint 1 completion checklist](docs/testing/sprint1-completion-checklist.md)
+  maps every S1 functional/business rule, UI screen and applicable NFR to implementation
+  and verification, with human review/release evidence tracked separately.
   User-authorized DEC-028 groups Sprint 1 into four
   parent features while preserving F-05, FR/BR, AC and test IDs for traceability.
 - Git repository initialized on `main`, with `origin` connected to
@@ -85,10 +90,9 @@ Official Fiber v3 docs currently say Go 1.26+ is required. Framework selection i
 
 ## Important caveats
 
-- F-01/F-02 execution evidence is linked under `docs/testing`; F-03 checks and limits
-  are recorded in [My Ticket evidence](docs/testing/f03-my-ticket-results.md).
-  F-04 Host operations and S2 tests remain pending. Test-only guard equivalents
-  are not shipped Host endpoints. Unresolved domain decisions remain **PROPOSED / PENDING** unless team/TA signs off.
+- Dated F-01..F-04 and integration execution evidence is linked under `docs/testing`.
+  Worktree results do not establish release approval, a CI run or a tested future merge commit.
+  S2 operations remain pending. Unresolved domain decisions remain **PROPOSED / PENDING** unless team/TA signs off.
 - Sprint 1 minimum is deliberately preserved, with a versioned boundary change from max party 8 to 16. Do not silently backdate commits or claim previous tests had already validated 10 guests.
 - Matching is a deterministic heuristic, not an ML model and not guaranteed globally optimal. Floor adjacency must be manager-approved, not inferred from CSS coordinates.
 - If advanced scope threatens deadlines, prioritize strict S1 flow then S2 atomic combined-table seating with true DB tests; defer decorative maps, ML ETA, public display or floor editing before dropping engineering correctness.
@@ -101,7 +105,8 @@ Course: `group_work_specs_v1.pdf`, Sections 5, 6.9, 7–11. Official references 
 
 Scope: [foundation contract](docs/features/sprint1-foundation-contract.md).
 Results and limitations: [foundation evidence](docs/testing/sprint1-foundation-results.md).
-The foundation is extended by F-01 authentication; the Sprint 1 queue product is still in progress.
+The foundation is extended by the four Sprint 1 features. Release review, CI and tagging
+are separate from local implementation and regression checks.
 
 ```text
 apps/web/          Next.js + TypeScript + Tailwind; minimal landing shell

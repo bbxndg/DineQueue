@@ -19,13 +19,30 @@ function errorMessage(status: number, code: string | undefined) {
   return 'Unable to update the queue. Please try again.';
 }
 
+// The parent keys this component by ticket ID. A refreshed current ticket must
+// receive its own confirmation, and the mutation always uses the selected ID.
+function CompleteAction({ entry, busy, pending, onComplete }: {
+  entry: Entry; busy: boolean; pending: boolean; onComplete: (id: string) => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  if (!confirming) return <button disabled={busy} onClick={() => setConfirming(true)}
+    className="mt-5 rounded-lg border border-wine px-5 py-3 font-semibold text-wine disabled:opacity-60">Complete</button>;
+  return <div className="mt-5 grid gap-3">
+    <p>Confirm the waitlist service for ticket {entry.ticketCode} is finished?</p>
+    <div className="flex gap-4">
+      <button disabled={busy} onClick={async () => { await onComplete(entry.id); setConfirming(false); }}
+        className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">{pending ? 'Completing…' : 'Confirm complete'}</button>
+      <button disabled={pending} onClick={() => setConfirming(false)} className="font-semibold text-wine underline">Cancel</button>
+    </div>
+  </div>;
+}
+
 export function HostBoard({ queueId, timezone, csrfToken, current, waiting }: {
   queueId: string; timezone: string; csrfToken: string; current: Entry | null; waiting: Entry[];
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [refreshing, startRefresh] = useTransition();
-  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   // FIFO spans service dates, so show the date too: a leftover ticket from an
@@ -45,18 +62,17 @@ export function HostBoard({ queueId, timezone, csrfToken, current, waiting }: {
         setError(errorMessage(response.status, body?.error?.code));
         if (response.status === 401) router.replace('/login');
       } else setNotice(success(body));
-      setConfirming(false);
       startRefresh(() => router.refresh());
     } catch { setError('Unable to connect. Please try again.'); }
     finally { setPending(false); }
   }
 
-  return <div className="mt-8 grid gap-8" aria-busy={busy}>
+  return <div className="mt-8 grid min-w-0 gap-8" aria-busy={busy}>
     <div className="flex flex-wrap items-center gap-4">
       <button disabled={busy || current !== null || waiting.length === 0}
         onClick={() => mutate('/call-next', entry => `Ticket ${entry.ticketCode} called.`)}
         className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">
-        {pending && !confirming ? 'Working…' : 'Call next'}
+        {pending && current === null ? 'Working…' : 'Call next'}
       </button>
       <button disabled={busy} onClick={() => { setError(''); setNotice(''); startRefresh(() => router.refresh()); }}
         className="font-semibold text-wine underline disabled:opacity-60">{refreshing ? 'Refreshing…' : 'Refresh queue'}</button>
@@ -68,36 +84,34 @@ export function HostBoard({ queueId, timezone, csrfToken, current, waiting }: {
       <h2 id="current-heading" className="text-sm font-semibold uppercase tracking-widest text-wine">Now called</h2>
       {current === null ? <p className="mt-3">No ticket is currently called.</p> : <>
         <p className="mt-3 text-5xl font-semibold tracking-tight" data-testid="current-ticket">{current.ticketCode}</p>
-        <p className="mt-3">Party of {current.partySize}{current.calledAt && <> · called at <time dateTime={current.calledAt}>{time.format(new Date(current.calledAt))}</time></>}</p>
-        {!confirming
-          ? <button disabled={busy} onClick={() => { setConfirming(true); setError(''); setNotice(''); }}
-            className="mt-5 rounded-lg border border-wine px-5 py-3 font-semibold text-wine disabled:opacity-60">Complete</button>
-          : <div className="mt-5 grid gap-3">
-            <p>Confirm the waitlist service for ticket {current.ticketCode} is finished?</p>
-            <div className="flex gap-4">
-              <button disabled={busy} onClick={() => mutate(`/entries/${encodeURIComponent(current.id)}/complete`, entry => `Ticket ${entry.ticketCode} completed.`)}
-                className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">{pending ? 'Completing…' : 'Confirm complete'}</button>
-              <button disabled={pending} onClick={() => setConfirming(false)} className="font-semibold text-wine underline">Cancel</button>
-            </div>
-          </div>}
+        <p className="mt-3">Party of {current.partySize}</p>
+        <dl className="mt-3 grid gap-2 text-sm">
+          <div><dt className="inline font-medium">Joined: </dt><dd className="inline"><time data-testid="current-joined-at" dateTime={current.joinedAt}>{time.format(new Date(current.joinedAt))} ({timezone})</time></dd></div>
+          {current.calledAt && <div><dt className="inline font-medium">Called: </dt><dd className="inline"><time data-testid="current-called-at" dateTime={current.calledAt}>{time.format(new Date(current.calledAt))} ({timezone})</time></dd></div>}
+        </dl>
+        <CompleteAction key={current.id} entry={current} busy={busy} pending={pending}
+          onComplete={id => mutate(`/entries/${encodeURIComponent(id)}/complete`, entry => `Ticket ${entry.ticketCode} completed.`)} />
       </>}
     </section>
 
-    <section aria-labelledby="waiting-heading">
+    <section aria-labelledby="waiting-heading" className="min-w-0">
       <h2 id="waiting-heading" className="text-xl font-semibold">Waiting ({waiting.length})</h2>
       {waiting.length === 0 ? <p className="mt-3">No parties are waiting.</p> :
-        <table className="mt-4 w-full border-collapse text-left">
+        <div role="region" aria-label="Waiting tickets" tabIndex={0}
+          className="mt-4 overflow-x-auto focus-visible:outline-2 focus-visible:outline-wine">
+        <table className="w-full min-w-[32rem] border-collapse text-left">
+          <caption className="sr-only">Waiting tickets in first-in, first-out order</caption>
           <thead><tr className="border-b border-wine/30">
-            <th scope="col" className="py-2">Position</th><th scope="col" className="py-2">Ticket</th>
-            <th scope="col" className="py-2">Party size</th><th scope="col" className="py-2">Joined</th>
+            <th scope="col" className="py-2 pr-4">Position</th><th scope="col" className="py-2 pr-4">Ticket</th>
+            <th scope="col" className="py-2 pr-4">Party size</th><th scope="col" className="py-2">Joined</th>
           </tr></thead>
           <tbody>{waiting.map((entry, index) => <tr key={entry.id} className="border-b border-ink/10" data-testid="waiting-row">
-            <td className="py-2">{index + 1}</td>
-            <td className="py-2 font-semibold">{entry.ticketCode}</td>
-            <td className="py-2">{entry.partySize}</td>
+            <td className="py-2 pr-4">{index + 1}</td>
+            <td className="py-2 pr-4 font-semibold">{entry.ticketCode}</td>
+            <td className="py-2 pr-4">{entry.partySize}</td>
             <td className="py-2"><time dateTime={entry.joinedAt}>{time.format(new Date(entry.joinedAt))}</time></td>
           </tr>)}</tbody>
-        </table>}
+        </table></div>}
     </section>
   </div>;
 }

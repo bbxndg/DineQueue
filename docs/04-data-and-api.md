@@ -2,6 +2,10 @@
 
 **Status:** proposed implementation contract. API response shapes and status/error codes are team choices. They are not prescribed by the CPE 334 PDF.
 
+Machine-readable export of the implemented Sprint 1 routes:
+[`api/sprint1.openapi.json`](api/sprint1.openapi.json). S2 proposed routes below
+are excluded from that implemented API export.
+
 **Access-layer revision (DEC-026, 6 Nov 2026):** GORM + PostgreSQL driver replaces
 sqlc/direct pgx access. The schema, API, FR/BR IDs and database invariants below are
 unchanged. Use explicit versioned SQL migrations for checks, foreign keys and partial
@@ -255,6 +259,11 @@ to 128 UTF-8 bytes; invalid credentials are generic 401, per-IP limits return 42
 No credentialed CORS is enabled. The frontend uses same-origin auth rewrites.
 
 ### Customer endpoints — S1
+
+Queue path IDs in Join and Host routes use the 36-character UUID representation.
+Malformed IDs and alternate encodings (URN, braces or compact hex) return 404
+`NOT_FOUND` before SQL permission/resource queries. This preserves the existing
+not-found contract without letting PostgreSQL parsing errors become 500 responses.
 
 | Method | Path | Request | Success | Errors |
 |---|---|---|---|---|

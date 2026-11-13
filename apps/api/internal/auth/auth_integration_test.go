@@ -3,9 +3,11 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -25,6 +27,34 @@ import (
 
 const testPassword = "F01-test-only-password"
 const testOrigin = "https://dinequeue.example.test"
+
+func TestS1AuthFailureLogOmitsSensitiveData(t *testing.T) {
+	f := setup(t)
+	var output bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&output)
+	t.Cleanup(func() { log.SetOutput(previous) })
+	email, password, token := "private-review@example.test", "private-review-password", "private-review-session"
+	data, err := json.Marshal(map[string]string{"email": email, "password": password})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := request(t, f, "POST", "/api/v1/auth/login", string(data), "", testOrigin, ""); r.StatusCode != 401 {
+		t.Fatalf("failed login: %d", r.StatusCode)
+	}
+	if r := request(t, f, "GET", "/api/v1/auth/me", "", token, "", ""); r.StatusCode != 401 {
+		t.Fatalf("failed session: %d", r.StatusCode)
+	}
+	text := output.String()
+	if !strings.Contains(text, "authentication rejected") || !strings.Contains(text, "session rejected") {
+		t.Fatal("missing redacted authentication failure events")
+	}
+	for _, secret := range []string{email, password, token} {
+		if strings.Contains(text, secret) {
+			t.Fatal("authentication log contains request credentials")
+		}
+	}
+}
 
 type fixture struct {
 	db      *gorm.DB

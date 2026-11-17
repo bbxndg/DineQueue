@@ -1,0 +1,265 @@
+ Image dqep3clean-migrate Building
+ Image dqep3clean-seed Building
+ Image dqep3clean-api Building
+ Image dqep3clean-web Building
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.01kB done
+#1 DONE 0.0s
+
+#2 [seed internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.15kB done
+#2 DONE 0.0s
+
+#3 [web internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.96kB done
+#3 DONE 0.0s
+
+#4 [api internal] load build definition from Dockerfile
+#4 transferring dockerfile: 1.15kB done
+#4 DONE 0.0s
+
+#5 [migrate internal] load build definition from Dockerfile
+#5 transferring dockerfile: 1.15kB done
+#5 DONE 0.0s
+
+#6 [migrate internal] load metadata for docker.io/library/golang:1.26.10-bookworm
+#6 ...
+
+#7 [web internal] load metadata for docker.io/library/node:22.23.4-bookworm-slim
+#7 DONE 1.4s
+
+#8 [web internal] load .dockerignore
+#8 transferring context: 150B done
+#8 DONE 0.0s
+
+#9 [web development 1/7] FROM docker.io/library/node:22.23.4-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d
+#9 DONE 0.0s
+
+#10 [web internal] load build context
+#10 transferring context: 338.21kB done
+#10 DONE 0.0s
+
+#11 [web development 4/7] COPY apps/web/package.json ./apps/web/package.json
+#11 CACHED
+
+#12 [web development 2/7] WORKDIR /workspace
+#12 CACHED
+
+#13 [web development 3/7] COPY package.json package-lock.json ./
+#13 CACHED
+
+#14 [web development 5/7] RUN npm ci --ignore-scripts --no-audit --no-fund
+#14 CACHED
+
+#15 [web development 6/7] COPY --chown=node:node apps/web ./apps/web
+#15 CACHED
+
+#16 [web development 7/7] RUN chown -R node:node /workspace/apps/web
+#16 CACHED
+
+#17 [web build 1/1] RUN npm run build --workspace @dinequeue/web     && mkdir -p /workspace/apps/web/public     && rm -rf /workspace/apps/web/.next/cache
+#17 0.333
+#17 0.333 > @dinequeue/web@0.0.0 build
+#17 0.333 > next build --webpack
+#17 0.333
+#17 ...
+
+#6 [seed internal] load metadata for docker.io/library/golang:1.26.10-bookworm
+#6 DONE 2.1s
+
+#18 [migrate internal] load .dockerignore
+#18 transferring context: 150B done
+#18 DONE 0.0s
+
+#19 [api internal] load .dockerignore
+#19 transferring context: 150B done
+#19 DONE 0.0s
+
+#20 [seed development 1/6] FROM docker.io/library/golang:1.26.10-bookworm@sha256:5de7c99eb78ca5e515a4c340235d0955ec5964a5071c492c15503d7c267da473
+#20 DONE 0.0s
+
+#21 [seed internal] load .dockerignore
+#21 transferring context: 150B done
+#21 DONE 0.0s
+
+#22 [migrate internal] load build context
+#22 transferring context: 154.73kB done
+#22 DONE 0.0s
+
+#23 [api internal] load build context
+#23 transferring context: 154.73kB done
+#23 DONE 0.0s
+
+#24 [migrate development 2/6] WORKDIR /app
+#24 CACHED
+
+#25 [migrate development 3/6] COPY apps/api/go.mod apps/api/go.sum ./
+#25 CACHED
+
+#26 [seed internal] load build context
+#26 transferring context: 154.73kB done
+#26 DONE 0.0s
+
+#27 [seed development 4/6] RUN go mod download
+#27 CACHED
+
+#28 [api development 5/6] COPY apps/api/ ./
+#28 DONE 0.0s
+
+#17 [web build 1/1] RUN npm run build --workspace @dinequeue/web     && mkdir -p /workspace/apps/web/public     && rm -rf /workspace/apps/web/.next/cache
+#17 0.736 ▲ Next.js 16.4.5 (webpack)
+#17 ...
+
+#29 [seed development 6/6] RUN useradd --create-home --uid 10001 app && chown -R app:app /app
+#29 DONE 0.2s
+
+#17 [web build 1/1] RUN npm run build --workspace @dinequeue/web     && mkdir -p /workspace/apps/web/public     && rm -rf /workspace/apps/web/.next/cache
+#17 0.752 ✓ Running next.config.mjs took 16ms
+#17 0.776
+#17 0.795   Creating an optimized production build ...
+#17 ...
+
+#30 [seed build 1/1] RUN CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/api ./cmd/api     && CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/db ./cmd/db
+#30 ...
+
+#17 [web build 1/1] RUN npm run build --workspace @dinequeue/web     && mkdir -p /workspace/apps/web/public     && rm -rf /workspace/apps/web/.next/cache
+#17 11.78 ✓ Compiled successfully in 7.6s
+#17 11.78   Running TypeScript ...
+#17 15.15   Finished TypeScript in 3.4s ...
+#17 15.16   Collecting page data using 9 workers ...
+#17 16.16   Generating static pages using 9 workers (0/7) ...
+#17 16.76   Generating static pages using 9 workers (1/7)
+#17 16.76   Generating static pages using 9 workers (3/7)
+#17 16.76   Generating static pages using 9 workers (5/7)
+#17 16.76 ✓ Generating static pages using 9 workers (7/7) in 597ms
+#17 16.91   Finalizing page optimization ...
+#17 16.91   Collecting build traces ...
+#17 ...
+
+#30 [api build 1/1] RUN CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/api ./cmd/api     && CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/db ./cmd/db
+#30 DONE 17.3s
+
+#31 [migrate runtime 1/2] COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+#31 CACHED
+
+#32 [migrate runtime 2/2] WORKDIR /app
+#32 CACHED
+
+#24 [api development 2/6] WORKDIR /app
+#24 CACHED
+
+#33 [api runtime 1/2] COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+#33 CACHED
+
+#34 [api development 3/6] COPY apps/api/go.mod apps/api/go.sum ./
+#34 CACHED
+
+#35 [api development 5/6] COPY apps/api/ ./
+#35 CACHED
+
+#36 [api development 6/6] RUN useradd --create-home --uid 10001 app && chown -R app:app /app
+#36 CACHED
+
+#37 [api runtime 2/2] WORKDIR /app
+#37 CACHED
+
+#38 [api development 4/6] RUN go mod download
+#38 CACHED
+
+#39 [api build 1/1] RUN CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/api ./cmd/api     && CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/db ./cmd/db
+#39 CACHED
+
+#40 [api production 1/1] COPY --from=build /app/bin/api /app/api
+#40 CACHED
+
+#41 [migrate db-tools 1/1] COPY --from=build /app/bin/db /app/db
+#41 CACHED
+
+#42 [seed] exporting to image
+#42 exporting layers done
+#42 writing image sha256:97bf2a47143b2e1c556afb970633018af263fb99081ca7f5cf8dc8503ddf0e73 done
+#42 naming to docker.io/library/dqep3clean-seed done
+#42 DONE 0.0s
+
+#43 [api] exporting to image
+#43 exporting layers done
+#43 writing image sha256:5cc7e600858e5d9aa989e9c0dd9aeba08ee315e9d9fd8206fe830c4ce65ade39 done
+#43 naming to docker.io/library/dqep3clean-api done
+#43 DONE 0.0s
+
+#44 [migrate] exporting to image
+#44 exporting layers done
+#44 writing image sha256:5b0af85607efe56fd634af582402c3bd41b773eee70139ec9b5b44b027104335 done
+#44 naming to docker.io/library/dqep3clean-migrate done
+#44 DONE 0.0s
+
+#45 [seed] resolving provenance for metadata file
+#45 DONE 0.0s
+
+#46 [api] resolving provenance for metadata file
+#46 DONE 0.0s
+
+#47 [migrate] resolving provenance for metadata file
+#47 DONE 0.0s
+
+#17 [web build 1/1] RUN npm run build --workspace @dinequeue/web     && mkdir -p /workspace/apps/web/public     && rm -rf /workspace/apps/web/.next/cache
+#17 23.08
+#17 23.08 Route (app)
+#17 23.08 ┌ ƒ /
+#17 23.08 ├ ○ /_not-found
+#17 23.08 ├ ƒ /host/queue
+#17 23.08 ├ ƒ /join
+#17 23.08 ├ ƒ /login
+#17 23.08 ├ ƒ /my-queue
+#17 23.08 └ ƒ /my-queue/[entryId]
+#17 23.08
+#17 23.08
+#17 23.08 ○  (Static)   prerendered as static content
+#17 23.08 ƒ  (Dynamic)  server-rendered on demand
+#17 23.08
+#17 23.14 npm notice
+#17 23.14 npm notice New major version of npm available! 10.9.9 -> 12.2.2
+#17 23.14 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+#17 23.14 npm notice To update run: npm install -g npm@12.2.2
+#17 23.14 npm notice
+#17 DONE 23.2s
+
+#48 [web production  6/10] COPY --from=build --chown=node:node /workspace/apps/web/next.config.mjs ./apps/web/next.config.mjs
+#48 CACHED
+
+#49 [web production-dependencies 5/5] RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+#49 CACHED
+
+#50 [web production  4/10] COPY package.json ./
+#50 CACHED
+
+#51 [web production  7/10] COPY --from=build --chown=node:node /workspace/apps/web/config ./apps/web/config
+#51 CACHED
+
+#52 [web production  3/10] COPY --from=production-dependencies /workspace/node_modules ./node_modules
+#52 CACHED
+
+#53 [web production  5/10] COPY --from=build --chown=node:node /workspace/apps/web/package.json ./apps/web/package.json
+#53 CACHED
+
+#54 [web production  8/10] COPY --from=build --chown=node:node /workspace/apps/web/public ./apps/web/public
+#54 CACHED
+
+#55 [web production  9/10] COPY --from=build --chown=node:node /workspace/apps/web/.next ./apps/web/.next
+#55 DONE 0.0s
+
+#56 [web production 10/10] WORKDIR /workspace/apps/web
+#56 DONE 0.0s
+
+#57 [web] exporting to image
+#57 exporting layers 0.0s done
+#57 writing image sha256:687882dd199527ff4b412145eec02bf94f67da7dd9777d4c5d70ffcd06023288 done
+#57 naming to docker.io/library/dqep3clean-web done
+#57 DONE 0.0s
+
+#58 [web] resolving provenance for metadata file
+#58 DONE 0.0s
+ Image dqep3clean-migrate Built
+ Image dqep3clean-seed Built
+ Image dqep3clean-api Built
+ Image dqep3clean-web Built

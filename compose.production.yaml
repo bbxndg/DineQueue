@@ -1,0 +1,92 @@
+# Local verification of production-built images. Not a cloud deployment config.
+# Use separately from compose.yaml; its project/volume cannot reuse dev data.
+name: dinequeue-production
+
+x-database-tools: &database-tools
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+    target: db-tools
+  environment: &api-environment
+    # Local HTTP/non-TLS verification only; production validation remains intact.
+    APP_ENV: development
+    APP_ORIGIN: http://localhost:${WEB_HOST_PORT:-3002}
+    DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with db as hostname}
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:18.6-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dinequeue}
+      POSTGRES_DB: ${POSTGRES_DB:-dinequeue}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    <<: *database-tools
+    command: [migrate]
+    restart: "no"
+
+  seed:
+    <<: *database-tools
+    profiles: [tools]
+    environment:
+      <<: *api-environment
+      SEED_CUSTOMER_PASSWORD: ${SEED_CUSTOMER_PASSWORD:-}
+      SEED_CUSTOMER2_PASSWORD: ${SEED_CUSTOMER2_PASSWORD:-}
+      SEED_HOST_PASSWORD: ${SEED_HOST_PASSWORD:-}
+      SEED_OTHER_HOST_PASSWORD: ${SEED_OTHER_HOST_PASSWORD:-}
+    command: [seed]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: production
+    environment:
+      <<: *api-environment
+      PORT: ${PORT:-8080}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8082}:${PORT:-8080}"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    stop_grace_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+      args:
+        API_INTERNAL_URL: http://api:${PORT:-8080}
+    environment:
+      API_INTERNAL_URL: http://api:${PORT:-8080}
+      PORT: ${WEB_PORT:-3000}
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3002}:${WEB_PORT:-3000}"
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health/ready',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 5s
+      start_period: 10s
+      retries: 30
+    stop_grace_period: 15s
+
+volumes:
+  postgres_data:

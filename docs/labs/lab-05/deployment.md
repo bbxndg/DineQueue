@@ -1,6 +1,6 @@
-# Lab 5 — Episode 2: Cloud readiness and deployment notes
+# Lab 5 — Cloud readiness and Docker deployment notes
 
-**Scope:** Sprint 1 cloud-readiness review and initial deployment notes only. This episode does not create GCP resources, deploy the application, add production Docker packaging, CI/CD, or Sprint 2 features.
+**Scope:** Episode 2 records the Sprint 1 cloud-readiness review. Episode 3 below records the production Docker plan and Step 3 image checks for Issue #21. Compose integration and full acceptance verification remain pending. GCP deployment and CI/CD belong to later episodes.
 
 ## Environment configuration inventory
 
@@ -77,3 +77,79 @@ Pending team/TA confirmation: approved GCP services and region; Cloud SQL versus
 ## Episode 2 boundary
 
 Do not add production Dockerfiles, CI workflows, GCP resources, a cloud deployment, or Sprint 2 behavior in this episode. Those are handled by the separate Lab 5 episodes/issues.
+
+## Episode 3 — Production Docker plan (Issue #21)
+
+**Status:** Step 3 production image targets implemented and build/start checks executed; full Episode 3 acceptance remains pending (see results below).
+**Tracking:** [Issue #21](https://github.com/bbxndg/DineQueue/issues/21), branch `feat/lab5-ep3-production-docker`, PR target `gcp-staging`.
+
+### Packaging and startup design
+
+| Component | Planned change | Acceptance evidence |
+|---|---|---|
+| Go Fiber API | Add a multi-stage production target that runs a compiled API binary as a non-root user. Retain the existing development target. | Inspect runtime user/start command; start successfully on the configured `PORT` and all container interfaces. No runtime `go run`. |
+| Next.js web | Add a production target containing the built app and required runtime files, running as a non-root user with `NODE_ENV=production`. | Production server starts without source bind mounts or `next dev`; configured `PORT` works. |
+| API routing | Verify Next.js server requests and browser-facing rewrites reach the same intended API. Rewrites currently depend on `API_INTERNAL_URL` at build time. | Login, health proxy, Customer and Host flows work from the built image. Document any build-time origin and rebuild requirement; do not imply runtime changes rewrite an existing build. |
+| Database tools | Package the compiled database CLI and its required SQL migrations separately from API startup. | Migration succeeds before API startup, reruns safely, and startup does not invoke GORM AutoMigrate. |
+| PostgreSQL | Retain PostgreSQL data in a named volume and isolate the EP3 verification project from the developer database. | The same ticket code and status remain after down/up without removing the volume. |
+| Compose | Add a standalone `compose.production.yaml` for production-image verification; keep existing local development commands usable. | Config validation succeeds; database becomes healthy, migration exits 0, API and web start successfully. |
+| Build context | Review `.dockerignore`, pinned base images, lockfile installation and runtime contents. | Local secrets and generated host dependencies are excluded; no real credential is baked into image configuration or layers. |
+
+Use separate web and API images, consistent with the EP2 topology proposal. Cloud services, connectivity and deployment identity remain decisions for later episodes. Implementation must use official framework/container references and preserve the current dependency versions unless a change is justified and recorded.
+
+### Configuration, credentials and local verification
+
+- Supply database credentials and seed passwords at runtime through an ignored local environment file. Never pass credentials through Docker build arguments or copy that file into an image.
+- The API must continue enforcing `APP_ORIGIN`, backend RBAC, CSRF and PostgreSQL-backed sessions. `DATABASE_URL` must address the intended database service; do not log it.
+- Production API configuration currently requires an HTTPS `APP_ORIGIN` and `sslmode=verify-full`. Keep those validations. A local HTTP/non-TLS test may run production-built images with explicitly documented local API `APP_ENV=development`; this is packaging verification, not evidence of production HTTPS/TLS behavior. Next.js still uses its production server.
+- Demo seed remains an explicit local setup action, disabled when `APP_ENV=production`. Seed before the smoke test with operator-supplied local passwords; application startup must not silently seed or reset accounts. Secure cloud account provisioning belongs to the deployment episode.
+- Document the final Compose commands, host ports, environment-file handling and service names after implementation. Use a separate Compose project, database volume and available ports for EP3 tests; apply the same project/file options to every command, including migration and down/up.
+
+### Verification sequence and acceptance criteria
+
+All items below are pending until actual execution evidence is recorded:
+
+- [ ] Review the Docker/Compose diff and confirm no source or configuration change expands Sprint 1 business scope.
+- [ ] Validate the production Compose configuration without printing expanded secrets; build the production web, API and database-tool targets.
+- [ ] Start PostgreSQL, run versioned migrations, explicitly seed local demo accounts, and start the production-built API/web images in the documented order.
+- [ ] Verify API `/health/live` returns 200/`ok`, API `/health/ready` and web `/api/health/ready` return 200/`ready`. Verify a database outage returns readiness 503 and recovery restores 200; always restore the test database afterward.
+- [ ] Verify configured listener ports and non-root runtime users. Confirm application startup uses compiled/built artifacts and does not depend on host source mounts.
+- [ ] Smoke-test Customer login/join/own-ticket and Host FIFO Call Next/Complete, preserving role and ticket privacy checks.
+- [ ] Create a separate ticket for persistence evidence. Record its code/status, stop the verification Compose project with `down` (never `down -v`), restart with `up -d`, and confirm the same ticket and status through the app without resetting or reseeding the database.
+- [ ] Commit the implementation and verify a clean clone of that exact commit can build/run using a fresh local environment file populated from `.env.example`, with no old `.env`, host `node_modules` or `.next` artifacts.
+- [ ] Run web tests, lint, typecheck and build; run Go tests with `-tags=integration -race -count=1` against isolated real PostgreSQL and run Go vet. Record actual results and any skipped checks.
+- [ ] Review tracked files, build context, image contents/configuration and captured logs for accidental credentials; redact secrets from all evidence.
+- [ ] Replace planned instructions with verified commands and record dates, tested SHA, container/health results, clean-clone outcome and before/after persistence evidence here or in a linked results record/PR. Do not reuse EP2 results as an EP3 execution claim.
+- [ ] Open a PR into `gcp-staging` with `Part of #21`; obtain teammate review and merge before closing the Issue.
+
+Evidence to capture during execution: build completion, container status (including migration exit 0), health responses, ticket before/after restart, clean-clone command output and tested SHA, plus the reviewed PR link. Store only sanitized evidence. Episode 3 does not deploy GCP resources or add CI/CD or Sprint 2 features.
+
+### Step 3 image checks — 17 November 2026
+
+Snapshot: uncommitted Dockerfile changes based on `5b8617bdb4728c6a54afb49a3b6d8928f970e74b`; this is not a claim that the base commit contains these changes. Repeat final acceptance on the committed EP3 snapshot.
+
+Executed from the repository root, all three builds exited 0:
+
+```bash
+docker build --target production -f apps/api/Dockerfile -t dinequeue-ep3-api:step3 .
+docker build --target db-tools -f apps/api/Dockerfile -t dinequeue-ep3-db-tools:step3 .
+docker build --target production -f apps/web/Dockerfile -t dinequeue-ep3-web:step3 .
+```
+
+The API and database-tool images run compiled static binaries as UID/GID `10001:10001`. SQL migrations are embedded in the database binary; timezone data is included with the `timetzdata` build tag, and the runtime retains CA trust roots. The web image runs `next start` as user `node` (observed UID 1000), contains production dependencies and the built app, and accepts `PORT` (tested with 3100).
+
+`API_INTERNAL_URL` is a non-secret web build argument, defaulting to `http://api:8080`. Use the same origin at runtime; rebuild the web image when the upstream origin changes because its rewrites are generated during build. Never pass credentials through this argument.
+
+A temporary Docker network and two containers, with no host ports or database, were used for the startup checks. Requests were made using `docker exec` with Node `fetch` in the web container. Results:
+
+| Check | Actual result |
+|---|---|
+| API `http://api:8080/health/live` | HTTP 200, `{"status":"ok"}` |
+| API `http://api:8080/health/ready`, database unavailable | HTTP 503, `{"status":"unavailable"}` |
+| Web `http://127.0.0.1:3100/api/health/live` | HTTP 200, `{"status":"ok"}` |
+| Web `http://127.0.0.1:3100/api/health/ready`, database unavailable | HTTP 503, `{"status":"unavailable"}` |
+| Runtime inspection | API uses `/app/api`; web uses `next start --hostname 0.0.0.0`; both non-root |
+
+API `APP_ENV=development` was explicitly used for this local HTTP/non-TLS packaging check. Production configuration enforcement was not relaxed. Temporary containers/network were removed afterward; images remain available locally. `git diff --check` passed.
+
+Not yet executed for EP3: production Compose integration, database-tool execution/migration, healthy-database recovery, login/queue smoke journey, persistence, clean-clone verification, full regression and final-commit verification. These belong to the remaining steps and must not be marked passed from the image checks above.

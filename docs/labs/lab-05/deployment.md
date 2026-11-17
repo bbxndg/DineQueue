@@ -224,4 +224,116 @@ After pushing the implementation commit, clone that branch into a new folder, re
 
 Capture the build result, migration exit 0, container status, 200/503/recovery responses, smoke result, ticket code/status before and after down/up, and tested SHA. The teammate review and merged PR remain separate evidence. After verification, `down` retains the local volume for inspection; remove only an explicitly disposable audit volume when finished, outside the persistence test.
 
+### Windows guide — PowerShell or WSL
+
+**Verification status:** these Windows instructions are based on the repository configuration and official Docker/Microsoft documentation. They have not been executed on a Windows host. Record the Windows tester, date, commit SHA and actual results after following them; the Linux results above do not establish a Windows PASS.
+
+#### 1. Prepare Docker Desktop and choose a terminal
+
+Install Git and [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) using their official installers. Start Docker Desktop and wait for its engine to be running. These images require **Linux containers**, not Windows containers. If using the WSL 2 backend, follow Docker's [WSL setup and integration instructions](https://docs.docker.com/desktop/features/wsl/). For a WSL terminal, enable integration for that Linux distribution in Docker Desktop.
+
+Choose one terminal workflow for the steps below:
+
+- **Native PowerShell:** use the numbered PowerShell steps in this section, from the repository folder containing `compose.production.yaml`.
+- **WSL (for example Ubuntu):** use a checkout inside the Linux distribution, enable its Docker Desktop integration, and follow the Bash commands in the sections above. Run `chmod` and the `EP3_TICKET_FILE=... node ...` syntax inside WSL, not PowerShell. Host Node 22 is needed inside WSL only for the optional helper.
+
+Go and Node do not need to be installed on Windows to build/start the containers or test them through a browser. The optional Node smoke helper requires host Node 22 (matching the repository's Node engine range). No host `npm install` or `npm run dev` is needed for the Docker app.
+
+#### 2. Check the checkout and create local configuration (PowerShell)
+
+Use the branch/commit being reviewed for EP3, or the accepted integration branch after merge. Open PowerShell at that checkout's root and run each command separately. Stop and resolve any error before continuing:
+
+```powershell
+git status
+git rev-parse HEAD
+docker --version
+docker compose version
+docker info --format '{{.OSType}}'
+```
+
+The final command must report `linux` and confirms that the daemon is reachable. If Docker cannot connect, open Docker Desktop and wait for the engine; do not reset the database to fix an engine connection error.
+
+Create the environment file only if it does not already exist, then edit it:
+
+```powershell
+if (-not (Test-Path .env.docker)) { Copy-Item .env.example .env.docker }
+notepad.exe .env.docker
+```
+
+Fill `POSTGRES_PASSWORD` and `DATABASE_URL` with matching credentials and host `db`, as described under Fresh local configuration. Fill all four `SEED_*_PASSWORD` values (12–128 bytes) for this machine's demo accounts. Leave the example host ports 3002/8082 unless they are occupied. Save the file as `.env.docker`, not `.env.docker.txt`. PowerShell does not use `chmod`; keep this local file in your own account's folder and out of Git/screenshots. `git check-ignore .env.docker` should print the filename, confirming the existing ignore rule.
+
+#### 3. Build, start, migrate and seed (PowerShell)
+
+```powershell
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml config --quiet
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml build api web migrate seed
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml up -d --wait
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml run --rm seed
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml ps -a
+```
+
+Expected: API running, DB and web healthy, migration `Exited (0)`. Seed runs explicitly for the new EP3 database and does not change passwords of existing accounts on reruns. This project has a different database volume from the development Compose project, even if both use the same database name or local passwords.
+
+#### 4. Check health and use the app (PowerShell)
+
+Use `curl.exe` explicitly so Windows PowerShell does not substitute its `curl` alias:
+
+```powershell
+curl.exe --fail -i http://localhost:8082/health/live
+curl.exe --fail -i http://localhost:8082/health/ready
+curl.exe --fail -i http://localhost:3002/api/health/ready
+```
+
+Expected: HTTP 200, `ok` for liveness and `ready` for readiness. If you changed host ports, use those values instead. Open `http://localhost:3002`: Customer `customer1@example.test` uses this machine's `SEED_CUSTOMER_PASSWORD`; Host `host@example.test` uses `SEED_HOST_PASSWORD`. Use separate browser profiles or normal/Incognito windows for the two roles. Cookies on `localhost` can also be shared with a development app on another port; use a separate browser context for EP3 to avoid session conflicts.
+
+With host Node 22 installed, optionally run the HTTP journey on a dedicated seeded database with no existing active ticket for Customer One and no older waiting ticket:
+
+```powershell
+node.exe --env-file=.env.docker scripts/lab5/docker-smoke.mjs journey
+```
+
+#### 5. Verify persistence and stop safely (PowerShell)
+
+For a manual check, create a new WAITING ticket through the browser, note its code/status and capture the card. Run:
+
+```powershell
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml down
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml up -d --wait
+```
+
+Refresh My Ticket (sign in again with the same Customer if required). The same code/status must remain. Capture the result; do not seed/reset between reads and do not use `down -v`.
+
+Alternatively, after the optional journey completes, use the Node helper instead of creating another ticket manually. PowerShell environment-variable syntax differs from Bash; keep the same terminal open so the file path is retained:
+
+```powershell
+$env:EP3_TICKET_FILE = Join-Path $env:TEMP ("dinequeue-ep3-" + [guid]::NewGuid().ToString() + ".json")
+node.exe --env-file=.env.docker scripts/lab5/docker-smoke.mjs create
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml down
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml up -d --wait
+node.exe --env-file=.env.docker scripts/lab5/docker-smoke.mjs verify
+Remove-Item Env:\EP3_TICKET_FILE
+```
+
+This creates a unique private file under Windows TEMP and avoids overwriting earlier evidence. Do not share the JSON file (it contains a private ticket identifier). See [Microsoft's environment-variable reference](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_Environment_Variables) for `$env:` syntax.
+
+When finished, use the same `down` command to stop the EP3 containers while retaining their database volume. For clean-clone evidence, use a new folder, fresh `.env.docker` and a new project name such as `dinequeue-ep3-clean` consistently on every command; stop the first project before reusing its host ports.
+
+#### Troubleshooting and Windows evidence
+
+| Symptom | Action |
+|---|---|
+| `docker` is not found / daemon cannot connect | Check Docker Desktop installation, start its engine, reopen the terminal; for WSL check distribution integration. |
+| Image platform/OS mismatch | Ensure Docker Desktop is using Linux containers. |
+| Cannot find Compose/environment file | Return to the repo root and check the environment filename is exactly `.env.docker`. |
+| Host port already in use | Stop the conflicting app or change `WEB_HOST_PORT`/`API_HOST_PORT` in `.env.docker` and rerun `up -d --wait`; use the new web port in your browser. |
+| Migration fails or web stays unhealthy | Inspect the EP3 `api`, `web` and `migrate` logs with the command below. Confirm database host `db` and matching credentials; redact logs before sharing. |
+| Login fails after editing a seed password | Existing database passwords are preserved; use the password originally seeded for this project. Check that you opened the EP3 URL. Do not delete a volume to troubleshoot login. |
+| `node.exe` is not found | Use the browser journey, or install the supported Node 22 version for the optional helper. |
+
+```powershell
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml logs --tail 100 api web migrate
+```
+
+Keep actual build completion, container/health output, ticket before/after restart, tested SHA and teammate review evidence. Report failures as observed; only mark Windows verification passed after the Windows developer has executed the procedure successfully. Do not capture passwords, cookies or credential-bearing database URLs.
+
 Official packaging references: [Next.js deployment](https://nextjs.org/docs/app/getting-started/deploying), [Docker Go guide](https://docs.docker.com/guides/golang/), and [Compose startup order](https://docs.docker.com/compose/how-tos/startup-order/).

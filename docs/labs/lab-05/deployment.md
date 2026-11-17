@@ -13,13 +13,15 @@ The names below were compared with `rg -n 'os\.(Getenv|LookupEnv)|process\.env|N
 | `DATABASE_URL` | Go API and database CLI | PostgreSQL connection URL. Local Compose uses service host `db`; production requires verified TLS. | Secret: contains DB credentials |
 | `PORT` | Go API | HTTP listener port; defaults to `8080`. The API listens on `:<port>` inside its container. | Non-secret |
 | `API_INTERNAL_URL` | Next.js configuration and server-side session helper | API origin used for Next.js rewrites/server requests. Compose sets `http://api:8080`; a host-run web process uses `http://127.0.0.1:8080`. | Non-secret; server-side only, also affects the Next.js build |
+| `WEB_HOST_PORT`, `API_HOST_PORT` | Production-image local Compose only | Loopback host ports; defaults 3002 and 8082. Web origin follows `WEB_HOST_PORT`. | Non-secret |
+| `WEB_PORT` | Production-image local Compose/Next.js | Web container listener; defaults 3000. API listener uses `PORT`. | Non-secret |
 | `NEXT_TELEMETRY_DISABLED` | Next.js/Docker configuration | Disables Next.js telemetry when set to `1`. | Non-secret |
 | `POSTGRES_USER` | Docker Compose/PostgreSQL | Local database role name. | Non-secret |
 | `POSTGRES_DB` | Docker Compose/PostgreSQL | Local database name. | Non-secret |
 | `POSTGRES_PASSWORD` | Docker Compose/PostgreSQL | Local database role password. | Secret; leave blank in `.env.example` |
 | `SEED_CUSTOMER_PASSWORD`, `SEED_CUSTOMER2_PASSWORD`, `SEED_HOST_PASSWORD`, `SEED_OTHER_HOST_PASSWORD` | Explicit demo seed CLI only | Operator-supplied passwords for the four local demo users; 12–128 UTF-8 bytes each. Seeding is disabled in production. | Secrets; blank in `.env.example`, never display or commit values |
 
-The source scan also finds test-only variables: `TEST_DATABASE_URL` for isolated Go integration tests; `F01_BASE_URL` and `F01_TEST_PASSWORD` for Playwright E2E tests; and optional `S1_REVIEW_SCREENSHOT_DIR` for review-test output. These are not application runtime configuration and are intentionally not defaulted in `.env.example`. No `NEXT_PUBLIC_` variables are currently used; do not expose server credentials through client-prefixed variables.
+The source scan also finds test-only variables: `TEST_DATABASE_URL` for isolated Go integration tests; `F01_BASE_URL` and `F01_TEST_PASSWORD` for Playwright E2E tests; and optional `S1_REVIEW_SCREENSHOT_DIR` for review-test output. `EP3_TICKET_FILE` is also a local smoke-script output path for persistence evidence. These are not application runtime configuration and are intentionally not defaulted in `.env.example`. No `NEXT_PUBLIC_` variables are currently used; do not expose server credentials through client-prefixed variables.
 
 `.env.example` already lists the runtime, local Compose, and seed variables above with non-secret defaults/placeholders. Keep `.env` local and ignored. Do not copy real values into this document, Issues, PRs, logs, or screenshots.
 
@@ -153,3 +155,73 @@ A temporary Docker network and two containers, with no host ports or database, w
 API `APP_ENV=development` was explicitly used for this local HTTP/non-TLS packaging check. Production configuration enforcement was not relaxed. Temporary containers/network were removed afterward; images remain available locally. `git diff --check` passed.
 
 Not yet executed for EP3: production Compose integration, database-tool execution/migration, healthy-database recovery, login/queue smoke journey, persistence, clean-clone verification, full regression and final-commit verification. These belong to the remaining steps and must not be marked passed from the image checks above.
+
+
+## Episode 3 — Reproducible local production-image run
+
+This is local verification of production-built artifacts using `APP_ENV=development` for HTTP and non-TLS local PostgreSQL. Next.js uses `NODE_ENV=production` and `next start`; the API and migration CLI are compiled binaries. Production API HTTPS/TLS requirements and disabled demo seed remain enforced by the application. This Compose file is not a Cloud Run deployment configuration.
+
+Use Docker Engine/Desktop with Compose v2, and Node 22 if running the optional smoke script. Commands below work in Linux or Windows WSL. Native PowerShell can use `Copy-Item .env.example .env.docker` instead of `cp`, omit `chmod`, and use `curl.exe` instead of `curl`. Docker itself runs the same pinned Linux images on both developers' machines.
+
+### Fresh local configuration
+
+From the repository root:
+
+```bash
+cp .env.example .env.docker
+chmod 600 .env.docker
+```
+
+Edit the ignored `.env.docker` locally: fill `POSTGRES_PASSWORD`, set `DATABASE_URL` to `postgres://<user>:<URL-encoded-password>@db:5432/<database>?sslmode=disable` matching the `POSTGRES_*` values, and supply all four seed passwords (12–128 bytes). Use a random URL-safe password or URL-encode special characters in the URL. Do not copy a teammate's secrets. Keep the default host ports `WEB_HOST_PORT=3002`, `API_HOST_PORT=8082`, web container `WEB_PORT=3000`, API container `PORT=8080`, or select free ports before building.
+
+The production-image Compose derives `APP_ORIGIN` from `WEB_HOST_PORT` and passes the same API upstream `http://api:<PORT>` to the web build and runtime. The existing development Compose stays on host 3000/8080. For this verification, always open `http://localhost:3002` (or your chosen web host port), not the development URL or `127.0.0.1`, because Origin checks are exact. Rebuild web if changing the API's internal `PORT`.
+
+### Build, migrate, seed and start
+
+Use the same environment file, project name and Compose file on every command:
+
+```bash
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml config --quiet
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml build api web migrate seed
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml up -d --wait
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml run --rm seed
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml ps -a
+```
+
+`db` becomes healthy, `migrate` exits 0, then API and web start; web has a readiness healthcheck. Seed is explicit and is not run by normal startup. Its profile keeps credentials out of API/web services. Migration reruns are checksum-checked and safe; seed preserves existing passwords, so editing a seed password does not change an account already stored in the volume. Use a new verification project for a genuinely fresh database instead of deleting a developer's data.
+
+The database is not published to the host by this Compose file. Containers have no source bind mounts; the only persistent volume is PostgreSQL's project-scoped `postgres_data`.
+
+With default host ports:
+
+```bash
+curl --fail http://localhost:8082/health/live
+curl --fail http://localhost:8082/health/ready
+curl --fail http://localhost:3002/api/health/ready
+node --env-file=.env.docker scripts/lab5/docker-smoke.mjs journey
+```
+
+The optional `journey` script must target a dedicated seeded verification database with no existing active ticket for Customer One, and no older waiting ticket. It creates and completes a 10-person ticket, checks privacy/RBAC and CSRF/Origin rejection, reads the server-rendered Host page, and verifies logout revocation. It never prints credentials or raw session cookies. It does not replace the browser or concurrency regression suites.
+
+For outage evidence, stop only the verification project's DB, use `curl -i --max-time 15` on direct and proxied readiness (expected 503), and always restore it with the same Compose options and `up -d --wait db`; health should return 200 again.
+
+### Persistence evidence
+
+After the journey, create a separate WAITING ticket. Choose a new private output path; `create` refuses to overwrite an existing file:
+
+```bash
+EP3_TICKET_FILE=/tmp/dinequeue-ep3-ticket.json node --env-file=.env.docker scripts/lab5/docker-smoke.mjs create
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml down
+docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yaml up -d --wait
+EP3_TICKET_FILE=/tmp/dinequeue-ep3-ticket.json node --env-file=.env.docker scripts/lab5/docker-smoke.mjs verify
+```
+
+On native PowerShell set `$env:EP3_TICKET_FILE` to a local path before the Node commands. Keep this file out of Git/evidence: it contains a private ticket identifier. The script prints only ticket code/status. For screenshots, use a Customer browser window before and after restart; keep the same ticket and status. `verify` logs in again and reads the saved ticket through the app API. Do not seed/reset the database between these two reads, and never add `-v` to the persistence-test `down` command.
+
+### Clean-clone verification
+
+After pushing the implementation commit, clone that branch into a new folder, record `git rev-parse HEAD`, create a fresh `.env.docker` from its `.env.example`, and repeat the commands above with a new Compose project name (for example `dinequeue-ep3-clean`). Stop the previous verification project first or select other free host ports. Do not copy old `.env`, `node_modules`, `.next`, or data volumes into the clone. Docker's build cache may be reused; a clean checkout is independent of a cold image download.
+
+Capture the build result, migration exit 0, container status, 200/503/recovery responses, smoke result, ticket code/status before and after down/up, and tested SHA. The teammate review and merged PR remain separate evidence. After verification, `down` retains the local volume for inspection; remove only an explicitly disposable audit volume when finished, outside the persistence test.
+
+Official packaging references: [Next.js deployment](https://nextjs.org/docs/app/getting-started/deploying), [Docker Go guide](https://docs.docker.com/guides/golang/), and [Compose startup order](https://docs.docker.com/compose/how-tos/startup-order/).

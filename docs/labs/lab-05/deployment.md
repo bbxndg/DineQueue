@@ -1,6 +1,6 @@
 # Lab 5 — Cloud readiness and Docker deployment notes
 
-**Scope:** Episode 2 records the Sprint 1 cloud-readiness review. Episode 3 below records the production Docker plan and Step 3 image checks for Issue #21. Compose integration and full acceptance verification remain pending. GCP deployment and CI/CD belong to later episodes.
+**Scope:** Episode 2 records the Sprint 1 cloud-readiness review. Episode 3 below records the production Docker plan and Step 3 image checks for Issue #21. Local packaging, clean-clone, persistence and regression checks are recorded in [EP3 results](ep3-results.md); teammate review/merge remains pending. GCP deployment and CI/CD belong to later episodes.
 
 ## Environment configuration inventory
 
@@ -82,7 +82,7 @@ Do not add production Dockerfiles, CI workflows, GCP resources, a cloud deployme
 
 ## Episode 3 — Production Docker plan (Issue #21)
 
-**Status:** Step 3 production image targets implemented and build/start checks executed; full Episode 3 acceptance remains pending (see results below).
+**Status:** Production images and local Compose implemented and verified; see [EP3 execution results](ep3-results.md) for the tested SHA, commands, logs and limits. Teammate review/merge remains pending.
 **Tracking:** [Issue #21](https://github.com/bbxndg/DineQueue/issues/21), branch `feat/lab5-ep3-production-docker`, PR target `gcp-staging`.
 
 ### Packaging and startup design
@@ -109,19 +109,19 @@ Use separate web and API images, consistent with the EP2 topology proposal. Clou
 
 ### Verification sequence and acceptance criteria
 
-All items below are pending until actual execution evidence is recorded:
+The local verification items below have execution evidence in [EP3 results](ep3-results.md). Review/merge is tracked separately:
 
-- [ ] Review the Docker/Compose diff and confirm no source or configuration change expands Sprint 1 business scope.
-- [ ] Validate the production Compose configuration without printing expanded secrets; build the production web, API and database-tool targets.
-- [ ] Start PostgreSQL, run versioned migrations, explicitly seed local demo accounts, and start the production-built API/web images in the documented order.
-- [ ] Verify API `/health/live` returns 200/`ok`, API `/health/ready` and web `/api/health/ready` return 200/`ready`. Verify a database outage returns readiness 503 and recovery restores 200; always restore the test database afterward.
-- [ ] Verify configured listener ports and non-root runtime users. Confirm application startup uses compiled/built artifacts and does not depend on host source mounts.
-- [ ] Smoke-test Customer login/join/own-ticket and Host FIFO Call Next/Complete, preserving role and ticket privacy checks.
-- [ ] Create a separate ticket for persistence evidence. Record its code/status, stop the verification Compose project with `down` (never `down -v`), restart with `up -d`, and confirm the same ticket and status through the app without resetting or reseeding the database.
-- [ ] Commit the implementation and verify a clean clone of that exact commit can build/run using a fresh local environment file populated from `.env.example`, with no old `.env`, host `node_modules` or `.next` artifacts.
-- [ ] Run web tests, lint, typecheck and build; run Go tests with `-tags=integration -race -count=1` against isolated real PostgreSQL and run Go vet. Record actual results and any skipped checks.
-- [ ] Review tracked files, build context, image contents/configuration and captured logs for accidental credentials; redact secrets from all evidence.
-- [ ] Replace planned instructions with verified commands and record dates, tested SHA, container/health results, clean-clone outcome and before/after persistence evidence here or in a linked results record/PR. Do not reuse EP2 results as an EP3 execution claim.
+- [x] Review the Docker/Compose diff and confirm no source or configuration change expands Sprint 1 business scope.
+- [x] Validate the production Compose configuration without printing expanded secrets; build the production web, API and database-tool targets.
+- [x] Start PostgreSQL, run versioned migrations, explicitly seed local demo accounts, and start the production-built API/web images in the documented order.
+- [x] Verify API `/health/live` returns 200/`ok`, API `/health/ready` and web `/api/health/ready` return 200/`ready`. Verify a database outage returns readiness 503 and recovery restores 200; always restore the test database afterward.
+- [x] Verify configured listener ports and non-root runtime users. Confirm application startup uses compiled/built artifacts and does not depend on host source mounts.
+- [x] Smoke-test Customer login/join/own-ticket and Host FIFO Call Next/Complete, preserving role and ticket privacy checks.
+- [x] Create a separate ticket for persistence evidence. Record its code/status, stop the verification Compose project with `down` (never `down -v`), restart with `up -d`, and confirm the same ticket and status through the app without resetting or reseeding the database.
+- [x] Commit the implementation and verify a clean clone of that exact commit can build/run using a fresh local environment file populated from `.env.example`, with no old `.env`, host `node_modules` or `.next` artifacts.
+- [x] Run web tests, lint, typecheck and build; run Go tests with `-tags=integration -race -count=1` against isolated real PostgreSQL and run Go vet. Record actual results and any skipped checks.
+- [x] Review tracked files, build context, image contents/configuration and captured logs for accidental credentials; redact secrets from all evidence.
+- [x] Replace planned instructions with verified commands and record dates, tested SHA, container/health results, clean-clone outcome and before/after persistence evidence here or in a linked results record/PR. Do not reuse EP2 results as an EP3 execution claim.
 - [ ] Open a PR into `gcp-staging` with `Part of #21`; obtain teammate review and merge before closing the Issue.
 
 Evidence to capture during execution: build completion, container status (including migration exit 0), health responses, ticket before/after restart, clean-clone command output and tested SHA, plus the reviewed PR link. Store only sanitized evidence. Episode 3 does not deploy GCP resources or add CI/CD or Sprint 2 features.
@@ -154,7 +154,7 @@ A temporary Docker network and two containers, with no host ports or database, w
 
 API `APP_ENV=development` was explicitly used for this local HTTP/non-TLS packaging check. Production configuration enforcement was not relaxed. Temporary containers/network were removed afterward; images remain available locally. `git diff --check` passed.
 
-Not yet executed for EP3: production Compose integration, database-tool execution/migration, healthy-database recovery, login/queue smoke journey, persistence, clean-clone verification, full regression and final-commit verification. These belong to the remaining steps and must not be marked passed from the image checks above.
+At the end of Step 3, Compose integration, migration execution, recovery, login/queue smoke, persistence, clean-clone and regression checks were still pending. They were subsequently executed; their separate results are recorded in [EP3 results](ep3-results.md), not inferred from the Step 3 image checks.
 
 
 ## Episode 3 — Reproducible local production-image run

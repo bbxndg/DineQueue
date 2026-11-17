@@ -1,0 +1,52 @@
+ Network dqep3clean_default Creating
+ Network dqep3clean_default Created
+ Volume dqep3clean_postgres_data Creating
+ Volume dqep3clean_postgres_data Created
+ Container dqep3clean-db-1 Creating
+ Container dqep3clean-db-1 Created
+ Container dqep3clean-migrate-1 Creating
+ Container dqep3clean-migrate-1 Created
+ Container dqep3clean-api-1 Creating
+ Container dqep3clean-api-1 Created
+ Container dqep3clean-web-1 Creating
+ Container dqep3clean-web-1 Created
+ Container dqep3clean-db-1 Starting
+ Container dqep3clean-db-1 Started
+ Container dqep3clean-db-1 Waiting
+ Container dqep3clean-db-1 Healthy
+ Container dqep3clean-migrate-1 Starting
+ Container dqep3clean-migrate-1 Started
+ Container dqep3clean-migrate-1 Waiting
+ Container dqep3clean-migrate-1 Exited
+ Container dqep3clean-api-1 Starting
+ Container dqep3clean-api-1 Started
+ Container dqep3clean-web-1 Starting
+ Container dqep3clean-web-1 Started
+ Container dqep3clean-api-1 Waiting
+ Container dqep3clean-web-1 Waiting
+ Container dqep3clean-db-1 Waiting
+ Container dqep3clean-migrate-1 Waiting
+ Container dqep3clean-migrate-1 Exited
+ Container dqep3clean-api-1 Healthy
+ Container dqep3clean-db-1 Healthy
+ Container dqep3clean-web-1 Healthy
+ Container dqep3clean-db-1 Running
+ Container dqep3clean-db-1 Waiting
+ Container dqep3clean-db-1 Healthy
+ Container dqep3clean-migrate-1 Starting
+ Container dqep3clean-migrate-1 Started
+ Container dqep3clean-migrate-1 Waiting
+ Container dqep3clean-migrate-1 Exited
+ Container dqep3clean-seed-run-d97a53fac1a2 Creating
+ Container dqep3clean-seed-run-d97a53fac1a2 Created
+2026/11/17 14:58:48 database command completed
+NAME                   IMAGE                    COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+dqep3clean-api-1       dqep3clean-api           "/app/api"               api       12 seconds ago   Up 7 seconds              127.0.0.1:8093->8080/tcp
+dqep3clean-db-1        postgres:18.6-bookworm   "docker-entrypoint.s…"   db        12 seconds ago   Up 11 seconds (healthy)   5432/tcp
+dqep3clean-migrate-1   dqep3clean-migrate       "/app/db migrate"        migrate   12 seconds ago   Exited (0) 1 second ago
+dqep3clean-web-1       dqep3clean-web           "docker-entrypoint.s…"   web       12 seconds ago   Up 7 seconds (healthy)    127.0.0.1:3032->3000/tcp
+PASS ticket A-001 WAITING, party size 10
+PASS own-ticket privacy, Customer RBAC, missing CSRF and foreign Origin rejected
+PASS Host Call Next/Complete; Customer reads CALLED and COMPLETED
+PASS authenticated Next.js server-rendered Host page
+PASS logout revokes the session

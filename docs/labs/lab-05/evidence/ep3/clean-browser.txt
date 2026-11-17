@@ -1,0 +1,27 @@
+
+Running 20 tests using 1 worker
+
+(node:354446) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 apps/web/e2e/auth.spec.ts:10:1 › T-041 Customer login, refresh, role redirect, CSRF rejection and logout (1.9s)
+  ✓   2 apps/web/e2e/auth.spec.ts:32:1 › T-041 Host identity survives reload and signs out (939ms)
+  ✓   3 apps/web/e2e/auth.spec.ts:42:1 › T-041 Invalid credentials and invalid session recover to login (847ms)
+  ✓   4 apps/web/e2e/auth.spec.ts:62:3 › T-039 Login 429 feedback: attempt limit (315ms)
+  ✓   5 apps/web/e2e/auth.spec.ts:62:3 › T-039 Login 429 feedback: verification capacity (595ms)
+  ✓   6 apps/web/e2e/auth.spec.ts:62:3 › T-039 Login 429 feedback: missing header (627ms)
+  ✓   7 apps/web/e2e/auth.spec.ts:62:3 › T-039 Login 429 feedback: invalid header (685ms)
+  ✓   8 apps/web/e2e/join.spec.ts:5:1 › T-010 Customer joins the waitlist and sees a WAITING ticket (3.0s)
+  ✓   9 apps/web/e2e/join.spec.ts:44:1 › T-017 Host is redirected away from the join page (1.1s)
+  ✓  10 apps/web/e2e/my-ticket.spec.ts:11:1 › T-010/018/019/020 My Ticket empty, join, persisted reload and cross-user privacy (5.1s)
+  ✓  11 apps/web/e2e/my-ticket.spec.ts:81:1 › T-021 My Ticket requires a session and redirects Hosts (1.9s)
+  ✓  12 apps/web/e2e/queue-operations.spec.ts:22:1 › T-029 Host calls next and completes; customer sees CALLED then COMPLETED (2.2s)
+  ✓  13 apps/web/e2e/queue-operations.spec.ts:101:1 › T-027 unassigned Host sees no queue and is denied by the API (441ms)
+  ✓  14 apps/web/e2e/queue-operations.spec.ts:114:1 › T-006 Customer cannot open the Host board or call next (534ms)
+  ✓  15 apps/web/e2e/sprint1-review.spec.ts:73:1 › Sprint 1 review: Complete confirmation cannot transfer to another Host ticket (1.1s)
+  ✓  16 apps/web/e2e/sprint1-review.spec.ts:100:1 › Sprint 1 review: Customer home follows WAITING CALLED and COMPLETED state (846ms)
+  ✓  17 apps/web/e2e/sprint1-review.spec.ts:123:1 › Sprint 1 review: Host retries a real read failure without navigating away (1.0s)
+  ✓  18 apps/web/e2e/sprint1-review.spec.ts:172:3 › Sprint 1 completion: labelled keyboard journey and layout at 360px (2.3s)
+  ✓  19 apps/web/e2e/sprint1-review.spec.ts:172:3 › Sprint 1 completion: labelled keyboard journey and layout at 1280px (1.9s)
+  ✓  20 apps/web/e2e/ticket-states.spec.ts:19:1 › F-03 stored status refresh, completed detail and real read-error retry (1.2s)
+
+  20 passed (1.5m)

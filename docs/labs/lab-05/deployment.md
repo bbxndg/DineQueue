@@ -360,7 +360,7 @@ Checks run in this order:
 
 The PostgreSQL service password is an intentionally public synthetic CI-only value. Browser database and seed credentials are random per run and masked with GitHub's `add-mask` mechanism before use. Private environment files, cookies, traces and screenshots are not uploaded. The service and browser databases are separate so the integration suite's empty-schema checks remain valid. `scripts/ci/prepare-env.mjs` does not read a local `.env`; its exported GitHub environment values are paths/project names rather than passwords.
 
-For local CI-helper checks (no Docker or GCP):
+From the repository root, run the local CI-helper checks below (no Docker or GCP required):
 
 ```bash
 python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py' -v

@@ -1,6 +1,6 @@
 # Lab 5 — Cloud readiness and Docker deployment notes
 
-**Scope:** Episode 2 records the Sprint 1 cloud-readiness review. Episode 3 below records the production Docker plan and Step 3 image checks for Issue #21. Local packaging, clean-clone, persistence and regression checks are recorded in [EP3 results](ep3-results.md); teammate review/merge remains pending. GCP deployment and CI/CD belong to later episodes.
+**Scope:** Episode 2 records cloud readiness; Episode 3 records production-image packaging and [its local verification results](ep3-results.md). Episode 4 below adds pull-request CI for Issue #15. GCP deployment and release automation belong to later episodes. See each episode's evidence for actual execution/review status.
 
 ## Environment configuration inventory
 
@@ -21,7 +21,7 @@ The names below were compared with `rg -n 'os\.(Getenv|LookupEnv)|process\.env|N
 | `POSTGRES_PASSWORD` | Docker Compose/PostgreSQL | Local database role password. | Secret; leave blank in `.env.example` |
 | `SEED_CUSTOMER_PASSWORD`, `SEED_CUSTOMER2_PASSWORD`, `SEED_HOST_PASSWORD`, `SEED_OTHER_HOST_PASSWORD` | Explicit demo seed CLI only | Operator-supplied passwords for the four local demo users; 12–128 UTF-8 bytes each. Seeding is disabled in production. | Secrets; blank in `.env.example`, never display or commit values |
 
-The source scan also finds test-only variables: `TEST_DATABASE_URL` for isolated Go integration tests; `F01_BASE_URL` and `F01_TEST_PASSWORD` for Playwright E2E tests; and optional `S1_REVIEW_SCREENSHOT_DIR` for review-test output. `EP3_TICKET_FILE` is also a local smoke-script output path for persistence evidence. These are not application runtime configuration and are intentionally not defaulted in `.env.example`. No `NEXT_PUBLIC_` variables are currently used; do not expose server credentials through client-prefixed variables.
+The source scan also finds test-only variables: `TEST_DATABASE_URL` for isolated Go integration tests; `F01_BASE_URL` and `F01_TEST_PASSWORD` for Playwright E2E tests; optional `F01_BROWSER_CHANNEL` to select an installed browser locally (CI defaults to its matching bundled Chromium); and optional `S1_REVIEW_SCREENSHOT_DIR` for review-test output. `EP3_TICKET_FILE` is also a local smoke-script output path for persistence evidence. These are not application runtime configuration and are intentionally not defaulted in `.env.example`. No `NEXT_PUBLIC_` variables are currently used; do not expose server credentials through client-prefixed variables.
 
 `.env.example` already lists the runtime, local Compose, and seed variables above with non-secret defaults/placeholders. Keep `.env` local and ignored. Do not copy real values into this document, Issues, PRs, logs, or screenshots.
 
@@ -337,3 +337,48 @@ docker compose --env-file .env.docker -p dinequeue-ep3 -f compose.production.yam
 Keep actual build completion, container/health output, ticket before/after restart, tested SHA and teammate review evidence. Report failures as observed; only mark Windows verification passed after the Windows developer has executed the procedure successfully. Do not capture passwords, cookies or credential-bearing database URLs.
 
 Official packaging references: [Next.js deployment](https://nextjs.org/docs/app/getting-started/deploying), [Docker Go guide](https://docs.docker.com/guides/golang/), and [Compose startup order](https://docs.docker.com/compose/how-tos/startup-order/).
+
+## Episode 4 — Pull-request CI
+
+Tracking: [Issue #15](https://github.com/bbxndg/DineQueue/issues/15); [pre-implementation contract](ep4-contract.md); [local execution results and pending GitHub evidence](ep4-results.md). Status: local checks passed; hosted CI, intentional-failure PR and reviewed release evidence remain pending. No hosted PASS or merge is implied by the workflow's presence.
+
+`.github/workflows/ci-docker.yml` is named **CI & Docker Build** and retains the stable job ID/name **test-and-docker**. PRs targeting `gcp-staging` or `main` run it; `workflow_call` allows EP7 reuse and `workflow_dispatch` permits manual runs once GitHub recognizes the workflow on the default branch. There are no path filters that could skip a required check. EP6 must select the actual `test-and-docker` check from a completed run when configuring required checks; this episode does not change branch protection.
+
+The single job runs on Ubuntu 24.04, with a 30-minute timeout and cancellation of superseded runs on the same workflow/ref. It uses only `contents: read`, checkout without persisted credentials, official Actions pinned to full verified commit SHAs, Node from `.nvmrc` and Go 1.26.10. It has no GCP credentials, OIDC write permission, deployment environment or `pull_request_target` trigger.
+
+Checks run in this order:
+
+1. Record the checked-out revision and PR head SHA. GitHub normally tests the synthetic PR merge commit; retain both revisions in the evidence.
+2. Validate the workflow with actionlint 1.7.12 from its official release, verifying the published SHA-256 before executing it.
+3. Syntax-check and stub-test the imported course deployment reference scripts, then run their three Python offline smoke tests. These are reference tests, not DineQueue cloud smoke/deployment evidence; read [deploy/README.md](../../../deploy/README.md) before any future live use.
+4. Run seven offline tests for CI configuration privacy/isolation, validate ports/project identifiers before creating private files, and generate disposable credentials/configuration under runner temporary storage.
+5. Check Go formatting without rewriting source, download pinned modules, run vet and all Go tests with integration tags, race detection and cache disabled for execution. The job's PostgreSQL service uses an empty disposable database; no developer/cloud database is involved.
+6. Install web packages with `npm ci --ignore-scripts`, run unit tests/lint, build Next.js, then typecheck generated route types on the clean checkout.
+7. Validate Compose and build API, web and database-tool production image targets. Nothing is pushed to a registry.
+8. Install the Chromium revision matching the pinned Playwright package, start a separate local production-built app database, run migration and explicit seed, and execute the existing browser suite with one worker.
+9. Always remove only the CI-created Compose project/volume and its private temporary configuration. This cleanup is not the EP3 persistence test and must never target a developer's project.
+
+The PostgreSQL service password is an intentionally public synthetic CI-only value. Browser database and seed credentials are random per run and masked with GitHub's `add-mask` mechanism before use. Private environment files, cookies, traces and screenshots are not uploaded. The service and browser databases are separate so the integration suite's empty-schema checks remain valid. `scripts/ci/prepare-env.mjs` does not read a local `.env`; its exported GitHub environment values are paths/project names rather than passwords.
+
+From the repository root, run the local CI-helper checks below (no Docker or GCP required):
+
+```bash
+python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py' -v
+for script in deploy/deploy.sh deploy/teardown.sh deploy/release.sh; do
+  bash -n "$script"
+done
+bash deploy/tests/test_deploy_stub.sh
+bash deploy/tests/test_release_stub.sh
+python3 -m unittest discover -s deploy/tests -p 'test_smoke.py' -v
+```
+
+For a local equivalent of app checks, follow EP3's isolated-project instructions and use a fresh database. CI-helper inputs are `RUNNER_TEMP` and the disposable service's `CI_PG_PORT`; optional local-only `CI_WEB_HOST_PORT`, `CI_API_HOST_PORT`, `CI_DB_HOST_PORT` avoid ports occupied by a developer's app. `GITHUB_ENV` receives only generated file paths and the unique project name. Do not supply GCP or personal credentials. On Windows use WSL for Bash/stub tests; the hosted job itself uses Linux.
+
+### Required GitHub evidence and completion
+
+- Open the EP4 feature PR into `gcp-staging` with `Part of #15`. Confirm that the check starts automatically, inspect each step and record its run URL, conclusion and tested head/merge SHAs.
+- Use a separate temporary branch/PR with a clearly identified intentional failing synthetic Go test. Record the real red check, then close that PR without merging it. Do not add that failing file to the implementation branch. A failed check alone is not evidence of enforced merge blocking; EP6 verifies the repository rules.
+- Fix/re-run any genuine CI failures until the implementation PR passes. Distinguish a cancelled run from a failure, and local results from hosted results.
+- Obtain teammate approval and merge into `gcp-staging`. The Student Guide also requires a reviewed release PR from `gcp-staging` to `main`, with the same passing check, before EP4 is fully complete and EP5 begins. Do not merge/release or claim review on behalf of the teammate.
+
+Evidence to retain: the passing and intentional-failure PR/run links, job/step output, tested SHAs and actual review/merge links for staging and main. Record missing or unexecuted evidence as pending. Reference: [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).

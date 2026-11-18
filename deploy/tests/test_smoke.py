@@ -1,13 +1,7 @@
-"""Offline unit tests for deploy/smoke_test.py (the network is mocked).
-
-Run (repo root):  python3 -m unittest discover -s deploy/tests -p 'test_smoke.py'
-CI runs it too (.github/workflows/ci-docker.yml).
-
-Covers: public checks pass + login skipped without credentials; a DB that is not
-ready fails even if HTTP answers; the session is logged out even if a check fails.
-CHANGE ME: if you change the endpoints in smoke_test.py, update `response()` below.
-"""
+"""DineQueue smoke checks, network mocked and no cloud credentials."""
+import contextlib
 import importlib.util
+import io
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -18,42 +12,60 @@ spec.loader.exec_module(smoke)
 
 
 class SmokeTests(unittest.TestCase):
-    def response(self, base, path, data=None, token=None):
+    def responses(self, path, data=None, csrf=None):
         return {
-            '/api/health': b'{"status":"ok"}',
-            '/api/ready': b'{"db":"connected"}',
-            '/': b'<html></html>',
-            '/api/categories': b'[{"id":1}]',
-            '/api/auth/login': b'{"token":"test-session"}',
-            '/api/auth/me': b'{"id":1}',
-            '/api/auth/logout': b'{}',
+            '/api/health/live': (200,b'{"status":"ok"}'),
+            '/api/health/ready': (200,b'{"status":"ready"}'),
+            '/login': (200,b'<html>Sign in</html>'),
+            '/api/v1/auth/me': (401,b'{"error":{"code":"UNAUTHENTICATED"}}'),
         }[path]
 
-    @patch.dict('os.environ', {}, clear=True)
-    def test_public_checks_pass_and_skip_optional_login(self):
-        with patch.object(smoke, 'request', side_effect=self.response) as req:
-            smoke.check('https://demo.test')
-            self.assertEqual(req.call_count, 4)
+    def test_read_only_public_checks_and_anonymous_authorization(self):
+        with patch.object(smoke, 'Client') as client, contextlib.redirect_stdout(io.StringIO()):
+            client.return_value.request.side_effect=self.responses
+            smoke.check('https://dinequeue.example.test', {})
+            self.assertEqual(client.return_value.request.call_count,4)
 
-    @patch.dict('os.environ', {}, clear=True)
-    def test_db_not_ready_fails_even_when_http_responds(self):
-        def disconnected(base, path, **kwargs):
-            return b'{"db":"disconnected"}' if path == '/api/ready' else self.response(base, path)
-        with patch.object(smoke, 'request', side_effect=disconnected), patch.object(smoke.time, 'sleep'):
-            with self.assertRaisesRegex(RuntimeError, '/api/ready'):
-                smoke.check('https://demo.test')
+    def test_db_not_ready_fails(self):
+        def unavailable(path, **kwargs):
+            return (503,b'{"status":"unavailable"}') if path=='/api/health/ready' else self.responses(path)
+        with patch.object(smoke, 'Client') as client, patch.object(smoke.time,'sleep'), contextlib.redirect_stdout(io.StringIO()):
+            client.return_value.request.side_effect=unavailable
+            with self.assertRaisesRegex(RuntimeError,'/api/health/ready'):
+                smoke.check('https://dinequeue.example.test',{})
 
-    @patch.dict('os.environ', {'SMOKE_EMAIL': 'smoke@example.test', 'SMOKE_PASSWORD': 'test-only'}, clear=True)
-    def test_session_is_logged_out_even_if_me_fails(self):
-        def broken_me(base, path, data=None, token=None):
-            if path == '/api/auth/me':
-                raise ValueError('Broken response')
-            return self.response(base, path, data, token)
-        with patch.object(smoke, 'request', side_effect=broken_me) as req:
-            with self.assertRaisesRegex(RuntimeError, 'Login smoke'):
-                smoke.check('https://demo.test')
-            self.assertEqual(req.call_args.args[1], '/api/auth/logout')
+    def test_rejects_insecure_or_credentialed_origin_before_network(self):
+        for origin in ('http://example.test','https://user:secret@example.test','https://example.test/path','https://example.test?query=1'):
+            with self.assertRaises(ValueError): smoke.check(origin,{})
+
+    def test_partial_credentials_are_rejected_before_network(self):
+        with patch.object(smoke,'Client',side_effect=AssertionError('network client created')):
+            with self.assertRaises(ValueError): smoke.check('https://example.test',{'SMOKE_EMAIL':'test@example.test'})
+
+    def test_logout_even_after_authenticated_identity_failure(self):
+        def response(path,data=None,csrf=None):
+            if path=='/api/v1/auth/login': return 200,b'{"csrfToken":"test-csrf","user":{"role":"HOST"}}'
+            if path=='/api/v1/auth/logout': return 204,b''
+            if path=='/api/v1/auth/me' and client.return_value.request.call_count>4: return 500,b'{}'
+            return self.responses(path,data,csrf)
+        with patch.object(smoke,'Client') as client, contextlib.redirect_stdout(io.StringIO()):
+            client.return_value.request.side_effect=response
+            client.return_value.secure_session.return_value=True
+            with self.assertRaisesRegex(RuntimeError,'Authenticated'):
+                smoke.check('https://example.test',{'SMOKE_EMAIL':'test@example.test','SMOKE_PASSWORD':'not-a-real-password'})
+            self.assertEqual(client.return_value.request.call_args.args[0],'/api/v1/auth/logout')
+
+    def test_missing_secure_cookie_is_rejected_and_session_revoked(self):
+        def response(path,data=None,csrf=None):
+            if path=='/api/v1/auth/login': return 200,b'{"csrfToken":"test-csrf","user":{"role":"CUSTOMER"}}'
+            if path=='/api/v1/auth/logout': return 204,b''
+            return self.responses(path,data,csrf)
+        with patch.object(smoke,'Client') as client, contextlib.redirect_stdout(io.StringIO()):
+            client.return_value.request.side_effect=response
+            client.return_value.secure_session.return_value=False
+            with self.assertRaisesRegex(RuntimeError,'Secure'):
+                smoke.check('https://example.test',{'SMOKE_EMAIL':'test@example.test','SMOKE_PASSWORD':'not-a-real-password'})
+            self.assertEqual(client.return_value.request.call_args.args[0],'/api/v1/auth/logout')
 
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__=='__main__': unittest.main()

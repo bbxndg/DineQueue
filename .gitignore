@@ -8,3 +8,5 @@ coverage/
 bin/
 .DS_Store
 .aws
+__pycache__/
+*.py[cod]

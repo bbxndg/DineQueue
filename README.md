@@ -143,8 +143,11 @@ to loopback. The database named volume survives `docker compose down`; do not us
 passwords does not update credentials in an already initialized volume.
 
 Web source changes reload through the read-only source mount. For backend/config/dependency
-changes rerun `docker compose up --build`. These Dockerfiles are development targets;
-production image hardening and CI/GCP delivery remain Lab 5 work.
+changes rerun `docker compose up --build`. This Compose file selects development targets.
+For production-built API/web images, explicit migrations, isolated local ports and
+clean-clone/persistence verification, follow the [Lab 5 Docker guide](docs/labs/lab-05/deployment.md#episode-3--reproducible-local-production-image-run).
+PR CI configuration and evidence requirements are documented in the [EP4 guide](docs/labs/lab-05/deployment.md#episode-4--pull-request-ci).
+GCP deployment is handled in later Lab 5 episodes.
 
 ### Host tools and checks
 

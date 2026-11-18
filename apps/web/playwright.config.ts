@@ -7,5 +7,7 @@ if (!process.env.F01_BASE_URL || !process.env.F01_TEST_PASSWORD) {
 export default defineConfig({
   testDir: './e2e', workers: 1, retries: 0, reporter: 'list',
   outputDir: '/tmp/dineq-f01-playwright-results',
-  use: { baseURL: process.env.F01_BASE_URL, trace: 'off', video: 'off', screenshot: 'off' },
+  // CI uses its matching bundled Chromium; local checks may select installed Chrome.
+  use: { baseURL: process.env.F01_BASE_URL, channel: process.env.F01_BROWSER_CHANNEL || undefined,
+    trace: 'off', video: 'off', screenshot: 'off' },
 });

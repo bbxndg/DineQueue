@@ -1,0 +1,136 @@
+name: CI & Docker Build
+
+on:
+  workflow_call:
+  pull_request:
+    branches: [gcp-staging, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Keep this stable: EP6 will require test-and-docker before merge.
+  test-and-docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18.6-bookworm
+        env:
+          POSTGRES_USER: dinequeue_ci
+          POSTGRES_DB: dinequeue_ci
+          # Synthetic credentials for this disposable service only.
+          POSTGRES_PASSWORD: ci-service-only
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U dinequeue_ci -d dinequeue_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Set up Go
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version: '1.26.10'
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Record tested revision
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          printf 'Checked-out revision: '
+          git rev-parse HEAD
+          printf 'PR head revision: %s\n' "$PR_HEAD_SHA"
+
+      - name: Validate workflow syntax with verified actionlint
+        run: |
+          curl --fail --location --retry 3 https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
+          printf '%s  %s\n' 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -shellcheck='' .github/workflows/ci-docker.yml
+
+      - name: Check course deployment reference scripts offline
+        run: |
+          for script in deploy/deploy.sh deploy/teardown.sh deploy/release.sh; do
+            bash -n "$script"
+          done
+          bash deploy/tests/test_deploy_stub.sh
+          bash deploy/tests/test_release_stub.sh
+          python3 -m unittest discover -s deploy/tests -p 'test_smoke.py'
+
+      - name: Test CI configuration isolation and credential handling
+        run: python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py' -v
+
+      - name: Prepare private isolated test configuration
+        env:
+          CI_PG_PORT: ${{ job.services.postgres.ports['5432'] }}
+        run: node scripts/ci/prepare-env.mjs
+
+      - name: Go formatting, vet and integration/race tests
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          formatting=$(gofmt -l .)
+          if [[ -n "$formatting" ]]; then
+            printf 'Run gofmt on:\n%s\n' "$formatting"
+            exit 1
+          fi
+          set -a
+          source "$DINEQUEUE_GO_ENV"
+          set +a
+          go mod download
+          go vet -tags=integration ./...
+          go test -tags=integration -race -count=1 -v ./...
+
+      - name: Web install, unit tests, lint, build and typecheck
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+          npm run lint
+          npm run build
+          npm run typecheck
+
+      - name: Build production images and validate Compose
+        run: |
+          docker compose --env-file "$DINEQUEUE_COMPOSE_ENV" -p "$DINEQUEUE_COMPOSE_PROJECT" -f compose.production.yaml config --quiet
+          docker compose --env-file "$DINEQUEUE_COMPOSE_ENV" -p "$DINEQUEUE_COMPOSE_PROJECT" -f compose.production.yaml build api web migrate seed
+
+      - name: Install matching Playwright Chromium
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Migrate, seed and start the isolated production-built app
+        run: |
+          docker compose --env-file "$DINEQUEUE_COMPOSE_ENV" -p "$DINEQUEUE_COMPOSE_PROJECT" -f compose.production.yaml -f "$DINEQUEUE_CI_DIR/browser-ports.yaml" up -d --wait
+          docker compose --env-file "$DINEQUEUE_COMPOSE_ENV" -p "$DINEQUEUE_COMPOSE_PROJECT" -f compose.production.yaml -f "$DINEQUEUE_CI_DIR/browser-ports.yaml" run --rm seed
+
+      - name: Critical browser regression against production-built images
+        run: node --env-file="$DINEQUEUE_BROWSER_ENV" node_modules/@playwright/test/cli.js test --config apps/web/playwright.config.ts
+
+      - name: Remove only this CI-created app and private configuration
+        if: always()
+        run: |
+          if [[ -n "${DINEQUEUE_COMPOSE_ENV:-}" && -f "$DINEQUEUE_COMPOSE_ENV" ]]; then
+            docker compose --env-file "$DINEQUEUE_COMPOSE_ENV" -p "$DINEQUEUE_COMPOSE_PROJECT" -f compose.production.yaml -f "$DINEQUEUE_CI_DIR/browser-ports.yaml" down --volumes --remove-orphans
+            rm -rf -- "$DINEQUEUE_CI_DIR"
+          fi

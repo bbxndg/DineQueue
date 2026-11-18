@@ -1,0 +1,46 @@
+PASS: first_run (exit, migration gate, credential handling, secret redaction)
+PASS: rerun (exit, migration gate, credential handling, secret redaction)
+PASS: partial (exit, migration gate, credential handling, secret redaction)
+PASS: job-fail (exit, migration gate, credential handling, secret redaction)
+PASS: demo (exit, migration gate, credential handling, secret redaction)
+PASS: dry run makes no gcloud calls
+Service URL: https://demo.example.test
+PASS normal release uses digest and waits for migration
+Rollback: reuse existing image; skip tests, build, migration and seed.
+Service URL: https://demo.example.test
+PASS rollback reuses image without touching migration job
+PASS image failure blocks service update
+PASS migration failure blocks service update
+Invalid image tag.
+PASS invalid tag rejected before GCP calls
+test_db_not_ready_fails_even_when_http_responds (test_smoke.SmokeTests.test_db_not_ready_fails_even_when_http_responds) ... ok
+test_public_checks_pass_and_skip_optional_login (test_smoke.SmokeTests.test_public_checks_pass_and_skip_optional_login) ... ok
+test_session_is_logged_out_even_if_me_fails (test_smoke.SmokeTests.test_session_is_logged_out_even_if_me_fails) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.003s
+
+OK
+PASS /api/health
+PASS /api/health
+PASS /api/ready
+PASS /
+PASS /api/categories
+SKIP login: optional smoke credentials not configured
+PASS /api/health
+PASS /api/ready
+PASS /
+PASS /api/categories
+PASS logout
+test_github_masks_every_generated_credential_before_exporting_paths (test_prepare_env.PrepareEnvironmentTests.test_github_masks_every_generated_credential_before_exporting_paths) ... ok
+test_invalid_or_colliding_host_ports_fail_without_creating_files (test_prepare_env.PrepareEnvironmentTests.test_invalid_or_colliding_host_ports_fail_without_creating_files) ... ok
+test_invalid_project_identifier_fails_before_creating_any_private_files (test_prepare_env.PrepareEnvironmentTests.test_invalid_project_identifier_fails_before_creating_any_private_files) ... ok
+test_invalid_service_port_fails_before_creating_any_private_files (test_prepare_env.PrepareEnvironmentTests.test_invalid_service_port_fails_before_creating_any_private_files) ... ok
+test_isolated_configuration_does_not_read_or_print_developer_credentials (test_prepare_env.PrepareEnvironmentTests.test_isolated_configuration_does_not_read_or_print_developer_credentials) ... ok
+test_local_override_ports_remain_consistent_between_app_origin_and_fixtures (test_prepare_env.PrepareEnvironmentTests.test_local_override_ports_remain_consistent_between_app_origin_and_fixtures) ... ok
+test_new_invocations_do_not_reuse_credentials_or_private_files (test_prepare_env.PrepareEnvironmentTests.test_new_invocations_do_not_reuse_credentials_or_private_files) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.446s
+
+OK

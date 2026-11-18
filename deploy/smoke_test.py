@@ -81,7 +81,14 @@ def check(base, env=None):
         if not isinstance(csrf,str) or not csrf: raise ValueError('Invalid CSRF response')
         if not client.secure_session(): raise RuntimeError('Secure HttpOnly host-only session cookie missing')
         status, body = client.request('/api/v1/auth/me')
-        if status!=200 or json.loads(body).get('user',{}).get('role') not in ('CUSTOMER','HOST'):
+        if status!=200:
+            raise RuntimeError('Authenticated identity smoke failed')
+        try:
+            identity = json.loads(body)
+        except ValueError:
+            raise RuntimeError('Authenticated identity smoke failed') from None
+        user = identity.get('user') if isinstance(identity,dict) else None
+        if not isinstance(user,dict) or user.get('role') not in ('CUSTOMER','HOST'):
             raise RuntimeError('Authenticated identity smoke failed')
         print('PASS secure login and authenticated identity')
     finally:

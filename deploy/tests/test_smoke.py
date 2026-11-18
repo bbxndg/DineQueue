@@ -2,6 +2,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -66,6 +67,44 @@ class SmokeTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'Secure'):
                 smoke.check('https://example.test',{'SMOKE_EMAIL':'test@example.test','SMOKE_PASSWORD':'not-a-real-password'})
             self.assertEqual(client.return_value.request.call_args.args[0],'/api/v1/auth/logout')
+
+    def test_malformed_identity_payloads_fail_cleanly_and_logout(self):
+        payloads = [b'{"user":null}', b'[]', b'null', b'"unexpected"',
+                    b'{"user":[]}', b'{"user":"unexpected"}', b'{}',
+                    b'{"user":{"role":"ADMIN"}}', b'not-json']
+        for payload in payloads:
+            with self.subTest(payload=payload), patch.object(smoke,'Client') as client, contextlib.redirect_stdout(io.StringIO()) as output:
+                def response(path,data=None,csrf=None):
+                    if path=='/api/v1/auth/login':
+                        return 200,b'{"csrfToken":"test-csrf","user":{"role":"HOST"}}'
+                    if path=='/api/v1/auth/logout': return 204,b''
+                    if path=='/api/v1/auth/me' and client.return_value.request.call_count>4:
+                        return 200,payload
+                    return self.responses(path,data,csrf)
+                client.return_value.request.side_effect=response
+                client.return_value.secure_session.return_value=True
+                with self.assertRaisesRegex(RuntimeError,'^Authenticated identity smoke failed$'):
+                    smoke.check('https://example.test',{'SMOKE_EMAIL':'test@example.test','SMOKE_PASSWORD':'not-a-real-password'})
+                self.assertEqual(client.return_value.request.call_args.args[0],'/api/v1/auth/logout')
+                self.assertEqual(client.return_value.request.call_args.kwargs,{'data':{},'csrf':'test-csrf'})
+                self.assertEqual(sum(call.args[0]=='/api/v1/auth/logout' for call in client.return_value.request.call_args_list),1)
+                self.assertNotIn('PASS secure login and authenticated identity',output.getvalue())
+
+    def test_supported_identity_roles_pass_and_logout(self):
+        for role in ('CUSTOMER','HOST'):
+            with self.subTest(role=role), patch.object(smoke,'Client') as client, contextlib.redirect_stdout(io.StringIO()) as output:
+                def response(path,data=None,csrf=None):
+                    if path=='/api/v1/auth/login':
+                        return 200,b'{"csrfToken":"test-csrf"}'
+                    if path=='/api/v1/auth/logout': return 204,b''
+                    if path=='/api/v1/auth/me' and client.return_value.request.call_count>4:
+                        return 200,json.dumps({'user':{'role':role}}).encode()
+                    return self.responses(path,data,csrf)
+                client.return_value.request.side_effect=response
+                client.return_value.secure_session.return_value=True
+                smoke.check('https://example.test',{'SMOKE_EMAIL':'test@example.test','SMOKE_PASSWORD':'not-a-real-password'})
+                self.assertIn('PASS secure login and authenticated identity',output.getvalue())
+                self.assertEqual(client.return_value.request.call_args.args[0],'/api/v1/auth/logout')
 
 
 if __name__=='__main__': unittest.main()

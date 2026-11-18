@@ -382,3 +382,5 @@ For a local equivalent of app checks, follow EP3's isolated-project instructions
 - Obtain teammate approval and merge into `gcp-staging`. The Student Guide also requires a reviewed release PR from `gcp-staging` to `main`, with the same passing check, before EP4 is fully complete and EP5 begins. Do not merge/release or claim review on behalf of the teammate.
 
 Evidence to retain: the passing and intentional-failure PR/run links, job/step output, tested SHAs and actual review/merge links for staging and main. Record missing or unexecuted evidence as pending. Reference: [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+
+Copy the PR URL from the pull request page. Open the `test-and-docker` check, then open its workflow run summary and copy the Actions run URL from the browser address bar (`/actions/runs/<run-id>`). Keep the passing and intentional-failure run URLs separately.

@@ -1,0 +1,148 @@
+{
+  "mode": "DRY RUN ONLY \u2014 no GCP calls or credential generation",
+  "project": "dinequeue-test",
+  "region": "asia-southeast1",
+  "source_sha": "68bbe2f4948481800c92412cbc2ec5f365affae3",
+  "registry": "dinequeue",
+  "sql_instance": "dinequeue-pg",
+  "sql": {
+    "version": "POSTGRES_18",
+    "edition": "enterprise",
+    "tier": "db-f1-micro",
+    "storage_gb": 10,
+    "storage_auto_increase": false,
+    "authorized_networks": []
+  },
+  "database": "dinequeue_demo",
+  "source_bucket": "dinequeue-test-dinequeue-build",
+  "service": "dinequeue",
+  "containers": {
+    "web": {
+      "image": "web:68bbe2f4948481800c92412cbc2ec5f365affae3",
+      "ingress_port": 8080,
+      "api_origin": "http://127.0.0.1:8081",
+      "secrets": []
+    },
+    "api": {
+      "image": "api:68bbe2f4948481800c92412cbc2ec5f365affae3",
+      "port": 8081,
+      "secrets": [
+        "dinequeue-database-url:1"
+      ]
+    }
+  },
+  "service_identities": [
+    "dinequeue-runtime",
+    "dinequeue-jobs",
+    "dinequeue-builder"
+  ],
+  "images": [
+    "api",
+    "web",
+    "db-tools"
+  ],
+  "deploy_by": "resolved sha256 digest",
+  "limits": {
+    "min_instances": 0,
+    "max_instances": 1,
+    "concurrency": 10
+  },
+  "jobs": [
+    "dinequeue-migrate",
+    "dinequeue-provision-demo"
+  ],
+  "order": [
+    "enable APIs",
+    "registry + SQL + database",
+    "identities + least-privilege bindings",
+    "generate/reuse secrets (never print)",
+    "build tracked main source only",
+    "resolve digests",
+    "migrate --wait (failure aborts)",
+    "optional guarded provisioning --wait",
+    "deploy web + API",
+    "set exact HTTPS origin",
+    "grant public web ingress"
+  ],
+  "demo": true,
+  "credentials": "Secret Manager only; no values in plan/output",
+  "pending": [
+    "real deployment and HTTPS smoke evidence",
+    "EP6 GitHub identity/merge gates",
+    "EP7 release automation",
+    "EP8 restart/redeploy evidence"
+  ]
+}
+
+SIMULATED COMMANDS (fresh resources; existing resources are reused after safe discovery):
+[DRY RUN] gcloud services enable run.googleapis.com sqladmin.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com iam.googleapis.com storage.googleapis.com logging.googleapis.com --project dinequeue-test --quiet
+[DRY RUN] gcloud artifacts repositories describe dinequeue --location=asia-southeast1 --project dinequeue-test --format=json
+[DRY RUN] gcloud artifacts repositories create dinequeue --location=asia-southeast1 --repository-format=docker --project dinequeue-test --quiet
+[DRY RUN] gcloud sql instances describe dinequeue-pg --project dinequeue-test --format=json
+[DRY RUN] gcloud sql instances create dinequeue-pg --database-version=POSTGRES_18 --edition=enterprise --tier=db-f1-micro --region=asia-southeast1 --storage-size=10GB --storage-type=SSD --no-storage-auto-increase --backup-start-time=03:00 --ssl-mode=ENCRYPTED_ONLY --project dinequeue-test --quiet
+[DRY RUN] gcloud sql databases describe dinequeue_demo --instance=dinequeue-pg --project dinequeue-test --format=json
+[DRY RUN] gcloud sql databases create dinequeue_demo --instance=dinequeue-pg --project dinequeue-test --quiet
+[DRY RUN] gcloud iam service-accounts describe dinequeue-runtime@dinequeue-test.iam.gserviceaccount.com --project dinequeue-test --format=json
+[DRY RUN] gcloud iam service-accounts create dinequeue-runtime --project dinequeue-test --quiet
+[DRY RUN] gcloud projects add-iam-policy-binding dinequeue-test --member=serviceAccount:dinequeue-runtime@dinequeue-test.iam.gserviceaccount.com --role=roles/cloudsql.client --condition=None --project dinequeue-test --quiet
+[DRY RUN] gcloud iam service-accounts describe dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --project dinequeue-test --format=json
+[DRY RUN] gcloud iam service-accounts create dinequeue-jobs --project dinequeue-test --quiet
+[DRY RUN] gcloud projects add-iam-policy-binding dinequeue-test --member=serviceAccount:dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --role=roles/cloudsql.client --condition=None --project dinequeue-test --quiet
+[DRY RUN] gcloud iam service-accounts describe dinequeue-builder@dinequeue-test.iam.gserviceaccount.com --project dinequeue-test --format=json
+[DRY RUN] gcloud iam service-accounts create dinequeue-builder --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets describe dinequeue-database-url --project dinequeue-test --format=json
+[DRY RUN] gcloud sql users list --instance=dinequeue-pg --format=json --project dinequeue-test --quiet
+[DRY RUN] gcloud sql users create dinequeue --instance=dinequeue-pg '--password=<GENERATED_AT_APPLY>' --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets create dinequeue-database-url --replication-policy=automatic --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets versions add dinequeue-database-url --data-file=- --project dinequeue-test --quiet
+[DRY RUN] stdin: generated secret value withheld
+[DRY RUN] gcloud secrets describe dinequeue-demo-customer-password --project dinequeue-test --format=json
+[DRY RUN] gcloud secrets create dinequeue-demo-customer-password --replication-policy=automatic --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets versions add dinequeue-demo-customer-password --data-file=- --project dinequeue-test --quiet
+[DRY RUN] stdin: generated secret value withheld
+[DRY RUN] gcloud secrets describe dinequeue-demo-customer2-password --project dinequeue-test --format=json
+[DRY RUN] gcloud secrets create dinequeue-demo-customer2-password --replication-policy=automatic --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets versions add dinequeue-demo-customer2-password --data-file=- --project dinequeue-test --quiet
+[DRY RUN] stdin: generated secret value withheld
+[DRY RUN] gcloud secrets describe dinequeue-demo-host-password --project dinequeue-test --format=json
+[DRY RUN] gcloud secrets create dinequeue-demo-host-password --replication-policy=automatic --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets versions add dinequeue-demo-host-password --data-file=- --project dinequeue-test --quiet
+[DRY RUN] stdin: generated secret value withheld
+[DRY RUN] gcloud secrets describe dinequeue-demo-other-host-password --project dinequeue-test --format=json
+[DRY RUN] gcloud secrets create dinequeue-demo-other-host-password --replication-policy=automatic --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets versions add dinequeue-demo-other-host-password --data-file=- --project dinequeue-test --quiet
+[DRY RUN] stdin: generated secret value withheld
+[DRY RUN] gcloud secrets add-iam-policy-binding dinequeue-database-url --member=serviceAccount:dinequeue-runtime@dinequeue-test.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets add-iam-policy-binding dinequeue-database-url --member=serviceAccount:dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets add-iam-policy-binding dinequeue-demo-customer-password --member=serviceAccount:dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets add-iam-policy-binding dinequeue-demo-customer2-password --member=serviceAccount:dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets add-iam-policy-binding dinequeue-demo-host-password --member=serviceAccount:dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor --project dinequeue-test --quiet
+[DRY RUN] gcloud secrets add-iam-policy-binding dinequeue-demo-other-host-password --member=serviceAccount:dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor --project dinequeue-test --quiet
+[DRY RUN] gcloud storage buckets describe gs://dinequeue-test-dinequeue-build --project dinequeue-test --format=json
+[DRY RUN] gcloud storage buckets create gs://dinequeue-test-dinequeue-build --location=asia-southeast1 --uniform-bucket-level-access --public-access-prevention --project dinequeue-test --quiet
+[DRY RUN] gcloud storage buckets add-iam-policy-binding gs://dinequeue-test-dinequeue-build --member=serviceAccount:dinequeue-builder@dinequeue-test.iam.gserviceaccount.com --role=roles/storage.objectViewer --project dinequeue-test --quiet
+[DRY RUN] gcloud artifacts repositories add-iam-policy-binding dinequeue --location=asia-southeast1 --member=serviceAccount:dinequeue-builder@dinequeue-test.iam.gserviceaccount.com --role=roles/artifactregistry.writer --project dinequeue-test --quiet
+[DRY RUN] gcloud projects add-iam-policy-binding dinequeue-test --member=serviceAccount:dinequeue-builder@dinequeue-test.iam.gserviceaccount.com --role=roles/logging.logWriter --condition=None --project dinequeue-test --quiet
+[DRY RUN] gcloud builds submit /tmp/dinequeue-build-n46749am --config=/tmp/dinequeue-build-n46749am/deploy/cloudbuild.yaml --substitutions=_REGION=asia-southeast1,_SOURCE_SHA=68bbe2f4948481800c92412cbc2ec5f365affae3 --gcs-source-staging-dir=gs://dinequeue-test-dinequeue-build/source --service-account=projects/dinequeue-test/serviceAccounts/dinequeue-builder@dinequeue-test.iam.gserviceaccount.com --project dinequeue-test --quiet
+[DRY RUN] gcloud artifacts docker images describe asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/api:68bbe2f4948481800c92412cbc2ec5f365affae3 '--format=value(image_summary.fully_qualified_digest)' --project dinequeue-test --quiet
+[DRY RUN] gcloud artifacts docker images describe asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/web:68bbe2f4948481800c92412cbc2ec5f365affae3 '--format=value(image_summary.fully_qualified_digest)' --project dinequeue-test --quiet
+[DRY RUN] gcloud artifacts docker images describe asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/db-tools:68bbe2f4948481800c92412cbc2ec5f365affae3 '--format=value(image_summary.fully_qualified_digest)' --project dinequeue-test --quiet
+[DRY RUN] gcloud run services describe dinequeue --region=asia-southeast1 --project dinequeue-test --format=json
+[DRY RUN] gcloud run jobs deploy dinequeue-migrate --image=asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/db-tools@sha256:0000000000000000000000000000000000000000000000000000000000000000 --region=asia-southeast1 --service-account=dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --set-cloudsql-instances=dinequeue-test:asia-southeast1:dinequeue-pg --max-retries=0 --tasks=1 --parallelism=1 --task-timeout=300s --memory=512Mi --cpu=1 --set-env-vars=APP_ENV=production,APP_ORIGIN=https://not-yet-public.invalid,CLOUD_SQL_INSTANCE=dinequeue-test:asia-southeast1:dinequeue-pg --set-secrets=DATABASE_URL=dinequeue-database-url:1 --args=migrate --project dinequeue-test --quiet
+[DRY RUN] gcloud run jobs execute dinequeue-migrate --region=asia-southeast1 --wait --project dinequeue-test --quiet
+[DRY RUN] gcloud run jobs deploy dinequeue-provision-demo --image=asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/db-tools@sha256:0000000000000000000000000000000000000000000000000000000000000000 --region=asia-southeast1 --service-account=dinequeue-jobs@dinequeue-test.iam.gserviceaccount.com --set-cloudsql-instances=dinequeue-test:asia-southeast1:dinequeue-pg --max-retries=0 --tasks=1 --parallelism=1 --task-timeout=300s --memory=512Mi --cpu=1 --set-env-vars=APP_ENV=production,APP_ORIGIN=https://not-yet-public.invalid,CLOUD_SQL_INSTANCE=dinequeue-test:asia-southeast1:dinequeue-pg,ENABLE_DEMO_PROVISION=true,CONFIRM_DEMO_DATABASE=dinequeue_demo --set-secrets=DATABASE_URL=dinequeue-database-url:1,DEMO_CUSTOMER_PASSWORD=dinequeue-demo-customer-password:1,DEMO_CUSTOMER2_PASSWORD=dinequeue-demo-customer2-password:1,DEMO_HOST_PASSWORD=dinequeue-demo-host-password:1,DEMO_OTHER_HOST_PASSWORD=dinequeue-demo-other-host-password:1 --args=provision-demo --project dinequeue-test --quiet
+[DRY RUN] gcloud run jobs execute dinequeue-provision-demo --region=asia-southeast1 --wait --project dinequeue-test --quiet
+[DRY RUN] gcloud run deploy dinequeue --region=asia-southeast1 --service-account=dinequeue-runtime@dinequeue-test.iam.gserviceaccount.com --execution-environment=gen2 --set-cloudsql-instances=dinequeue-test:asia-southeast1:dinequeue-pg --min-instances=0 --max-instances=1 --concurrency=10 --timeout=60 --labels=source-sha=68bbe2f4948481800c92412cbc2ec5f365affae3 --container=web --image=asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/web@sha256:0000000000000000000000000000000000000000000000000000000000000000 --port=8080 --memory=512Mi --cpu=1 --set-env-vars=NODE_ENV=production,API_INTERNAL_URL=http://127.0.0.1:8081 --depends-on=api --startup-probe=httpGet.path=/api/health/ready,httpGet.port=8080,periodSeconds=5,timeoutSeconds=4,failureThreshold=24 --container=api --image=asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/api@sha256:0000000000000000000000000000000000000000000000000000000000000000 --memory=512Mi --cpu=1 --add-volume-mount=volume=cloudsql,mount-path=/cloudsql --set-env-vars=APP_ENV=production,API_PORT=8081,APP_ORIGIN=https://not-yet-public.invalid,CLOUD_SQL_INSTANCE=dinequeue-test:asia-southeast1:dinequeue-pg --set-secrets=DATABASE_URL=dinequeue-database-url:1 --startup-probe=httpGet.path=/health/ready,httpGet.port=8081,periodSeconds=5,timeoutSeconds=4,failureThreshold=24 --project dinequeue-test --quiet
+[DRY RUN] gcloud run services describe dinequeue --region=asia-southeast1 --project dinequeue-test --format=json
+[DRY RUN] gcloud run deploy dinequeue --region=asia-southeast1 --service-account=dinequeue-runtime@dinequeue-test.iam.gserviceaccount.com --execution-environment=gen2 --set-cloudsql-instances=dinequeue-test:asia-southeast1:dinequeue-pg --min-instances=0 --max-instances=1 --concurrency=10 --timeout=60 --labels=source-sha=68bbe2f4948481800c92412cbc2ec5f365affae3 --container=web --image=asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/web@sha256:0000000000000000000000000000000000000000000000000000000000000000 --port=8080 --memory=512Mi --cpu=1 --set-env-vars=NODE_ENV=production,API_INTERNAL_URL=http://127.0.0.1:8081 --depends-on=api --startup-probe=httpGet.path=/api/health/ready,httpGet.port=8080,periodSeconds=5,timeoutSeconds=4,failureThreshold=24 --container=api --image=asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/api@sha256:0000000000000000000000000000000000000000000000000000000000000000 --memory=512Mi --cpu=1 --add-volume-mount=volume=cloudsql,mount-path=/cloudsql --set-env-vars=APP_ENV=production,API_PORT=8081,APP_ORIGIN=https://dinequeue-preview.example.invalid,CLOUD_SQL_INSTANCE=dinequeue-test:asia-southeast1:dinequeue-pg --set-secrets=DATABASE_URL=dinequeue-database-url:1 --startup-probe=httpGet.path=/health/ready,httpGet.port=8081,periodSeconds=5,timeoutSeconds=4,failureThreshold=24 --project dinequeue-test --quiet
+[DRY RUN] gcloud run services add-iam-policy-binding dinequeue --region=asia-southeast1 --member=allUsers --role=roles/run.invoker --project dinequeue-test --quiet
+{
+  "source_sha": "68bbe2f4948481800c92412cbc2ec5f365affae3",
+  "url": "https://dinequeue-preview.example.invalid",
+  "images": {
+    "api": "asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/api@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "web": "asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/web@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "db-tools": "asia-southeast1-docker.pkg.dev/dinequeue-test/dinequeue/db-tools@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "note": "SIMULATION ONLY; nothing deployed."
+}

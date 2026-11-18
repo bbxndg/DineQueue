@@ -1,0 +1,17 @@
+# Inputs contain public resource identifiers and a reviewed source SHA only.
+steps:
+  - name: gcr.io/cloud-builders/docker@sha256:dccbdf9b7877dc1b66427d769a55fe9d82c21655a88301e5eba3d0754c76d146
+    args: [build, --file, apps/api/Dockerfile, --target, production, --tag, '${_REGION}-docker.pkg.dev/$PROJECT_ID/dinequeue/api:${_SOURCE_SHA}', .]
+  - name: gcr.io/cloud-builders/docker@sha256:dccbdf9b7877dc1b66427d769a55fe9d82c21655a88301e5eba3d0754c76d146
+    args: [build, --file, apps/api/Dockerfile, --target, db-tools, --tag, '${_REGION}-docker.pkg.dev/$PROJECT_ID/dinequeue/db-tools:${_SOURCE_SHA}', .]
+  - name: gcr.io/cloud-builders/docker@sha256:dccbdf9b7877dc1b66427d769a55fe9d82c21655a88301e5eba3d0754c76d146
+    args: [build, --file, apps/web/Dockerfile, --target, production, --build-arg, API_INTERNAL_URL=http://127.0.0.1:8081, --tag, '${_REGION}-docker.pkg.dev/$PROJECT_ID/dinequeue/web:${_SOURCE_SHA}', .]
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/dinequeue/api:${_SOURCE_SHA}'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/dinequeue/db-tools:${_SOURCE_SHA}'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/dinequeue/web:${_SOURCE_SHA}'
+substitutions:
+  _REGION: asia-southeast1
+  _SOURCE_SHA: REQUIRED_FULL_COMMIT_SHA
+options:
+  logging: CLOUD_LOGGING_ONLY

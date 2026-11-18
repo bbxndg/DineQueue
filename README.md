@@ -147,7 +147,7 @@ changes rerun `docker compose up --build`. This Compose file selects development
 For production-built API/web images, explicit migrations, isolated local ports and
 clean-clone/persistence verification, follow the [Lab 5 Docker guide](docs/labs/lab-05/deployment.md#episode-3--reproducible-local-production-image-run).
 PR CI configuration and evidence requirements are documented in the [EP4 guide](docs/labs/lab-05/deployment.md#episode-4--pull-request-ci).
-GCP deployment is handled in later Lab 5 episodes.
+First GCP deployment preparation and live-execution boundaries are documented in the [EP5 guide](docs/labs/lab-05/deployment.md#episode-5--first-gcp-deployment); no actual GCP deployment is claimed by those files.
 
 ### Host tools and checks
 

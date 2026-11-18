@@ -1,0 +1,11 @@
+test_db_not_ready_fails (test_smoke.SmokeTests.test_db_not_ready_fails) ... ok
+test_logout_even_after_authenticated_identity_failure (test_smoke.SmokeTests.test_logout_even_after_authenticated_identity_failure) ... ok
+test_missing_secure_cookie_is_rejected_and_session_revoked (test_smoke.SmokeTests.test_missing_secure_cookie_is_rejected_and_session_revoked) ... ok
+test_partial_credentials_are_rejected_before_network (test_smoke.SmokeTests.test_partial_credentials_are_rejected_before_network) ... ok
+test_read_only_public_checks_and_anonymous_authorization (test_smoke.SmokeTests.test_read_only_public_checks_and_anonymous_authorization) ... ok
+test_rejects_insecure_or_credentialed_origin_before_network (test_smoke.SmokeTests.test_rejects_insecure_or_credentialed_origin_before_network) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.003s
+
+OK

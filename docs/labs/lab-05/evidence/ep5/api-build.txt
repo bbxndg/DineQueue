@@ -1,0 +1,55 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.15kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.26.10-bookworm
+#2 DONE 1.4s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 176B done
+#3 DONE 0.0s
+
+#4 [development 1/6] FROM docker.io/library/golang:1.26.10-bookworm@sha256:5de7c99eb78ca5e515a4c340235d0955ec5964a5071c492c15503d7c267da473
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 166.63kB done
+#5 DONE 0.0s
+
+#6 [development 2/6] WORKDIR /app
+#6 CACHED
+
+#7 [development 3/6] COPY apps/api/go.mod apps/api/go.sum ./
+#7 CACHED
+
+#8 [development 4/6] RUN go mod download
+#8 CACHED
+
+#9 [development 5/6] COPY apps/api/ ./
+#9 DONE 0.0s
+
+#10 [development 6/6] RUN useradd --create-home --uid 10001 app && chown -R app:app /app
+#10 DONE 0.2s
+
+#11 [build 1/1] RUN CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/api ./cmd/api     && CGO_ENABLED=0 go build -buildvcs=false -trimpath -tags timetzdata -o /app/bin/db ./cmd/db
+#11 DONE 16.2s
+
+#12 [runtime 1/2] COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+#12 CACHED
+
+#13 [runtime 2/2] WORKDIR /app
+#13 CACHED
+
+#14 [production 1/1] COPY --from=build /app/bin/api /app/api
+#14 DONE 0.0s
+
+#15 exporting to image
+#15 exporting layers 0.0s done
+#15 writing image sha256:e749bdc9d83cf2c878467baadf673f21d280e2b25055845a32b0ea956a891886
+#15 writing image sha256:e749bdc9d83cf2c878467baadf673f21d280e2b25055845a32b0ea956a891886 done
+#15 naming to docker.io/library/dinequeue-ep5-api done
+#15 DONE 0.1s
+
+View build details: docker-desktop://dashboard/build/default/default/ugf632sjg76wlhzyac9ojpky3

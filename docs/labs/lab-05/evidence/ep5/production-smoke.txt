@@ -1,0 +1,6 @@
+PASS /api/health/live
+PASS /api/health/ready
+PASS /login
+PASS /api/v1/auth/me
+PASS secure login and authenticated identity
+PASS logout

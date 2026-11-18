@@ -1,0 +1,155 @@
+# EP5 preparation — actual local verification
+
+Date: 18 November 2026 (Asia/Bangkok). Tracking: Issue #16.
+Branch: `feat/lab5-ep5-first-gcp-deployment`.
+
+**Local preparation passed. GCP resources, Cloud Build, Cloud Run deployment,
+Cloud SQL connectivity/IAM and live smoke tests have NOT been executed.**
+Do not close Issue #16 based on this report.
+
+## Tested snapshot
+
+The worktree is based on reviewed main `68bbe2f4948481800c92412cbc2ec5f365affae3`.
+The pre-implementation plan/DEC-032 was committed as `5823451`. Implementation
+and tests were executed in the worktree after that commit, not on an accepted
+main release. The [source/config manifest](evidence/ep5/source-manifest.txt)
+identifies the checked files; its SHA-256 is
+`9450311fba9f9829d36f1af0b0ad27d7b3a5be71b88bf6427c8f1a736bd94ae6`.
+The implementation was subsequently grouped into focused commits; committed
+source/config at `7fbf0f4a7405bdf1f34b335888cf564af8cc1332` matches every entry in that tested manifest.
+This is a source-equivalence check, not a fresh test run on the commit.
+Documentation/evidence edits after those checks do not establish a hosted CI run.
+
+## Results
+
+| Check | Actual result | Evidence |
+|---|---|---|
+| Go formatting, `go vet -tags=integration ./...` | Exit 0 | [Go log](evidence/ep5/go-tests.txt) |
+| `go test -tags=integration -race -count=1 -v ./...` | 58 top-level tests passed; no failure/race report | [Go log](evidence/ep5/go-tests.txt) |
+| Deployment planning/command tests | 17/17 passed, GCP responses mocked | [Deploy log](evidence/ep5/deploy-tests.txt) |
+| DineQueue smoke unit tests | 6/6 passed, network mocked | [Smoke unit log](evidence/ep5/smoke-tests.txt) |
+| Archived course release stub | Five scenarios passed; not DineQueue EP7 automation | [Reference output](evidence/ep5/reference-release-tests.txt) |
+| Existing CI configuration suite | 7/7 passed; helper/workflow source unchanged | Recorded local unittest command below |
+| Web tests | 2/2 passed outside restricted subprocess sandbox | [Captured output and initial TAP summary](evidence/ep5/web-checks.txt) |
+| Web lint/build/typecheck | All exited 0 outside restricted subprocess sandbox | [Captured build/typecheck output](evidence/ep5/web-checks.txt) |
+| Production API/db-tools/web images | All built successfully; no registry push | [API](evidence/ep5/api-build.txt), [db-tools](evidence/ep5/db-tools-build.txt), [web](evidence/ep5/web-build.txt) |
+| Existing browser regression | 20/20 passed on the local shared-localhost topology | [Browser log](evidence/ep5/browser-tests.txt) |
+| Production-mode migration/provisioning | Compiled CLI connected through the exact Unix socket; migration passed, provisioning passed and reran successfully | Generic CLI completion output observed; no credentials printed |
+| Ordinary production `seed` | Rejected with `demo seed is disabled in production` | Actual container invocation; expected nonzero exit |
+| HTTPS production-image smoke | Real local HTTPS requests passed with an explicitly trusted temporary certificate; Secure/HttpOnly host-only session and logout passed | [Production smoke](evidence/ep5/production-smoke.txt) |
+| HTTPS Customer/Host journey | Customer joined 10; Host called; Customer read CALLED; Host completed; Customer active list empty; both sessions revoked | [Production journey](evidence/ep5/production-journey.txt) |
+| Zero-network dry run | Printed summary/simulated commands, no gcloud calls or secret generation | [Dry-run output](evidence/ep5/dry-run.txt); mocked test enforces no subprocess/random generation |
+| Cloud Build config | YAML parsed locally; three targets and digest-pinned builder checked | Actual Python/YAML inspection; remote build NOT RUN |
+| Credential scan | No configured developer/test values found in checked files/history/logs/46 saved-image members; selected high-confidence token/key patterns absent | [Scoped scan](evidence/ep5/credential-check.txt) |
+| `git diff --check` and Bash syntax | Exit 0 | Local Git/Bash inspection |
+
+Go's total combines unit and integration functions and excludes nested subtests
+from the count. The 23 Python tests combine 17 deployment tests and six smoke
+unit tests. Do not add the five archived reference scenarios to an application
+unit-test count. The original browser assertions and workflow were not changed.
+
+## Environment and commands
+
+Go 1.26.10 ran in the existing toolchain image with current Go source mounted.
+A fresh PostgreSQL 18.6 container on a dedicated network and tmpfs data served
+`TEST_DATABASE_URL`. Provisioning integration fixtures created/drop their own
+randomly named `_demo` databases and schemas; they did not use a developer DB.
+The suite checked both new guards and all existing Sprint 1 rules/concurrency.
+
+```bash
+# In the Go toolchain container, with a private isolated TEST_DATABASE_URL:
+gofmt -l .
+go vet -tags=integration ./...
+go test -tags=integration -race -count=1 -v ./...
+
+# From repository root:
+bash deploy/tests/test_deploy_stub.sh
+bash deploy/tests/test_release_stub.sh
+python3 -m unittest discover -s deploy/tests -p 'test_smoke.py' -v
+python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py' -v
+npm test
+npm run lint
+npm run build
+npm run typecheck
+```
+
+Host Node 22.17.0 was within the repository engine range. The first sandboxed web
+attempt could not execute the TypeScript config subprocess; it reported a build
+error and an incomplete one-file TAP report. The same checks were rerun outside
+that restriction: the two real named tests, lint, build and typecheck passed.
+No web code/dependency was changed to make that environment problem disappear.
+Production web images used pinned Node 22.23.4 and the existing lockfile.
+
+API, web and database-tool images were built from the existing production
+Dockerfile targets, without source mounts at runtime. The web image's build-time
+and runtime `API_INTERNAL_URL` both used `http://127.0.0.1:8081`. Web and API
+containers shared a network namespace, reproducing the sidecar localhost hop.
+The 20 browser tests used local HTTP/development API configuration for their
+existing cookie fixtures; this alone is not production-cookie evidence.
+
+A separate production-mode phase then used the canonical socket
+`/cloudsql/dinequeue-test:asia-southeast1:dinequeue-pg` backed by a disposable local
+Postgres socket volume. `API_PORT=8081` overrode the image's default `PORT`.
+Compiled db-tools ran migration and explicit `provision-demo`; provisioning was
+rerun after the final metadata-conflict guard was compiled. No ordinary production
+seed was enabled. The full Go suite covered identity conflict rollback, mismatched
+database, missing flags/passwords, existing password/active/grant preservation and
+the new metadata-conflict guard.
+
+A loopback TLS proxy on 3445 forwarded to the production-built app on 3045. A
+one-day localhost certificate was explicitly trusted with `SSL_CERT_FILE`;
+certificate verification was not disabled. The production API origin was
+`https://localhost:3445`. Public/authenticated smoke and a separate real API
+Customer/Host journey used independent cookie jars, printed only generic outcomes,
+and revoked their sessions. This proves local production-mode socket/session
+behavior, not Google-managed proxy encryption, cloud IAM or public Cloud Run TLS.
+The production journey is an API journey through Next.js, while the preceding
+20-test suite separately covers the UI in its existing local fixture mode.
+
+Cloud Build's official Docker builder manifest was read from Google Container
+Registry and its content SHA-256 matched the declared digest before pinning:
+`gcr.io/cloud-builders/docker@sha256:dccbdf9b7877dc1b66427d769a55fe9d82c21655a88301e5eba3d0754c76d146`.
+The builder was not run on GCP. No packages/versions or CI workflow were changed.
+
+## RED observations
+
+- Before configuration changes, the new config tests failed because the managed
+  socket was rejected and production query transport overrides were accepted.
+- Before smoke adaptation, all six new DineQueue smoke cases failed against the
+  old TokTickIT interface. After adaptation, all six passed.
+- Initial local Go formatting could not write as the image's UID; rerunning with
+  the source owner's UID succeeded. No host file ownership was changed.
+- The first database readiness check ran before initialization finished; it
+  returned not ready. It was confirmed ready before any test suite was run.
+
+These are observed local failures/corrections, not an intentional failing hosted
+PR demonstration. No hosted EP5 CI result is claimed.
+
+## Remaining gates and limitations
+
+1. Review the implementation and integrate through `gcp-staging`/main with actual
+   CI results before deployment. Live source guards require clean main at the
+   same SHA as fetched origin/main.
+2. In Cloud Shell confirm account/project, region, billing/budget and actual quotas;
+   inspect the concrete dry run before explicit live execution. No billable
+   operation, public IAM binding or secret mutation was performed locally.
+3. Actual Cloud SQL/Cloud Run flags, permissions, mounted socket, service startup,
+   Secret Manager version access and three-image Cloud Build execution still need
+   real platform validation. Fix any genuine platform error before claiming PASS.
+4. Verify the public HTTPS health and Customer/Host UI journey, retain source SHA,
+   digests/revisions/run evidence and update Issue #16 only after acceptance.
+5. Containers share the service identity; job identity is shared by migration and
+   provisioning, and the first-deployment DB user owns its migration schema.
+   These are documented privilege/isolation limitations. EP6/EP7 and destructive
+   cleanup are not implemented by this change.
+6. Known-value/key-pattern scanning is limited; no comprehensive dependency audit,
+   security guarantee, production pentest or native Windows execution is claimed.
+
+All test resources/configuration are disposable and separate from developer dev
+and EP3 projects. Cleanup status is recorded after completion below.
+
+
+Cleanup completed: removed only the EP5-created app/Go test containers, temporary
+socket volume/network and loopback TLS proxy. Private generated env files and the
+localhost TLS key/certificate were deleted. Developer dev and EP3 containers
+remained running. Local build images and sanitized evidence logs were retained.

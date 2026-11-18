@@ -1,0 +1,5 @@
+PASS: Customer and Host production login with Secure HttpOnly host-only cookies
+PASS: Customer joins party 10; persisted WAITING ticket
+PASS: Host Call Next; Customer reads CALLED
+PASS: Host Complete; Customer active list empty
+PASS: both sessions revoked

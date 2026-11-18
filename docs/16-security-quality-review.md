@@ -57,6 +57,24 @@ Browser client (untrusted) → Next.js UI/proxy → Go Fiber API (enforces ident
 - CI PR gates: `go test`, `go vet`, Next.js lint/build, SQL migration check, integration tests; deploy only accepted main SHA after review.
 - Backup/restore is desirable, but persistence/reproducible fixtures/deployment are the course minimum.
 
+### EP5 managed connection exception (DEC-032)
+
+The user selected Cloud Run web/API sidecars with Cloud SQL. Ordinary production
+PostgreSQL TCP retains `sslmode=verify-full`; the explicit `CLOUD_SQL_INSTANCE`
+option permits only its matching canonical managed Unix socket. Cloud Run's
+managed connection handles authentication/encryption beyond that local socket.
+Do not allow arbitrary socket paths, duplicate transport keys or TCP downgrades.
+Production seed remains forbidden. The separate provisioning CLI requires exact
+demo/UAT database confirmation and preserves existing credentials/access. Its
+new accounts receive explicit per-account Secret Manager credentials.
+
+The web and API containers share the Cloud Run service identity/network, even
+though only API receives the database URL as an environment variable. Migration
+and provisioning share a job identity; the first-deployment database user owns the
+schema. These are documented isolation/privilege limitations, not claims of full
+process/DB-role isolation. No production security assessment or live deployment
+is established by the local tests; see `labs/lab-05/ep5-contract.md`.
+
 ## 5. Risk register
 
 | Risk | Impact | Mitigation |

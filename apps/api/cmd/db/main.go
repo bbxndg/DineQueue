@@ -20,8 +20,8 @@ func main() {
 	}
 }
 func run() error {
-	if len(os.Args) != 2 || (os.Args[1] != "migrate" && os.Args[1] != "seed") {
-		return errors.New("usage: go run ./cmd/db migrate|seed")
+	if len(os.Args) != 2 || (os.Args[1] != "migrate" && os.Args[1] != "seed" && os.Args[1] != "provision-demo") {
+		return errors.New("usage: go run ./cmd/db migrate|seed|provision-demo")
 	}
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
@@ -43,6 +43,8 @@ func run() error {
 	defer pool.Close()
 	if os.Args[1] == "migrate" {
 		err = schema.Migrate(ctx, database)
+	} else if os.Args[1] == "provision-demo" {
+		err = auth.ProvisionDemo(ctx, database, os.Getenv)
 	} else {
 		err = auth.SeedDemo(ctx, database, os.Getenv)
 	}

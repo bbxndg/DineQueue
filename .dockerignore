@@ -9,3 +9,5 @@
 **/*.tsbuildinfo
 **/.npmrc
 docs
+**/__pycache__
+**/*.pyc

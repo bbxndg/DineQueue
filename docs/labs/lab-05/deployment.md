@@ -364,7 +364,9 @@ For local CI-helper checks (no Docker or GCP):
 
 ```bash
 python3 -m unittest discover -s scripts/ci/tests -p 'test_*.py' -v
-bash -n deploy/deploy.sh deploy/teardown.sh deploy/release.sh
+for script in deploy/deploy.sh deploy/teardown.sh deploy/release.sh; do
+  bash -n "$script"
+done
 bash deploy/tests/test_deploy_stub.sh
 bash deploy/tests/test_release_stub.sh
 python3 -m unittest discover -s deploy/tests -p 'test_smoke.py' -v

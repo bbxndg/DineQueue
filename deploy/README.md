@@ -15,7 +15,9 @@ create resources or prove that DineQueue has deployed.
 CI may run only:
 
 ```bash
-bash -n deploy/deploy.sh deploy/release.sh deploy/teardown.sh
+for script in deploy/deploy.sh deploy/release.sh deploy/teardown.sh; do
+  bash -n "$script"
+done
 bash deploy/tests/test_deploy_stub.sh
 bash deploy/tests/test_release_stub.sh
 python3 -m unittest discover -s deploy/tests -p 'test_smoke.py'

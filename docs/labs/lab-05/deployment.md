@@ -340,7 +340,7 @@ Official packaging references: [Next.js deployment](https://nextjs.org/docs/app/
 
 ## Episode 4 — Pull-request CI
 
-Tracking: [Issue #15](https://github.com/bbxndg/DineQueue/issues/15); [pre-implementation contract](ep4-contract.md). Status: implemented workflow; local/hosted execution results and evidence must be recorded separately. No hosted PASS or merge is implied by the workflow's presence.
+Tracking: [Issue #15](https://github.com/bbxndg/DineQueue/issues/15); [pre-implementation contract](ep4-contract.md); [local execution results and pending GitHub evidence](ep4-results.md). Status: local checks passed; hosted CI, intentional-failure PR and reviewed release evidence remain pending. No hosted PASS or merge is implied by the workflow's presence.
 
 `.github/workflows/ci-docker.yml` is named **CI & Docker Build** and retains the stable job ID/name **test-and-docker**. PRs targeting `gcp-staging` or `main` run it; `workflow_call` allows EP7 reuse and `workflow_dispatch` permits manual runs once GitHub recognizes the workflow on the default branch. There are no path filters that could skip a required check. EP6 must select the actual `test-and-docker` check from a completed run when configuring required checks; this episode does not change branch protection.
 

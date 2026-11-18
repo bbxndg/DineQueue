@@ -34,7 +34,7 @@ esac
 STUB
 chmod +x "$TASK_TMP/gcloud"
 export ROLLBACK=false
-bash "$ROOT/deploy/release.sh"
+bash "$ROOT/deploy/reference/release.sh"
 grep -q 'run jobs execute .*--wait' "$CALL_LOG"
 grep -q 'run services update .*@sha256:abcdef' "$CALL_LOG"
 grep -q 'SERVICE_URL=https://demo.example.test' "$GITHUB_ENV"
@@ -42,14 +42,14 @@ echo 'PASS normal release uses digest and waits for migration'
 
 : > "$CALL_LOG"
 export ROLLBACK=true
-bash "$ROOT/deploy/release.sh"
+bash "$ROOT/deploy/reference/release.sh"
 if grep -q 'run jobs' "$CALL_LOG"; then echo 'Rollback ran migration' >&2; exit 1; fi
 grep -q 'run services update ' "$CALL_LOG"
 echo 'PASS rollback reuses image without touching migration job'
 
 for failure in image migration; do
   : > "$CALL_LOG"
-  if ROLLBACK=false FAIL_AT="$failure" bash "$ROOT/deploy/release.sh"; then
+  if ROLLBACK=false FAIL_AT="$failure" bash "$ROOT/deploy/reference/release.sh"; then
     echo "Expected $failure failure" >&2; exit 1
   fi
   if grep -q 'run services update' "$CALL_LOG"; then
@@ -59,6 +59,6 @@ for failure in image migration; do
 done
 
 : > "$CALL_LOG"
-if IMAGE_TAG='invalid;tag' bash "$ROOT/deploy/release.sh"; then exit 1; fi
+if IMAGE_TAG='invalid;tag' bash "$ROOT/deploy/reference/release.sh"; then exit 1; fi
 test ! -s "$CALL_LOG"
 echo 'PASS invalid tag rejected before GCP calls'

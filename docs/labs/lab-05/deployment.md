@@ -1,6 +1,6 @@
 # Lab 5 — Cloud readiness and Docker deployment notes
 
-**Scope:** Episode 2 records cloud readiness; Episode 3 records production-image packaging and [its local verification results](ep3-results.md). Episode 4 below adds pull-request CI for Issue #15. GCP deployment and release automation belong to later episodes. See each episode's evidence for actual execution/review status.
+**Scope:** Episode 2 records cloud readiness; Episode 3 records production-image packaging and [its local verification results](ep3-results.md). Episode 4 below adds pull-request CI for Issue #15. Episode 5 adds first-deployment preparation below; actual GCP execution is recorded separately. Release automation belongs to EP7. See each episode's evidence for actual execution/review status.
 
 ## Environment configuration inventory
 
@@ -10,7 +10,11 @@ The names below were compared with `rg -n 'os\.(Getenv|LookupEnv)|process\.env|N
 |---|---|---|---|
 | `APP_ENV` | Go API and database CLI | Selects `development`, `test`, or `production` configuration. | Non-secret |
 | `APP_ORIGIN` | Go API | Exact allowed browser origin for authentication/CSRF protections; production requires HTTPS. Local Compose uses `http://localhost:3000`. | Non-secret; deployment-specific |
-| `DATABASE_URL` | Go API and database CLI | PostgreSQL connection URL. Local Compose uses service host `db`; production requires verified TLS. | Secret: contains DB credentials |
+| `DATABASE_URL` | Go API and database CLI | PostgreSQL connection URL. Local Compose uses service host `db`; production TCP requires verified TLS; explicit managed Cloud SQL sockets follow DEC-032. | Secret: contains DB credentials |
+| `API_PORT` | Go API sidecar | Optional listener override for a non-ingress API container; otherwise uses `PORT`. Cloud plan uses `8081`. | Non-secret |
+| `CLOUD_SQL_INSTANCE` | Go API/database CLI | Explicit managed instance connection name; permits only its exact `/cloudsql/...` Unix socket in production. Blank for ordinary TCP/local use. | Non-secret |
+| `ENABLE_DEMO_PROVISION`, `CONFIRM_DEMO_DATABASE` | Explicit `provision-demo` CLI only | Requires `true` and exact connected DB name ending in `_demo`/`_uat`; does not enable production `seed`. | Non-secret; operator controlled |
+| `DEMO_CUSTOMER_PASSWORD`, `DEMO_CUSTOMER2_PASSWORD`, `DEMO_HOST_PASSWORD`, `DEMO_OTHER_HOST_PASSWORD` | Explicit provisioning job only | Four credentials supplied from named Secret Manager versions, not the web/API service. | Secrets |
 | `PORT` | Go API | HTTP listener port; defaults to `8080`. The API listens on `:<port>` inside its container. | Non-secret |
 | `API_INTERNAL_URL` | Next.js configuration and server-side session helper | API origin used for Next.js rewrites/server requests. Compose sets `http://api:8080`; a host-run web process uses `http://127.0.0.1:8080`. | Non-secret; server-side only, also affects the Next.js build |
 | `WEB_HOST_PORT`, `API_HOST_PORT` | Production-image local Compose only | Loopback host ports; defaults 3002 and 8082. Web origin follows `WEB_HOST_PORT`. | Non-secret |
@@ -70,11 +74,11 @@ Observed locally on 17 Nov 2026: all three routes returned HTTP 200 with their e
 
 Checks 1–5 above are source/configuration review; check 6 includes an actual local outage/recovery test. These results do not claim a GCP deployment or TA approval.
 
-## Proposed GCP topology — pending confirmation
+## EP2 topology proposal — superseded for EP5 by DEC-032
 
-**Proposal only; no resources created:** a Next.js web service and Go Fiber API on Cloud Run, with persistent PostgreSQL on a course-approved managed service (Cloud SQL is a candidate), runtime credentials in Secret Manager, and GitHub Actions authentication through short-lived workload identity federation rather than a committed service-account key.
+**Historical EP2 proposal, not the selected EP5 topology; no resources created:** a Next.js web service and Go Fiber API on Cloud Run, with persistent PostgreSQL on a course-approved managed service (Cloud SQL is a candidate), runtime credentials in Secret Manager, and GitHub Actions authentication through short-lived workload identity federation rather than a committed service-account key.
 
-Pending team/TA confirmation: approved GCP services and region; Cloud SQL versus another permitted persistent PostgreSQL option; private connectivity/Cloud SQL connector and service-to-service ingress; billing/budget limits; and the approved GitHub-to-GCP identity setup. Resolve these before creating billable resources or preparing production deployment.
+Pending team/TA confirmation: approved GCP services and region; Cloud SQL versus another permitted persistent PostgreSQL option; private connectivity/Cloud SQL connector and service-to-service ingress; billing/budget limits; and the approved GitHub-to-GCP identity setup. The user selected the EP5 topology in DEC-032. Confirm the actual project/region/budget and inspect the dry run before billable resource creation. GitHub federation is EP6 work.
 
 ## Episode 2 boundary
 
@@ -103,7 +107,7 @@ Use separate web and API images, consistent with the EP2 topology proposal. Clou
 
 - Supply database credentials and seed passwords at runtime through an ignored local environment file. Never pass credentials through Docker build arguments or copy that file into an image.
 - The API must continue enforcing `APP_ORIGIN`, backend RBAC, CSRF and PostgreSQL-backed sessions. `DATABASE_URL` must address the intended database service; do not log it.
-- Production API configuration currently requires an HTTPS `APP_ORIGIN` and `sslmode=verify-full`. Keep those validations. A local HTTP/non-TLS test may run production-built images with explicitly documented local API `APP_ENV=development`; this is packaging verification, not evidence of production HTTPS/TLS behavior. Next.js still uses its production server.
+- Production API configuration requires an HTTPS `APP_ORIGIN` and `sslmode=verify-full` for ordinary TCP. EP5 adds only the explicit managed Cloud SQL socket path described in DEC-032; retain the original TCP validations. A local HTTP/non-TLS test may run production-built images with explicitly documented local API `APP_ENV=development`; this is packaging verification, not evidence of production HTTPS/TLS behavior. Next.js still uses its production server.
 - Demo seed remains an explicit local setup action, disabled when `APP_ENV=production`. Seed before the smoke test with operator-supplied local passwords; application startup must not silently seed or reset accounts. Secure cloud account provisioning belongs to the deployment episode.
 - Document the final Compose commands, host ports, environment-file handling and service names after implementation. Use a separate Compose project, database volume and available ports for EP3 tests; apply the same project/file options to every command, including migration and down/up.
 
@@ -384,3 +388,143 @@ For a local equivalent of app checks, follow EP3's isolated-project instructions
 Evidence to retain: the passing and intentional-failure PR/run links, job/step output, tested SHAs and actual review/merge links for staging and main. Record missing or unexecuted evidence as pending. Reference: [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
 
 Copy the PR URL from the pull request page. Open the `test-and-docker` check, then open its workflow run summary and copy the Actions run URL from the browser address bar (`/actions/runs/<run-id>`). Keep the passing and intentional-failure run URLs separately.
+
+
+## Episode 5 — First GCP deployment
+
+Tracking: [Issue #16](https://github.com/bbxndg/DineQueue/issues/16), branch
+`feat/lab5-ep5-first-gcp-deployment`, [contract](ep5-contract.md), DEC-032.
+**Status: local preparation verified; see [actual local results and pending cloud gates](ep5-results.md). No GCP resource creation or deployment is claimed.**
+
+### Selected topology and difference from the course example
+
+The user approved one Cloud Run service with two separate production images:
+Next.js web is the public ingress on 8080; Go API is a non-public sidecar on
+`API_PORT=8081`. Both use localhost for proxy/server-side calls and scale together.
+A third image runs explicit migration/provision jobs. Cloud SQL PostgreSQL stores
+sessions/tickets outside the service. This adapts the TokTickIT single-image
+example to the existing Next.js/Go modular monolith without changing S1 rules.
+
+Only the API container receives `DATABASE_URL`. Both containers still share the
+Cloud Run service identity, so this does not isolate secret-manager permissions
+between the web and API processes. Jobs use a separate identity; the builder has
+no database/password secret access. Migration and provision share the job identity.
+See [deploy/README.md](../../../deploy/README.md) for the exact resource plan,
+permissions, partial-failure handling and limitations.
+
+Production still requires HTTPS origin and verified TLS for ordinary PostgreSQL
+TCP URLs. The managed transport requires `CLOUD_SQL_INSTANCE` and exactly its
+canonical `/cloudsql/PROJECT:REGION:INSTANCE` socket with no alternative hosts or
+duplicate transport keys. Driver `sslmode=disable` is restricted to that local
+socket; Cloud Run's managed Cloud SQL integration authenticates/encrypts the
+remote connection. Never use `APP_ENV=development` to bypass this on GCP.
+
+### 5.0 — Review and validate preparation locally
+
+From the repository root:
+
+```bash
+bash deploy/tests/test_deploy_stub.sh
+bash deploy/tests/test_release_stub.sh
+python3 -m unittest discover -s deploy/tests -p 'test_smoke.py' -v
+```
+
+The first command exercises DineQueue deployment planning with fake GCP responses.
+The second retains the archived course release checks only; EP7 release automation
+is not yet implemented. No test here creates resources. Run the existing Go suite
+with integration/race tags against a separate test database; include web and
+browser regressions when app/config changes. Record actual results and SHA.
+
+Preview without any cloud calls (use your project ID, never credentials):
+
+```bash
+export PROJECT_ID=YOUR_PROJECT_ID
+export REGION=asia-southeast1
+export SOURCE_SHA="$(git rev-parse HEAD)"
+DRY_RUN=1 bash deploy/deploy.sh --demo
+```
+
+Dry run prints the resource plan and simulated command sequence, not a deployment.
+It uses placeholder image digests and no generated secrets. A feature-branch SHA
+is valid for planning only. Review PostgreSQL 18 Enterprise `db-f1-micro`, fixed
+10 GB storage with auto-increase off, backups, no authorized networks, dedicated
+identities and source bucket, public web ingress, min 0/max 1 and concurrency 10.
+Cloud SQL/storage still incur costs while they exist; budgets do not stop billing.
+
+### 5.1–5.3 — Live Cloud Shell steps (not executed by local tests)
+
+After preparation is reviewed/merged through `gcp-staging` into main, in Cloud
+Shell sign in with the intended account, select the agreed project and verify
+billing/budget. Clone the same repository or update the existing clean checkout:
+
+```bash
+gcloud auth list --filter=status:ACTIVE --format='value(account)'
+export PROJECT_ID=YOUR_PROJECT_ID
+export REGION=asia-southeast1
+gcloud config set project "$PROJECT_ID"
+git switch main
+git pull --ff-only
+export SOURCE_SHA="$(git rev-parse HEAD)"
+DRY_RUN=1 bash deploy/deploy.sh --demo
+```
+
+The checked-out SHA must match reviewed main on GitHub. Dry run creates nothing;
+review it before granting the following live confirmations. The live script also
+requires main, clean Git status and a matching fetched `origin/main` before any
+GCP mutation. Git-archived tracked source alone is uploaded for builds, excluding
+ignored local environment files. Images use the full SHA and are resolved to
+immutable digests before deployment.
+
+Only after reviewing the concrete plan and accepting resource costs/public access:
+
+```bash
+export CONFIRM_PROJECT="$PROJECT_ID"
+export ALLOW_PUBLIC_SERVICE=true
+bash deploy/deploy.sh --apply --demo
+```
+
+`--demo` is opt-in. It creates four random per-account secrets and runs the
+separately guarded provisioning CLI against `dinequeue_demo`. The normal production
+`seed` command remains disabled. Reruns preserve existing passwords, disabled
+accounts and revoked grants. Do not substitute local `.env` passwords or print
+secret values. Missing/disabled secret versions or an existing DB user without its
+URL secret stop the script for explicit reconciliation; no implicit rotation.
+
+The script waits for migration, then optional provisioning, before updating the
+service. Only after configuring the actual HTTPS origin does it grant public web
+access. A failed operation is not a completed deployment: inspect the named
+resource/job safely in Console before retrying. Do not copy raw debug logs that
+might include credentials. Original cloud scripts under `deploy/reference` are
+historical TokTickIT examples and must not be used as live recovery tools.
+
+### 5.4–5.6 — Verify and collect real evidence
+
+The script configures storage auto-increase off at creation and on safe reruns;
+verify that setting on the actual Cloud SQL instance. Record the canonical HTTPS
+URL, source SHA, image digests, service revision and migration/provision execution
+outcomes. Run the read-only public smoke check:
+
+```bash
+python3 deploy/smoke_test.py https://YOUR_SERVICE_ORIGIN
+```
+
+Without credentials it checks liveness, database readiness, login HTML and an
+anonymous 401; it explicitly skips authenticated verification. An optional
+`SMOKE_EMAIL`/`SMOKE_PASSWORD` supplied securely in the shell environment checks
+Secure HttpOnly host-only session cookies, identity and logout; never put the
+password in command arguments, screenshots, logs or Git. The full journey still
+needs separate evidence: Customer login/join → Host login/call → Customer refresh
+shows CALLED → Host Complete → Customer active list becomes empty. Use separate
+browser profiles/private windows for Host and Customer.
+
+Retrieve/share demo credentials privately through Secret Manager with only the
+intended testers. Keep the Console secret-value view out of screenshots. The
+script never prints passwords. Preserve deployment, health and journey evidence
+with exact versions, then update Issue #16. Native Windows execution, actual GCP
+HTTPS/connectivity, and live smoke tests must not be marked passed from local
+Linux/offline results. EP8 verifies restart/redeploy persistence separately.
+
+Official references: [Cloud Run containers](https://docs.cloud.google.com/run/docs/configuring/services/containers),
+[deployment flags](https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy),
+[Cloud SQL from Cloud Run](https://docs.cloud.google.com/sql/docs/postgres/connect-run),
+[Cloud SQL supported versions](https://docs.cloud.google.com/sql/docs/postgres/db-versions).

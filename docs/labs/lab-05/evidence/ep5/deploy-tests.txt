@@ -1,0 +1,22 @@
+test_apply_needs_both_confirmations_before_commands (test_first_deploy.FirstDeployTests.test_apply_needs_both_confirmations_before_commands) ... ok
+test_disabled_demo_secret_aborts_without_credential_replacement (test_first_deploy.FirstDeployTests.test_disabled_demo_secret_aborts_without_credential_replacement) ... ok
+test_dry_run_calls_no_subprocess_or_random_generator (test_first_deploy.FirstDeployTests.test_dry_run_calls_no_subprocess_or_random_generator) ... ok
+test_existing_wrong_sql_settings_abort_before_secrets_and_build (test_first_deploy.FirstDeployTests.test_existing_wrong_sql_settings_abort_before_secrets_and_build) ... ok
+test_gcloud_errors_do_not_print_credentials (test_first_deploy.FirstDeployTests.test_gcloud_errors_do_not_print_credentials) ... ok
+test_generated_password_matches_db_url_secret (test_first_deploy.FirstDeployTests.test_generated_password_matches_db_url_secret) ... ok
+test_invalid_settings_are_rejected (test_first_deploy.FirstDeployTests.test_invalid_settings_are_rejected) ... ok
+test_live_source_guard_rejects_feature_branch_dirty_outdated_and_secret_files (test_first_deploy.FirstDeployTests.test_live_source_guard_rejects_feature_branch_dirty_outdated_and_secret_files) ... ok
+test_migration_failure_aborts_service_and_public_grant (test_first_deploy.FirstDeployTests.test_migration_failure_aborts_service_and_public_grant) ... ok
+test_new_deployment_orders_migration_before_service_and_public_access (test_first_deploy.FirstDeployTests.test_new_deployment_orders_migration_before_service_and_public_access) ... ok
+test_only_explicit_not_found_means_missing (test_first_deploy.FirstDeployTests.test_only_explicit_not_found_means_missing) ... ok
+test_partial_credentials_never_reset_password_or_continue (test_first_deploy.FirstDeployTests.test_partial_credentials_never_reset_password_or_continue) ... ok
+test_provisioning_is_opt_in_and_job_guarded (test_first_deploy.FirstDeployTests.test_provisioning_is_opt_in_and_job_guarded) ... ok
+test_rerun_preserves_credentials (test_first_deploy.FirstDeployTests.test_rerun_preserves_credentials) ... ok
+test_runtime_gets_database_secret_only_and_never_project_wide_secret_access (test_first_deploy.FirstDeployTests.test_runtime_gets_database_secret_only_and_never_project_wide_secret_access) ... ok
+test_secret_version_must_exist (test_first_deploy.FirstDeployTests.test_secret_version_must_exist) ... ok
+test_source_upload_is_git_archive_not_working_directory (test_first_deploy.FirstDeployTests.test_source_upload_is_git_archive_not_working_directory) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.010s
+
+OK

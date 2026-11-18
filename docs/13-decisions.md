@@ -175,3 +175,27 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
 - Host operations stay allowed on an inactive queue so existing tickets can drain.
 - Board shows ticket code, party size and times only; Complete needs an on-screen
   confirmation. Manual refresh; no polling, no S2 table assignment.
+
+## DEC-032 — EP5 Cloud Run topology and managed database transport (18 November 2026)
+
+- User approved one Cloud Run service with separate Next.js ingress and Go API
+  sidecar images, managed PostgreSQL via Cloud SQL, Artifact Registry and Secret
+  Manager. This replaces the earlier EP2 proposal of separate web/API services.
+  Containers communicate on localhost; only the web container exposes ingress.
+- Reuse reviewed production image targets. Add a database-tools image for separate
+  migrate/provision jobs. No startup migration/AutoMigrate and no Sprint 2 rules.
+- Keep production HTTPS and verified TLS for ordinary TCP. Add explicit opt-in
+  Cloud SQL connection-name configuration for a canonical managed Unix socket;
+  no arbitrary TCP `sslmode=disable` or environment downgrade is permitted.
+- Keep production `seed` disabled. Add a separately guarded provisioning command
+  for the dedicated demo/UAT database with exact database-name confirmation and
+  environment-supplied passwords. Existing accounts, passwords, active flags and
+  revoked grants are preserved; identity conflicts roll back the transaction.
+- Only the API container receives the database URL; runtime and job identities
+  receive per-secret permissions. Account credentials are supplied only to the
+  explicit provisioning job, not the service or migration job.
+- Preparation is authorized; live billable resource creation and public exposure
+  require the concrete dry-run plan to be reviewed before execution. No live
+  deployment, TA approval, cost estimate or test PASS is implied here.
+- Contract and tests: `labs/lab-05/ep5-contract.md`; execution results follow actual
+  tests. EP6 identity/required gates and EP7 automation remain separate.

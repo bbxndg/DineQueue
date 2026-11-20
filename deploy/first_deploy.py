@@ -7,6 +7,7 @@ import argparse
 import io
 import json
 import os
+import random
 from pathlib import Path
 import re
 import secrets
@@ -14,6 +15,7 @@ import shlex
 import subprocess
 import tarfile
 import tempfile
+import time
 from urllib.parse import urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,18 +36,51 @@ class GCloud:
         # Arguments may contain a generated SQL password: never print raw argv,
         # stderr, successful secret output or CalledProcessError representations.
         print('GCP:', ' '.join(args[:3]))
-        result = subprocess.run(['gcloud', *args, '--project', self.project, '--quiet'],
-                                input=data, capture_output=True)
-        if result.returncode:
-            raise DeploymentError('GCP command failed at ' + ' '.join(args[:3]) + '; inspect the resource safely in Console.')
-        return result.stdout.decode().strip()
+        # Only repeat IAM binding additions, never builds/jobs/secret writes.
+        for attempt in range(5):
+            result = subprocess.run(['gcloud', *args, '--project', self.project, '--quiet'],
+                                    input=data, capture_output=True)
+            if not result.returncode:
+                return result.stdout.decode().strip()
+            if attempt == 4 or not self._retryable_binding(args, result.stderr):
+                break
+            print('GCP: retrying IAM binding after a transient error')
+            time.sleep(2 ** attempt + random.uniform(0, 1))
+        raise DeploymentError('GCP command failed at ' + ' '.join(args[:3]) + '; inspect the resource safely in Console.')
+
+    @staticmethod
+    def _retryable_binding(args, stderr):
+        if 'add-iam-policy-binding' not in args:
+            return False
+        if re.search(rb'\b(PERMISSION_DENIED|UNAUTHENTICATED|INVALID_ARGUMENT|FORBIDDEN)\b|\b403\b', stderr):
+            return False
+        if re.search(rb'\b(INTERNAL|UNAVAILABLE|ABORTED)\b', stderr):
+            return True
+        member = next((arg.split('serviceAccount:', 1)[1] for arg in args
+                       if arg.startswith('--member=serviceAccount:')), None)
+        return bool(member and ('Service account ' + member + ' does not exist.').encode() in stderr)
 
     def describe(self, *args):
         result = subprocess.run(['gcloud', *args, '--project', self.project, '--format=json'], capture_output=True)
         if result.returncode:
-            if b'NOT_FOUND' in result.stderr or re.search(rb'HTTPError[ :]+404\b', result.stderr):
+            # Storage uses a different 404 message from other gcloud groups.
+            # Accept only the exact requested bucket, never an arbitrary 404
+            # substring that could hide a permission/network failure.
+            bucket_missing = (
+                len(args) >= 4 and args[:3] == ('storage', 'buckets', 'describe')
+                and result.stderr.strip() == (
+                    'ERROR: (gcloud.storage.buckets.describe) ' + args[3] + ' not found: 404.'
+                ).encode()
+            )
+            service_missing = (
+                len(args) >= 4 and args[:3] == ('run', 'services', 'describe')
+                and result.stderr.strip() == (
+                    'ERROR: (gcloud.run.services.describe) Cannot find service [' + args[3] + ']'
+                ).encode()
+            )
+            if bucket_missing or service_missing or b'NOT_FOUND' in result.stderr or re.search(rb'HTTPError[ :]+404\b', result.stderr):
                 return None
-            raise DeploymentError('Resource discovery failed; refusing to treat permission/network errors as missing resources.')
+            raise DeploymentError('Resource discovery failed at ' + ' '.join(args[:3]) + '; refusing to treat permission/network errors as missing resources.')
         try:
             return json.loads(result.stdout)
         except (ValueError, TypeError):
@@ -221,8 +256,17 @@ def apply(g, region, sha, demo, stage_source=source_stage):
             g.call('secrets', 'add-iam-policy-binding', name, '--member=serviceAccount:' + identity + '@' + project + '.iam.gserviceaccount.com', '--role=roles/secretmanager.secretAccessor')
     builder = 'dinequeue-builder@' + project + '.iam.gserviceaccount.com'
     bucket = 'gs://' + project + '-dinequeue-build'
-    if g.describe('storage', 'buckets', 'describe', bucket) is None:
+    # --raw uses the Storage API field names, avoiding display-format aliases.
+    bucket_metadata = g.describe('storage', 'buckets', 'describe', bucket, '--raw')
+    if bucket_metadata is None:
         g.call('storage', 'buckets', 'create', bucket, '--location=' + region, '--uniform-bucket-level-access', '--public-access-prevention')
+    else:
+        iam = bucket_metadata.get('iamConfiguration', {})
+        if (bucket_metadata.get('name') != bucket.removeprefix('gs://')
+                or str(bucket_metadata.get('location', '')).lower() != region
+                or iam.get('uniformBucketLevelAccess', {}).get('enabled') is not True
+                or iam.get('publicAccessPrevention') != 'enforced'):
+            raise DeploymentError('Existing source bucket differs from the reviewed name/region/access policy; reconcile explicitly before upload.')
     g.call('storage', 'buckets', 'add-iam-policy-binding', bucket, '--member=serviceAccount:' + builder, '--role=roles/storage.objectViewer')
     g.call('artifacts', 'repositories', 'add-iam-policy-binding', 'dinequeue', '--location=' + region, '--member=serviceAccount:' + builder, '--role=roles/artifactregistry.writer')
     g.call('projects', 'add-iam-policy-binding', project, '--member=serviceAccount:' + builder, '--role=roles/logging.logWriter', '--condition=None')

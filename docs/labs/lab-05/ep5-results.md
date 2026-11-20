@@ -153,3 +153,30 @@ Cleanup completed: removed only the EP5-created app/Go test containers, temporar
 socket volume/network and loopback TLS proxy. Private generated env files and the
 localhost TLS key/certificate were deleted. Developer dev and EP3 containers
 remained running. Local build images and sanitized evidence logs were retained.
+
+
+## Deployment recovery regression — 20 November 2026 (local only)
+
+Branch: `fix/lab5-ep5-bucket-discovery`. Tested uncommitted working-tree changes
+on base HEAD `7452aaebf8f893bd27ccca42eef470b1c3e7945d`; this base SHA does not
+identify the fixes until they are committed.
+
+- Added regression cases before implementation: the targeted suite failed
+  (`22` test methods, `2` failures and `11` errors, including subtest errors).
+- After the fixes: `python3 -m unittest discover -s deploy/tests -p 'test_*.py' -v`
+  — **34/34 PASS**, comprising 26 first-deployment tests and 8 smoke-tool tests.
+  Cloud/HTTP responses are mocked; these are not live smoke results.
+- `PROJECT_ID=dinequeue-test SOURCE_SHA=7452aaebf8f893bd27ccca42eef470b1c3e7945d DRY_RUN=1 bash deploy/deploy.sh --demo`
+  — PASS, simulated commands only.
+- `bash -n deploy/deploy.sh` and `git diff --check` — PASS.
+
+Coverage includes exact Storage/Cloud Run absence messages and rejection of
+wrong-resource/mixed-denial errors; bounded IAM retries, immediate permanent-error
+abort and credential-safe output; matching existing bucket metadata and refusal
+to upload when name/region/access policy differs; failed build/provisioning,
+wrong image digest and failed public IAM binding stop their dependent steps.
+Bucket inspection uses the raw Storage API metadata shape, not display aliases.
+
+No resources, IAM permissions, credentials, Docker images or CI configuration were
+changed by this local recovery work. Cloud Run/Cloud SQL execution still requires
+real validation after the reviewed fixes reach main.

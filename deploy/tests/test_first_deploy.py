@@ -24,6 +24,9 @@ class FakeGCloud:
         self.mode, self.calls = mode, []
         self.deployed = False
 
+    def configure_service(self, body):
+        self.call('run-v2','deploy','dinequeue',data=json.dumps(body).encode())
+
     def new_secret(self):
         return d.secrets.token_hex(24)
 
@@ -51,7 +54,7 @@ class FakeGCloud:
             return image.rsplit(':', 1)[0] + '@sha256:' + 'b' * 64
         if args[:3] == ('run', 'jobs', 'execute') and self.mode == 'migration-fail':
             raise d.DeploymentError('synthetic migration failure')
-        if args[:3] == ('alpha', 'run', 'deploy'):
+        if args[:3] == ('run-v2', 'deploy', 'dinequeue'):
             self.deployed = True
         return ''
 
@@ -67,7 +70,7 @@ class FirstDeployTests(unittest.TestCase):
         with patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout=b'help',stderr=b'')) as run:
             d.GCloud(PROJECT).preflight()
             self.assertEqual(run.call_args.kwargs['timeout'],60)
-            self.assertEqual(run.call_args.args[0],['gcloud','--quiet','alpha','run','deploy','--help'])
+            self.assertEqual(run.call_args.args[0],['gcloud','--quiet','auth','print-access-token'])
 
     def test_exhausted_api_quota_is_bounded_and_permanent_denials_stop(self):
         failure = subprocess.CompletedProcess([],1,stdout=b'',stderr=b'429 RESOURCE_EXHAUSTED private-canary')
@@ -118,10 +121,10 @@ class FirstDeployTests(unittest.TestCase):
             return original(*args)
         with patch.object(fake,'describe',side_effect=describe), contextlib.redirect_stdout(io.StringIO()):
             d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
-        deployments = [a for _,a,_ in fake.calls if a[:3] == ('alpha','run','deploy')]
+        deployments = [json.loads(data) for _,a,data in fake.calls if a[:3] == ('run-v2','deploy','dinequeue')]
         self.assertEqual(len(deployments),2)
-        self.assertTrue(any('APP_ORIGIN=https://not-yet-public.invalid' in a for a in deployments[0]))
-        self.assertTrue(any('APP_ORIGIN=https://dinequeue.example.test' in a for a in deployments[1]))
+        self.assertTrue(any(e=={'name':'APP_ORIGIN','value':'https://not-yet-public.invalid'} for e in deployments[0]['template']['containers'][1]['env']))
+        self.assertTrue(any(e=={'name':'APP_ORIGIN','value':'https://dinequeue.example.test'} for e in deployments[1]['template']['containers'][1]['env']))
 
     def test_missing_post_deploy_url_stops_before_public_access_or_completion(self):
         for response in (None, {}, {'status':{}}, {'status':{'url':'http://invalid.example'}}):
@@ -137,43 +140,22 @@ class FirstDeployTests(unittest.TestCase):
                 self.assertFalse(any('--member=allUsers' in a for _,a,_ in fake.calls))
                 self.assertNotIn('Deployment command completed',output.getvalue())
 
-    def test_service_uses_explicit_cloudsql_volume_without_reserved_name(self):
-        fake = FakeGCloud()
-        connection = PROJECT + ':asia-southeast1:dinequeue-pg'
-        images = {'web': 'web-digest', 'api': 'api-digest'}
-        d.deploy_service(fake, 'asia-southeast1', connection, images,
-                         'https://example.test', SHA)
-        args = fake.calls[-1][1]
-        self.assertEqual(args[:4], ('alpha', 'run', 'deploy', 'dinequeue'))
-        volume = '--add-volume=name=db-sockets,type=cloudsql,instances=' + connection
-        self.assertIn(volume, args[:args.index('--container=web')])
-        api_args = args[args.index('--container=api'):]
-        self.assertIn('--add-volume-mount=volume=db-sockets,mount-path=/cloudsql', api_args)
-        self.assertFalse(any('volume=cloudsql,' in arg for arg in args))
-        self.assertFalse(any(arg.startswith('--set-cloudsql-instances=') for arg in args))
-
-    def test_multicontainer_deploy_keeps_global_flags_outside_container_scope(self):
-        images = {name: 'registry.example/' + name + '@sha256:' + 'b' * 64
-                  for name in ('api', 'web')}
-        connection = PROJECT + ':asia-southeast1:dinequeue-pg'
-
-        def cli(command, **kwargs):
-            # gcloud scopes every argument after --container to that container.
-            scoped = command[command.index('--container=web'):]
-            self.assertNotIn('--project', scoped)
-            self.assertNotIn('--quiet', scoped)
-            self.assertEqual(command[command.index('--project') + 1], PROJECT)
-            return subprocess.CompletedProcess(command, 0, stdout=b'', stderr=b'')
-
-        with patch.object(d.subprocess, 'run', side_effect=cli) as run, contextlib.redirect_stdout(io.StringIO()):
-            d.deploy_service(d.GCloud(PROJECT), 'asia-southeast1', connection,
-                             images, 'https://example.test', SHA)
-        command = run.call_args.args[0]
+    def test_service_uses_native_cloudsql_volume_and_preview_body_matches(self):
+        fake=FakeGCloud()
+        d.deploy_service(fake,'asia-southeast1',PROJECT+':asia-southeast1:dinequeue-pg',
+                         {'web':'web-digest','api':'api-digest'},'https://example.test',SHA)
+        body=json.loads(fake.calls[-1][2])
+        self.assertEqual(body['template']['volumes'],[{'name':'db-sockets','cloudSqlInstance':{'instances':[PROJECT+':asia-southeast1:dinequeue-pg']}}])
+        self.assertNotIn('csi',json.dumps(body))
         with contextlib.redirect_stdout(io.StringIO()) as output:
-            d.deploy_service(d.Preview(PROJECT), 'asia-southeast1', connection,
-                             images, 'https://example.test', SHA)
-        import shlex
-        self.assertEqual(shlex.split(output.getvalue().strip().removeprefix('[DRY RUN] ')), command)
+            d.deploy_service(d.Preview(PROJECT),'asia-southeast1',PROJECT+':asia-southeast1:dinequeue-pg',
+                             {'web':'web-digest','api':'api-digest'},'https://example.test',SHA)
+        self.assertEqual(json.loads(output.getvalue().split('\n',1)[1]),body)
+
+    def test_gcloud_wrapper_keeps_global_flags_before_command_arguments(self):
+        with patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout=b'',stderr=b'')) as run,contextlib.redirect_stdout(io.StringIO()):
+            d.GCloud(PROJECT).call('run','jobs','deploy','dinequeue-migrate','--image=test-digest')
+        self.assertEqual(run.call_args.args[0][:7],['gcloud','--project',PROJECT,'--quiet','run','jobs','deploy'])
 
     def run_apply(self, mode='fresh', demo=True):
         fake = FakeGCloud(mode)
@@ -200,40 +182,37 @@ class FirstDeployTests(unittest.TestCase):
             with self.assertRaises(d.DeploymentError): d.settings(env)
 
     def test_new_deployment_orders_migration_before_service_and_public_access(self):
-        f = self.run_apply()
-        calls = [args for kind,args,_ in f.calls if kind=='call']
-        migration = next(i for i,a in enumerate(calls) if a[:4]==('run','jobs','execute','dinequeue-migrate'))
-        deployment = next(i for i,a in enumerate(calls) if a[:3]==('alpha','run','deploy'))
-        public = next(i for i,a in enumerate(calls) if '--member=allUsers' in a)
-        self.assertLess(migration, deployment)
-        self.assertLess(deployment, public)
-        self.assertTrue(any('--wait' in a for a in calls if a[:3]==('run','jobs','execute')))
-        for a in calls:
-            if a[:3]==('alpha','run','deploy'):
-                self.assertIn('--container=api', a)
-                self.assertIn('--depends-on=api', a)
-                self.assertIn('--add-volume-mount=volume=db-sockets,mount-path=/cloudsql', a)
-                self.assertTrue(any('API_PORT=8081' in x for x in a))
-                self.assertFalse(any('PORT=8081' in x and 'API_PORT=8081' not in x for x in a))
-                self.assertIn('--port=8080', a)
-                self.assertFalse(any('latest' in x for x in a))
+        fake=self.run_apply()
+        calls=[args for kind,args,_ in fake.calls if kind=='call']
+        migration=next(i for i,a in enumerate(calls) if a[:4]==('run','jobs','execute','dinequeue-migrate'))
+        deployment=next(i for i,a in enumerate(calls) if a==('run-v2','deploy','dinequeue'))
+        public=next(i for i,a in enumerate(calls) if '--member=allUsers' in a)
+        self.assertLess(migration,deployment);self.assertLess(deployment,public)
+        for _,args,data in fake.calls:
+            if args!=('run-v2','deploy','dinequeue'):continue
+            body=json.loads(data);containers={c['name']:c for c in body['template']['containers']}
+            self.assertEqual(containers['web']['dependsOn'],['api'])
+            self.assertEqual(containers['web']['ports'],[{'containerPort':8080}])
+            self.assertNotIn('ports',containers['api'])
+            self.assertIn({'name':'API_PORT','value':'8081'},containers['api']['env'])
+            self.assertTrue(all('@sha256:' in c['image'] for c in containers.values()))
 
     def test_runtime_gets_database_secret_only_and_never_project_wide_secret_access(self):
-        f = self.run_apply()
-        for _, args, _ in f.calls:
+        fake=self.run_apply()
+        for _,args,data in fake.calls:
             if '--role=roles/secretmanager.secretAccessor' in args:
-                self.assertEqual(args[:2], ('secrets','add-iam-policy-binding'))
-                if 'dinequeue-runtime@' in ' '.join(args): self.assertEqual(args[2], 'dinequeue-database-url')
-            if args[:3]==('alpha','run','deploy'):
-                before_api = args[:args.index('--container=api')]
-                self.assertFalse(any('set-secrets' in x for x in before_api))
-                self.assertFalse(any('DEMO_' in x for x in args))
+                self.assertEqual(args[:2],('secrets','add-iam-policy-binding'))
+                if 'dinequeue-runtime@' in ' '.join(args):self.assertEqual(args[2],'dinequeue-database-url')
+            if args==('run-v2','deploy','dinequeue'):
+                containers={c['name']:c for c in json.loads(data)['template']['containers']}
+                self.assertFalse(any('valueSource' in e for e in containers['web']['env']))
+                self.assertFalse(any(e['name'].startswith('DEMO_') for c in containers.values() for e in c['env']))
 
     def test_migration_failure_aborts_service_and_public_grant(self):
         f = FakeGCloud('migration-fail')
         with patch.object(d, 'source_stage'), self.assertRaises(d.DeploymentError):
             d.apply(f, 'asia-southeast1', SHA, True, stage_source=lambda *_: None)
-        self.assertFalse(any(a[:3]==('alpha','run','deploy') or '--member=allUsers' in a for _,a,_ in f.calls))
+        self.assertFalse(any(a[:3]==('run-v2','deploy','dinequeue') or '--member=allUsers' in a for _,a,_ in f.calls))
 
     def test_partial_credentials_never_reset_password_or_continue(self):
         f = FakeGCloud('partial')
@@ -421,7 +400,7 @@ class FirstDeployTests(unittest.TestCase):
                 raise d.DeploymentError('provision fixture failure')
             return original(*args,**kwargs)
         with patch.object(fake,'call',side_effect=call),self.assertRaises(d.DeploymentError):d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
-        self.assertFalse(any(args[:3]==('alpha','run','deploy') or '--member=allUsers' in args for _,args,_ in fake.calls))
+        self.assertFalse(any(args[:3]==('run-v2','deploy','dinequeue') or '--member=allUsers' in args for _,args,_ in fake.calls))
 
     def test_build_failure_stops_before_migration(self):
         fake=FakeGCloud();original=fake.call

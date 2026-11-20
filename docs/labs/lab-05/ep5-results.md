@@ -269,3 +269,36 @@ removed; developer dev/EP3 resources were excluded.
 Cloud Run server-side acceptance and actual cloud startup/readiness remain pending
 after the fixes reach reviewed main. This audit does not claim a successful GCP
 deployment, real managed socket connection, or approval to close Issue #16.
+
+
+### Cloud Run v2 native-volume correction — 20 November 2026
+
+**Supersedes the alpha CSI deployment above.** The user reported a real failure
+on main `160f5dd8772778e42dc2c590b938eb5fd964c4c9`:
+`Unsupported driver: cloudsql.run.googleapis.com`. Parsing/transforming a CLI
+command locally did not establish server support for that generated driver.
+
+Branch `fix/lab5-ep5-cloud-run-v2` changes only deployment transport, its tests and
+documentation. Main at the SHA above is the base, not the tested fix commit.
+Service creation/update now uses the documented v2 native `cloudSqlInstance`
+field through `services.patch?allowMissing=true`, with an explicit update mask,
+short-lived in-memory credentials, no redirects, bounded HTTP requests and an
+operation readiness gate. Jobs/images/database/application rules are unchanged.
+The alpha CLI prerequisite and CSI driver were removed from the active path.
+
+Local verification:
+
+- New v2 regressions failed before implementation (5 test methods, 8 errors
+  including setup errors for absent methods), then passed after implementation.
+- `python3 -m unittest discover -s deploy/tests -p 'test_*.py' -v`: 52/52 PASS
+  (36 first-deployment, 8 v2 transport/spec and 8 existing smoke-tool tests).
+- `python3 deploy/tests/check_gcloud_sdk.py /tmp/dinequeue-deploy-audit/sdk-source`:
+  SDK 594.0.0 parsed 54 stable CLI commands and round-tripped 2 native service
+  requests through its v2 Service schema without dropped/changed fields.
+- Dry run and `git diff --check`: PASS. All responses in transport tests are
+  mocked. No API token was obtained and no Cloud Run API call was made locally.
+
+Scope is deployment only; no browser/business-flow tests, Docker builds or live
+cloud mutations were performed for this correction. API v2 server acceptance and
+actual Cloud SQL startup/readiness still require live verification. Do not claim
+deployment success or close Issue #16 based on these local results.

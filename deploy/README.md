@@ -61,6 +61,14 @@ existing ones. The source SHA in a feature-branch dry run is a planning input,
 not an accepted deployment. Live execution requires clean reviewed main and
 checks it against `origin/main` before any GCP call.
 
+Service creation/update uses the documented Cloud Run v2 REST API with a native
+`cloudSqlInstance` volume mounted only into the API. It does not use alpha CLI or
+the unsupported `cloudsql.run.googleapis.com` CSI driver. `gcloud` supplies a
+short-lived access token captured in memory; tokens and provider payloads are not
+printed or written. The script waits up to ten minutes for the long-running
+operation and requires a successful service terminal condition before proceeding.
+Other resource, build, job and public-IAM commands remain on the stable CLI.
+
 ## Planned runtime and safety boundaries
 
 - Only Next.js has public ingress (8080); API listens on `API_PORT=8081` inside the

@@ -419,21 +419,26 @@ duplicate transport keys. Driver `sslmode=disable` is restricted to that local
 socket; Cloud Run's managed Cloud SQL integration authenticates/encrypts the
 remote connection. Never use `APP_ENV=development` to bypass this on GCP.
 
-Service deployment uses `gcloud alpha run deploy` because the explicit
-`--add-volume` type `cloudsql` is exposed on that release track. It declares
-`db-sockets` with the reviewed instance and mounts it only in the API at
-`/cloudsql`. Do not manually mount the reserved volume name `cloudsql` or replace
-the socket with an empty directory. Single-container migration/provision jobs
-retain the GA `--set-cloudsql-instances` integration. See
-[Google's alpha volume flags](https://docs.cloud.google.com/sdk/gcloud/reference/alpha/run/deploy#--add-volume)
-and [reserved v1 volume name](https://docs.cloud.google.com/run/docs/reference/rest/v1/Volume).
-Before live execution, confirm `gcloud alpha run deploy --help` is available in
-Cloud Shell. Alpha flags may change; actual volume creation and API database
-readiness must be verified on GCP. This is a CLI compatibility adjustment within
-DEC-032's existing two-container topology.
+Service deployment uses Cloud Run v2 REST `services.patch` with
+`allowMissing=true`, and a native `cloudSqlInstance` volume named `db-sockets`
+mounted only into the API at `/cloudsql`. The earlier alpha CLI path generated a
+CSI driver rejected by the user's live deployment; it is superseded. Do not use
+that driver or replace the database socket with an empty directory. Jobs retain
+the working single-container GA `--set-cloudsql-instances` integration.
 
-Live execution checks the required alpha CLI help before any resource mutations
-or image build. API-enable rate limits (HTTP 429) wait 60–61 seconds before retry,
+The script obtains a short-lived token through the active `gcloud` login and
+captures it only in memory. It sends the service body to the fixed Google API
+origin with redirects disabled, then polls the returned operation for at most
+ten minutes. An operation failure, timeout or non-successful service terminal
+condition stops before public access. No token, raw provider error payload or
+secret value is printed. The service update specifies the revision template,
+labels, ingress and latest-revision traffic; it does not change the IAM policy.
+
+References: [native Cloud SQL volume](https://docs.cloud.google.com/run/docs/reference/rest/v2/Volume),
+[create/update with allowMissing](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services/patch),
+and [operation polling](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.operations/get).
+Live execution checks CLI authentication before resource changes/builds.
+API-enable rate limits (HTTP 429) wait 60–61 seconds before retry,
 with at most five attempts; permanent permission/authentication failures stop.
 Failure messages categorize known quota, IAM, argument-parsing and mount errors
 without printing provider payloads. An existing service without a URL can use the
@@ -445,7 +450,7 @@ For an optional offline check against an installed official SDK, run:
 python3 deploy/tests/check_gcloud_sdk.py /path/to/google-cloud-sdk
 ```
 
-This parses planned commands and builds service specs using SDK internals, with
+This parses stable CLI commands and round-trips native service specs through the SDK v2 schema, with
 network connections blocked. It does not invoke SDK command execution methods or
 prove server-side acceptance. See the [scoped audit results](ep5-results.md#deployment-only-audit--20-november-2026).
 

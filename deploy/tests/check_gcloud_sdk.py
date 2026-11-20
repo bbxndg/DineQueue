@@ -65,8 +65,8 @@ def check(sdk_root):
                 assert containers['web']['ports'] == [{'containerPort':8080}]
                 assert not containers['api'].get('ports')
                 assert not containers['web'].get('volumeMounts')
-                assert containers['api']['volumeMounts'] == [{'name':'db-sockets','mountPath':'/cloudsql'}]
-                assert template['volumes'] == [{'name':'db-sockets','cloudSqlInstance':{
+                assert containers['api']['volumeMounts'] == [{'name':'cloudsql','mountPath':'/cloudsql'}]
+                assert template['volumes'] == [{'name':'cloudsql','cloudSqlInstance':{
                     'instances':['dinequeue-test:asia-southeast1:dinequeue-pg']}}]
                 assert not any(e['name']=='DATABASE_URL' for e in containers['web']['env'])
             print('PASS real SDK parser:', len(commands), 'planned stable CLI commands')

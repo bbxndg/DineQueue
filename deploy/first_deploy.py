@@ -94,7 +94,7 @@ class GCloud:
                        if arg.startswith('--member=serviceAccount:')), None)
         return bool(member and ('Service account ' + member + ' does not exist.').encode() in stderr)
 
-    def _run_v2_request(self, method, path, body=None):
+    def _run_v2_request(self, method, path, body=None, *, missing_ok=False):
         # Never export/write/log access tokens. No redirect may forward this header.
         result = subprocess.run(['gcloud','--quiet','auth','print-access-token'],
                                 capture_output=True, timeout=60)
@@ -112,7 +112,18 @@ class GCloud:
                 data = json.loads(response.read(1048576))
         except urllib.error.HTTPError as error:
             code = error.code
-            error.close()
+            try:
+                failure = json.loads(error.read(65536))
+            except (ValueError, TypeError):
+                failure = {}
+            finally:
+                error.close()
+            detail = failure.get('error') if isinstance(failure,dict) else None
+            service_path = re.escape(f'projects/{self.project}/locations/') + r'[a-z]+-[a-z]+[0-9]/services/dinequeue'
+            if (missing_ok and method == 'GET' and re.fullmatch(service_path,path)
+                    and code == 404 and isinstance(detail,dict)
+                    and detail.get('code') == 404 and detail.get('status') == 'NOT_FOUND'):
+                return None
             raise DeploymentError(f'Cloud Run v2 {method} failed (HTTP {code}); request/credential payloads withheld.') from None
         except (urllib.error.URLError, TimeoutError, ValueError):
             raise DeploymentError('Cloud Run v2 response unavailable or invalid; inspect service state before retrying.') from None
@@ -125,9 +136,17 @@ class GCloud:
         prefix = f'projects/{self.project}/locations/'
         if not re.fullmatch(re.escape(prefix) + r'[a-z]+-[a-z]+[0-9]/services/dinequeue',name):
             raise DeploymentError('Invalid Cloud Run v2 target.')
-        print('GCP: Cloud Run v2 PATCH dinequeue; waiting for readiness')
-        query = urlencode({'allowMissing':'true','updateMask':'template,labels,ingress,traffic'})
-        operation = self._run_v2_request('PATCH',name+'?'+query,body)
+        existing = self._run_v2_request('GET',name,missing_ok=True)
+        if existing is None:
+            print('GCP: Cloud Run v2 POST dinequeue; waiting for readiness')
+            collection = name.rsplit('/services/',1)[0]+'/services'
+            # CreateService takes the name from serviceId, not the Service body.
+            create_body = {key:value for key,value in body.items() if key != 'name'}
+            operation = self._run_v2_request('POST',collection+'?serviceId=dinequeue',create_body)
+        else:
+            print('GCP: Cloud Run v2 PATCH dinequeue; waiting for readiness')
+            query = urlencode({'updateMask':'template,labels,ingress,traffic'})
+            operation = self._run_v2_request('PATCH',name+'?'+query,body)
         deadline = time.monotonic()+600
         operation_name = operation.get('name','')
         # Operation results may use the project number rather than the project ID.
@@ -306,7 +325,7 @@ def service_spec_v2(project, region, connection, images, origin, sha):
             'executionEnvironment':'EXECUTION_ENVIRONMENT_GEN2', 'timeout':'60s',
             'maxInstanceRequestConcurrency':10,
             'scaling':{'minInstanceCount':0,'maxInstanceCount':1},
-            'volumes':[{'name':'db-sockets','cloudSqlInstance':{'instances':[connection]}}],
+            'volumes':[{'name':'cloudsql','cloudSqlInstance':{'instances':[connection]}}],
             'containers':[
                 {'name':'web','image':images['web'],'ports':[{'containerPort':8080}],
                  'resources':{'limits':{'cpu':'1','memory':'512Mi'}}, 'dependsOn':['api'],
@@ -314,7 +333,7 @@ def service_spec_v2(project, region, connection, images, origin, sha):
                  'startupProbe':probe('/api/health/ready',8080)},
                 {'name':'api','image':images['api'],
                  'resources':{'limits':{'cpu':'1','memory':'512Mi'}},
-                 'volumeMounts':[{'name':'db-sockets','mountPath':'/cloudsql'}],
+                 'volumeMounts':[{'name':'cloudsql','mountPath':'/cloudsql'}],
                  'env':env({'APP_ENV':'production','API_PORT':'8081','APP_ORIGIN':origin,'CLOUD_SQL_INSTANCE':connection}) + [
                      {'name':'DATABASE_URL','valueSource':{'secretKeyRef':{'secret':'dinequeue-database-url','version':'1'}}}],
                  'startupProbe':probe('/health/ready',8081)},
@@ -436,8 +455,9 @@ class Preview(GCloud):
     deployed = False
 
     def configure_service(self, body):
-        print('[DRY RUN] Cloud Run v2 PATCH allowMissing=true; native service body:')
-        print(json.dumps(body,indent=2))
+        print('[DRY RUN] Cloud Run v2 GET service; POST with serviceId if missing, PATCH if present; request bodies:')
+        print(json.dumps({'createBody':{key:value for key,value in body.items() if key != 'name'},
+                          'updateBody':body},indent=2))
         self.deployed = True
 
     def new_secret(self):

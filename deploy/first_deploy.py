@@ -1,7 +1,7 @@
 """DineQueue EP5 manual deployment. Defaults to a zero-network dry run.
 
 Only --apply plus explicit project/public-access confirmations performs GCP calls.
-No credential value is printed; subprocess errors are deliberately generic.
+No credential value is printed; subprocess errors use fixed diagnostic messages.
 """
 import argparse
 import io
@@ -32,6 +32,32 @@ class GCloud:
     def new_secret(self):
         return secrets.token_hex(24)
 
+    def preflight(self):
+        # Check the required CLI component before IAM changes or an image build.
+        env = dict(os.environ, CLOUDSDK_PAGER='cat', PAGER='cat')
+        try:
+            result = subprocess.run(['gcloud', '--quiet', 'alpha', 'run', 'deploy', '--help'],
+                                    capture_output=True, env=env, timeout=60)
+        except (OSError, subprocess.TimeoutExpired):
+            raise DeploymentError('Required gcloud alpha CLI preflight could not finish; check the local SDK before applying the plan.') from None
+        if result.returncode:
+            raise DeploymentError('Required gcloud alpha run deploy is unavailable; check the installed SDK before applying the plan.')
+
+    @staticmethod
+    def _error_hint(stderr):
+        # Fixed messages only: raw provider errors can contain credentials.
+        for pattern, hint in (
+            (rb'PERMISSION_DENIED|\b403\b', 'Permission denied; check the active identity and named resource IAM.'),
+            (rb'UNAUTHENTICATED|\b401\b', 'Authentication failed; check the active gcloud login.'),
+            (rb'\b429\b|RESOURCE_EXHAUSTED|RATE_LIMIT_EXCEEDED', 'Quota/rate limit exceeded; wait before retrying.'),
+            (rb'unrecognized arguments', 'SDK argument parsing failed; check the CLI version and flag scope.'),
+            (rb'VolumeMount.*reserved', 'Cloud Run rejected a reserved volume mount name.'),
+            (rb'UNAVAILABLE|INTERNAL|network|timed? ?out', 'A transient service/network error was reported.'),
+        ):
+            if re.search(pattern, stderr, re.IGNORECASE):
+                return hint
+        return 'Inspect the named resource or execution safely in Console.'
+
     def call(self, *args, data=None):
         # Arguments may contain a generated SQL password: never print raw argv,
         # stderr, successful secret output or CalledProcessError representations.
@@ -43,11 +69,16 @@ class GCloud:
                                     input=data, capture_output=True)
             if not result.returncode:
                 return result.stdout.decode().strip()
-            if attempt == 4 or not self._retryable_binding(args, result.stderr):
+            rate_limited_enable = (args[:2] == ('services', 'enable')
+                                   and re.search(rb'\b429\b|RATE_LIMIT_EXCEEDED', result.stderr)
+                                   and not re.search(rb'PERMISSION_DENIED|UNAUTHENTICATED|\b403\b|\b401\b', result.stderr))
+            if attempt == 4 or not (rate_limited_enable or self._retryable_binding(args, result.stderr)):
                 break
-            print('GCP: retrying IAM binding after a transient error')
-            time.sleep(2 ** attempt + random.uniform(0, 1))
-        raise DeploymentError('GCP command failed at ' + ' '.join(args[:3]) + '; inspect the resource safely in Console.')
+            print('GCP: API enable rate limit; waiting before retry' if rate_limited_enable
+                  else 'GCP: retrying IAM binding after a transient error')
+            time.sleep((60 if rate_limited_enable else 2 ** attempt) + random.uniform(0, 1))
+        operation = ' '.join(args[:4] if args[:1] == ('alpha',) else args[:3])
+        raise DeploymentError('GCP command failed at ' + operation + '; ' + self._error_hint(result.stderr))
 
     @staticmethod
     def _retryable_binding(args, stderr):
@@ -64,6 +95,8 @@ class GCloud:
     def describe(self, *args):
         result = subprocess.run(['gcloud', '--project', self.project, '--format=json', *args], capture_output=True)
         if result.returncode:
+            if re.search(rb'PERMISSION_DENIED|UNAUTHENTICATED|UNAVAILABLE|INTERNAL|\b403\b|\b429\b|network|timed? ?out', result.stderr, re.IGNORECASE):
+                raise DeploymentError('Resource discovery failed at ' + ' '.join(args[:3]) + '; ' + self._error_hint(result.stderr))
             # Storage uses a different 404 message from other gcloud groups.
             # Accept only the exact requested bucket, never an arbitrary 404
             # substring that could hide a permission/network failure.
@@ -83,9 +116,12 @@ class GCloud:
                 return None
             raise DeploymentError('Resource discovery failed at ' + ' '.join(args[:3]) + '; refusing to treat permission/network errors as missing resources.')
         try:
-            return json.loads(result.stdout)
+            resource = json.loads(result.stdout)
         except (ValueError, TypeError):
             raise DeploymentError('Invalid resource discovery response.') from None
+        if not isinstance(resource, dict):
+            raise DeploymentError('Invalid resource discovery response; expected a resource object.')
+        return resource
 
 
 def settings(env):
@@ -197,16 +233,19 @@ def origin_checked(value):
 
 def deploy_service(g, region, connection, images, origin, sha):
     # Only web has a container port. The API is a non-public localhost sidecar.
-    g.call('run', 'deploy', 'dinequeue', '--region=' + region,
+    # Explicit Cloud SQL volumes for a selected sidecar are exposed by alpha.
+    # The v1 built-in volume name "cloudsql" cannot be manually mounted.
+    g.call('alpha', 'run', 'deploy', 'dinequeue', '--region=' + region,
            '--service-account=dinequeue-runtime@' + g.project + '.iam.gserviceaccount.com',
-           '--execution-environment=gen2', '--set-cloudsql-instances=' + connection,
+           '--execution-environment=gen2',
+           '--add-volume=name=db-sockets,type=cloudsql,instances=' + connection,
            '--min-instances=0', '--max-instances=1', '--concurrency=10', '--timeout=60',
            '--labels=source-sha=' + sha,
            '--container=web', '--image=' + images['web'], '--port=8080', '--memory=512Mi', '--cpu=1',
            '--set-env-vars=NODE_ENV=production,API_INTERNAL_URL=http://127.0.0.1:8081',
            '--depends-on=api', '--startup-probe=httpGet.path=/api/health/ready,httpGet.port=8080,periodSeconds=5,timeoutSeconds=4,failureThreshold=24',
            '--container=api', '--image=' + images['api'], '--memory=512Mi', '--cpu=1',
-           '--add-volume-mount=volume=cloudsql,mount-path=/cloudsql',
+           '--add-volume-mount=volume=db-sockets,mount-path=/cloudsql',
            '--set-env-vars=APP_ENV=production,API_PORT=8081,APP_ORIGIN=' + origin + ',CLOUD_SQL_INSTANCE=' + connection,
            '--set-secrets=DATABASE_URL=dinequeue-database-url:1',
            '--startup-probe=httpGet.path=/health/ready,httpGet.port=8081,periodSeconds=5,timeoutSeconds=4,failureThreshold=24')
@@ -285,7 +324,8 @@ def apply(g, region, sha, demo, stage_source=source_stage):
             raise DeploymentError('Could not resolve the expected immutable image digest.')
         images[image] = resolved
     existing = g.describe('run', 'services', 'describe', 'dinequeue', '--region=' + region)
-    origin = origin_checked(existing['status']['url']) if existing else 'https://not-yet-public.invalid'
+    existing_url = (existing or {}).get('status', {}).get('url')
+    origin = origin_checked(existing_url) if existing_url else 'https://not-yet-public.invalid'
     common = ['--image=' + images['db-tools'], '--region=' + region,
               '--service-account=dinequeue-jobs@' + project + '.iam.gserviceaccount.com',
               '--set-cloudsql-instances=' + connection, '--max-retries=0', '--tasks=1', '--parallelism=1',
@@ -302,7 +342,10 @@ def apply(g, region, sha, demo, stage_source=source_stage):
         g.call('run', 'jobs', 'execute', 'dinequeue-provision-demo', '--region=' + region, '--wait')
     deploy_service(g, region, connection, images, origin, sha)
     service = g.describe('run', 'services', 'describe', 'dinequeue', '--region=' + region)
-    public_origin = origin_checked(service['status']['url'])
+    public_url = (service or {}).get('status', {}).get('url')
+    if not public_url:
+        raise DeploymentError('Cloud Run has no canonical URL after deploy; inspect its readiness conditions before granting public access.')
+    public_origin = origin_checked(public_url)
     if public_origin != origin:
         deploy_service(g, region, connection, images, public_origin, sha)
     g.call('run', 'services', 'add-iam-policy-binding', 'dinequeue', '--region=' + region,
@@ -334,7 +377,7 @@ class Preview(GCloud):
             return '[]'
         if args[:3] == ('artifacts', 'docker', 'images'):
             return args[4].rsplit(':', 1)[0] + '@sha256:' + '0' * 64
-        if args[:2] == ('run', 'deploy'):
+        if args[:3] == ('alpha', 'run', 'deploy'):
             self.deployed = True
         return ''
 
@@ -354,7 +397,9 @@ def main(argv=None, env=None):
     if env.get('CONFIRM_PROJECT') != project or env.get('ALLOW_PUBLIC_SERVICE') != 'true':
         raise DeploymentError('Live execution requires CONFIRM_PROJECT and ALLOW_PUBLIC_SERVICE=true after plan review.')
     verify_source(sha)
-    apply(GCloud(project), region, sha, args.demo)
+    cloud = GCloud(project)
+    cloud.preflight()
+    apply(cloud, region, sha, args.demo)
 
 
 if __name__ == '__main__':

@@ -419,6 +419,36 @@ duplicate transport keys. Driver `sslmode=disable` is restricted to that local
 socket; Cloud Run's managed Cloud SQL integration authenticates/encrypts the
 remote connection. Never use `APP_ENV=development` to bypass this on GCP.
 
+Service deployment uses `gcloud alpha run deploy` because the explicit
+`--add-volume` type `cloudsql` is exposed on that release track. It declares
+`db-sockets` with the reviewed instance and mounts it only in the API at
+`/cloudsql`. Do not manually mount the reserved volume name `cloudsql` or replace
+the socket with an empty directory. Single-container migration/provision jobs
+retain the GA `--set-cloudsql-instances` integration. See
+[Google's alpha volume flags](https://docs.cloud.google.com/sdk/gcloud/reference/alpha/run/deploy#--add-volume)
+and [reserved v1 volume name](https://docs.cloud.google.com/run/docs/reference/rest/v1/Volume).
+Before live execution, confirm `gcloud alpha run deploy --help` is available in
+Cloud Shell. Alpha flags may change; actual volume creation and API database
+readiness must be verified on GCP. This is a CLI compatibility adjustment within
+DEC-032's existing two-container topology.
+
+Live execution checks the required alpha CLI help before any resource mutations
+or image build. API-enable rate limits (HTTP 429) wait 60–61 seconds before retry,
+with at most five attempts; permanent permission/authentication failures stop.
+Failure messages categorize known quota, IAM, argument-parsing and mount errors
+without printing provider payloads. An existing service without a URL can use the
+bootstrap origin; a missing or invalid URL after deploy stops before public access.
+
+For an optional offline check against an installed official SDK, run:
+
+```bash
+python3 deploy/tests/check_gcloud_sdk.py /path/to/google-cloud-sdk
+```
+
+This parses planned commands and builds service specs using SDK internals, with
+network connections blocked. It does not invoke SDK command execution methods or
+prove server-side acceptance. See the [scoped audit results](ep5-results.md#deployment-only-audit--20-november-2026).
+
 ### 5.0 — Review and validate preparation locally
 
 From the repository root:

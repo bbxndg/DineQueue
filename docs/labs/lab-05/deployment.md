@@ -512,6 +512,12 @@ immediately. Builds, jobs, account creation and secret writes are not retried by
 this wrapper. See [Google's IAM retry guidance](https://docs.cloud.google.com/iam/docs/retry-strategy).
 These local regression checks do not establish that a live deployment succeeded.
 
+The wrapper and dry run place global `--project`, `--quiet` and response-format
+flags before the command arguments. In multi-container deployments, arguments
+after `--container` enter that container's scope; appending global flags there
+can produce `unrecognized arguments` before any service is created. See the
+[Cloud Run CLI container flag rules](https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy#--container).
+
 ### 5.4–5.6 — Verify and collect real evidence
 
 The script configures storage auto-increase off at creation and on safe reruns;

@@ -15,15 +15,64 @@ NAME=f'projects/{PROJECT}/locations/{REGION}/services/dinequeue'
 OP=f'projects/{PROJECT}/locations/{REGION}/operations/test-op'
 
 class RunV2Tests(unittest.TestCase):
+    def test_only_explicit_service_get_not_found_allows_creation(self):
+        missing=json.dumps({'error':{'code':404,'status':'NOT_FOUND','message':'private-canary'}}).encode()
+        token=subprocess.CompletedProcess([],0,stdout=b'private-token-canary',stderr=b'')
+        cases=[('GET',NAME,True,404,missing,True),
+               ('GET',NAME,False,404,missing,False),
+               ('GET',OP,True,404,missing,False),
+               ('POST',NAME,True,404,missing,False),
+               ('PATCH',NAME,True,404,missing,False),
+               ('GET',NAME,True,403,missing,False),
+               ('GET',NAME,True,404,b'<html>Not found</html>',False),
+               ('GET',NAME,True,404,b'{"error":{"code":404,"status":"PERMISSION_DENIED"}}',False)]
+        for method,path,missing_ok,code,payload,absent in cases:
+            error=d.urllib.error.HTTPError('https://run.googleapis.com/v2/'+path,code,'hidden',{},io.BytesIO(payload))
+            with self.subTest(method=method,path=path,code=code,absent=absent),patch.object(d.subprocess,'run',return_value=token),patch.object(d.urllib.request,'build_opener') as opener,contextlib.redirect_stdout(io.StringIO()) as output:
+                opener.return_value.open.side_effect=error
+                if absent:
+                    self.assertIsNone(d.GCloud(PROJECT)._run_v2_request(method,path,missing_ok=missing_ok))
+                else:
+                    with self.assertRaises(d.DeploymentError) as failure:
+                        d.GCloud(PROJECT)._run_v2_request(method,path,missing_ok=missing_ok)
+                    self.assertNotIn('canary',str(failure.exception))
+                self.assertNotIn('canary',output.getvalue())
+
+    def test_discovery_failure_never_attempts_a_mutation(self):
+        g=d.GCloud(PROJECT)
+        with patch.object(g,'_run_v2_request',side_effect=d.DeploymentError('denied')) as request:
+            with self.assertRaises(d.DeploymentError):g.configure_service(self.body())
+        self.assertEqual(request.call_count,1)
+        self.assertEqual(request.call_args.args,('GET',NAME))
+
+    def test_create_conflict_is_not_replayed_or_changed_into_patch(self):
+        g=d.GCloud(PROJECT)
+        with patch.object(g,'_run_v2_request',side_effect=[None,d.DeploymentError('HTTP 409')]) as request,contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(d.DeploymentError):g.configure_service(self.body())
+        self.assertEqual(request.call_count,2)
+        self.assertEqual(request.call_args_list[1].args[0],'POST')
+
+    def test_missing_service_is_created_with_post_not_patch(self):
+        ready={'name':OP,'done':True,'response':{'name':NAME,'terminalCondition':{'state':'CONDITION_SUCCEEDED'}}}
+        g=d.GCloud(PROJECT)
+        with patch.object(g,'_run_v2_request',side_effect=[None,ready]) as request,contextlib.redirect_stdout(io.StringIO()):
+            g.configure_service(self.body())
+        self.assertEqual(request.call_args_list[0].args,('GET',NAME))
+        self.assertEqual(request.call_args_list[0].kwargs,{'missing_ok':True})
+        self.assertEqual(request.call_args_list[1].args[:2],('POST',f'projects/{PROJECT}/locations/{REGION}/services?serviceId=dinequeue'))
+        expected={key:value for key,value in self.body().items() if key!='name'}
+        self.assertEqual(request.call_args_list[1].args[2],expected)
+        self.assertNotIn('name',request.call_args_list[1].args[2])
+
     def body(self):
         return d.service_spec_v2(PROJECT,REGION,PROJECT+':'+REGION+':dinequeue-pg',
                                  {'web':'web-digest','api':'api-digest'},'https://example.test','a'*40)
 
     def test_native_sql_volume_and_api_only_mount_and_secret(self):
         body=self.body();template=body['template'];containers={c['name']:c for c in template['containers']}
-        self.assertEqual(template['volumes'],[{'name':'db-sockets','cloudSqlInstance':{'instances':[PROJECT+':'+REGION+':dinequeue-pg']}}])
+        self.assertEqual(template['volumes'],[{'name':'cloudsql','cloudSqlInstance':{'instances':[PROJECT+':'+REGION+':dinequeue-pg']}}])
         self.assertNotIn('csi',json.dumps(body))
-        self.assertEqual(containers['api']['volumeMounts'],[{'name':'db-sockets','mountPath':'/cloudsql'}])
+        self.assertEqual(containers['api']['volumeMounts'],[{'name':'cloudsql','mountPath':'/cloudsql'}])
         self.assertNotIn('volumeMounts',containers['web'])
         self.assertNotIn('ports',containers['api'])
         self.assertEqual(containers['web']['ports'],[{'containerPort':8080}])
@@ -32,12 +81,13 @@ class RunV2Tests(unittest.TestCase):
         secret=next(e for e in containers['api']['env'] if e['name']=='DATABASE_URL')
         self.assertEqual(secret['valueSource']['secretKeyRef'],{'secret':'dinequeue-database-url','version':'1'})
 
-    def test_upsert_and_wait_for_operation_before_returning(self):
+    def test_existing_service_is_patched_and_operation_is_awaited(self):
         g=d.GCloud(PROJECT)
-        with patch.object(g,'_run_v2_request',side_effect=[{'name':OP},{'name':OP,'done':False},{'name':OP,'done':True,'response':{'name':NAME,'terminalCondition':{'state':'CONDITION_SUCCEEDED'}}}]) as request,patch.object(d.time,'sleep'),contextlib.redirect_stdout(io.StringIO()):
+        with patch.object(g,'_run_v2_request',side_effect=[{'name':NAME},{'name':OP},{'name':OP,'done':False},{'name':OP,'done':True,'response':{'name':NAME,'terminalCondition':{'state':'CONDITION_SUCCEEDED'}}}]) as request,patch.object(d.time,'sleep'),contextlib.redirect_stdout(io.StringIO()):
             g.configure_service(self.body())
-        self.assertEqual(request.call_args_list[0].args[:2],('PATCH',NAME+'?allowMissing=true&updateMask=template%2Clabels%2Cingress%2Ctraffic'))
-        self.assertEqual(request.call_count,3)
+        self.assertEqual(request.call_args_list[1].args[:2],('PATCH',NAME+'?updateMask=template%2Clabels%2Cingress%2Ctraffic'))
+        self.assertEqual(request.call_args_list[1].args[2]['name'],NAME)
+        self.assertEqual(request.call_count,4)
 
     def test_operation_failure_or_unsafe_name_aborts_without_raw_payload(self):
         for response in ({'name':OP,'done':True,'error':{'code':3,'message':'private-canary'}},
@@ -51,7 +101,7 @@ class RunV2Tests(unittest.TestCase):
         g=d.GCloud(PROJECT)
         with patch.object(g,'_run_v2_request',return_value={'name':OP}) as request,patch.object(d.time,'monotonic',side_effect=[0,601]),contextlib.redirect_stdout(io.StringIO()):
             with self.assertRaises(d.DeploymentError):g.configure_service(self.body())
-            self.assertEqual(request.call_count,1)
+            self.assertEqual(request.call_count,2)
 
     def test_preview_performs_no_cli_or_http_request(self):
         with patch.object(d.subprocess,'run',side_effect=AssertionError('CLI called')),patch.object(d.urllib.request,'build_opener',side_effect=AssertionError('HTTP called')),contextlib.redirect_stdout(io.StringIO()) as output:

@@ -145,12 +145,14 @@ class FirstDeployTests(unittest.TestCase):
         d.deploy_service(fake,'asia-southeast1',PROJECT+':asia-southeast1:dinequeue-pg',
                          {'web':'web-digest','api':'api-digest'},'https://example.test',SHA)
         body=json.loads(fake.calls[-1][2])
-        self.assertEqual(body['template']['volumes'],[{'name':'db-sockets','cloudSqlInstance':{'instances':[PROJECT+':asia-southeast1:dinequeue-pg']}}])
+        self.assertEqual(body['template']['volumes'],[{'name':'cloudsql','cloudSqlInstance':{'instances':[PROJECT+':asia-southeast1:dinequeue-pg']}}])
         self.assertNotIn('csi',json.dumps(body))
         with contextlib.redirect_stdout(io.StringIO()) as output:
             d.deploy_service(d.Preview(PROJECT),'asia-southeast1',PROJECT+':asia-southeast1:dinequeue-pg',
                              {'web':'web-digest','api':'api-digest'},'https://example.test',SHA)
-        self.assertEqual(json.loads(output.getvalue().split('\n',1)[1]),body)
+        preview=json.loads(output.getvalue().split('\n',1)[1])
+        self.assertEqual(preview['updateBody'],body)
+        self.assertEqual(preview['createBody'],{key:value for key,value in body.items() if key!='name'})
 
     def test_gcloud_wrapper_keeps_global_flags_before_command_arguments(self):
         with patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout=b'',stderr=b'')) as run,contextlib.redirect_stdout(io.StringIO()):

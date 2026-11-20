@@ -302,3 +302,51 @@ Scope is deployment only; no browser/business-flow tests, Docker builds or live
 cloud mutations were performed for this correction. API v2 server acceptance and
 actual Cloud SQL startup/readiness still require live verification. Do not claim
 deployment success or close Issue #16 based on these local results.
+
+### Explicit service creation after live 404 — 20 November 2026
+
+On main `974980f5b8f907819849c289653f8dc79befd6ce`, the user reported v2 PATCH
+HTTP 404. A separate read-only v2 GET returned the concrete `NOT_FOUND` response:
+service `dinequeue` does not exist in the expected project/region. The prior
+PATCH-with-allowMissing path did not create it in this observed run.
+
+Branch: `fix/lab5-ep5-explicit-service-create`; tests ran on uncommitted changes
+based on that main SHA. Creation now follows `services.create` explicitly:
+GET first, POST `.../services?serviceId=dinequeue` if missing, PATCH only if present.
+Only HTTP 404 with JSON `error.code=404` and `error.status=NOT_FOUND` on the exact
+service discovery request can select creation. Permission, network, malformed
+responses, operation 404s and mutation failures are not treated as missing.
+Create conflicts stop without replay or an implicit change into PATCH.
+
+- New missing-service regression failed against the old implementation
+  (9 v2 tests, one error), then passed after the routing correction.
+- `python3 -m unittest discover -s deploy/tests -p 'test_*.py' -v`: 56/56 PASS
+  (36 first-deployment, 12 v2 transport/spec, 8 existing smoke-tool tests).
+- Real SDK 594.0.0: 54 stable CLI commands parsed and two native service requests
+  round-tripped through the v2 schema; no network or command execution.
+- Dry run and `git diff --check`: PASS.
+
+Deployment only: no app, Dockerfile, CI or business-rule edits/tests. HTTP calls
+are mocked locally. The explicit POST and resulting Cloud SQL startup/readiness
+still require live confirmation after review/merge; no deployment success is claimed.
+
+The user's validation-only POST then returned HTTP 400 stating that the Service
+body's `name` must be empty on CreateServiceRequest. POST now omits this field and
+uses `serviceId`; PATCH retains its fully qualified name. The dry run shows both
+request-body variants. The corrected create-body assertion failed before the fix
+(12 v2 tests, one failure), and the full suite passed afterward (56/56). This
+validation correction has not yet been accepted by a live validation-only POST.
+
+### Native Cloud SQL volume name admission — 20 November 2026
+
+The user's live validation-only POST rejected `db-sockets` with HTTP 400:
+Cloud SQL volume must be named `cloudsql`; this name is reserved for Cloud SQL
+volumes. The native v2 volume and API mount now both use `cloudsql`. This differs
+from the previously rejected generic CLI CSI volume; the volume source remains
+native `cloudSqlInstance`, not a CSI driver.
+
+The corrected assertion failed against the former builder (12 v2 tests, one
+failure). After correcting the builder, all 56 deployment/tool tests passed.
+The offline SDK parser accepted 54 CLI commands and round-tripped two native
+service specs. These local checks do not prove server admission or deployment;
+a corrected live validation-only POST remains pending.

@@ -419,12 +419,16 @@ duplicate transport keys. Driver `sslmode=disable` is restricted to that local
 socket; Cloud Run's managed Cloud SQL integration authenticates/encrypts the
 remote connection. Never use `APP_ENV=development` to bypass this on GCP.
 
-Service deployment uses Cloud Run v2 REST `services.patch` with
-`allowMissing=true`, and a native `cloudSqlInstance` volume named `db-sockets`
+Service deployment uses Cloud Run v2 REST: GET the service, POST to create it
+only after an explicit service-level `404 NOT_FOUND`, or PATCH an existing service
+with an explicit update mask. It does not rely on PATCH `allowMissing` for first
+creation. It uses a native `cloudSqlInstance` volume named `cloudsql`
 mounted only into the API at `/cloudsql`. The earlier alpha CLI path generated a
 CSI driver rejected by the user's live deployment; it is superseded. Do not use
 that driver or replace the database socket with an empty directory. Jobs retain
 the working single-container GA `--set-cloudsql-instances` integration.
+POST omits the Service body's `name` and selects the name via `serviceId`;
+PATCH retains the fully qualified `name` in the body and request path.
 
 The script obtains a short-lived token through the active `gcloud` login and
 captures it only in memory. It sends the service body to the fixed Google API
@@ -435,7 +439,8 @@ secret value is printed. The service update specifies the revision template,
 labels, ingress and latest-revision traffic; it does not change the IAM policy.
 
 References: [native Cloud SQL volume](https://docs.cloud.google.com/run/docs/reference/rest/v2/Volume),
-[create/update with allowMissing](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services/patch),
+[service creation](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services/create),
+[service update](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services/patch),
 and [operation polling](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.operations/get).
 Live execution checks CLI authentication before resource changes/builds.
 API-enable rate limits (HTTP 429) wait 60–61 seconds before retry,

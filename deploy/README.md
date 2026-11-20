@@ -68,6 +68,10 @@ short-lived access token captured in memory; tokens and provider payloads are no
 printed or written. The script waits up to ten minutes for the long-running
 operation and requires a successful service terminal condition before proceeding.
 Other resource, build, job and public-IAM commands remain on the stable CLI.
+The service is discovered with v2 GET first. Only an explicit service-level
+`404 NOT_FOUND` selects `services.create` (POST with `serviceId=dinequeue`).
+Existing services use PATCH with an explicit update mask; discovery errors stop.
+The first deployment no longer depends on PATCH `allowMissing` creating a service.
 
 ## Planned runtime and safety boundaries
 

@@ -180,3 +180,24 @@ Bucket inspection uses the raw Storage API metadata shape, not display aliases.
 No resources, IAM permissions, credentials, Docker images or CI configuration were
 changed by this local recovery work. Cloud Run/Cloud SQL execution still requires
 real validation after the reviewed fixes reach main.
+
+### Cloud Run global flag ordering — 20 November 2026
+
+The user reported that the Cloud Shell deployment rejected trailing `--project`
+and `--quiet` after the API container arguments, and that service discovery found
+no service. The wrapper now places global flags before the command arguments;
+the preview uses the same order.
+
+Branch: `fix/lab5-ep5-gcloud-global-flags`, uncommitted working-tree changes on
+base `97a8f8281ced3c402809316215597fce48a801a1`.
+
+- A new regression test exercises `deploy_service` through the subprocess wrapper,
+  rejects global flags inside container scope, and checks preview/live argv parity.
+  Before the fix: 27 deployment tests ran with one failure in the new test.
+- After the fix: `python3 -m unittest discover -s deploy/tests -p 'test_*.py' -v`
+  — **35/35 PASS** (27 deployment tests and 8 mocked smoke-tool tests).
+- `PROJECT_ID=dinequeue-test SOURCE_SHA=97a8f8281ced3c402809316215597fce48a801a1 DRY_RUN=1 bash deploy/deploy.sh --demo`
+  — PASS, simulation only. `git diff --check` — PASS.
+
+These checks validate command construction with mocked subprocesses. No live SDK
+parser, Cloud Run deployment, new image build or cloud mutation was run locally.

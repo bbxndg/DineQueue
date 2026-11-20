@@ -57,6 +57,29 @@ class FakeGCloud:
 
 
 class FirstDeployTests(unittest.TestCase):
+    def test_multicontainer_deploy_keeps_global_flags_outside_container_scope(self):
+        images = {name: 'registry.example/' + name + '@sha256:' + 'b' * 64
+                  for name in ('api', 'web')}
+        connection = PROJECT + ':asia-southeast1:dinequeue-pg'
+
+        def cli(command, **kwargs):
+            # gcloud scopes every argument after --container to that container.
+            scoped = command[command.index('--container=web'):]
+            self.assertNotIn('--project', scoped)
+            self.assertNotIn('--quiet', scoped)
+            self.assertEqual(command[command.index('--project') + 1], PROJECT)
+            return subprocess.CompletedProcess(command, 0, stdout=b'', stderr=b'')
+
+        with patch.object(d.subprocess, 'run', side_effect=cli) as run, contextlib.redirect_stdout(io.StringIO()):
+            d.deploy_service(d.GCloud(PROJECT), 'asia-southeast1', connection,
+                             images, 'https://example.test', SHA)
+        command = run.call_args.args[0]
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            d.deploy_service(d.Preview(PROJECT), 'asia-southeast1', connection,
+                             images, 'https://example.test', SHA)
+        import shlex
+        self.assertEqual(shlex.split(output.getvalue().strip().removeprefix('[DRY RUN] ')), command)
+
     def run_apply(self, mode='fresh', demo=True):
         fake = FakeGCloud(mode)
         with patch.object(d, 'source_stage'), contextlib.redirect_stdout(io.StringIO()):

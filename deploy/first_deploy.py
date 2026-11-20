@@ -38,7 +38,8 @@ class GCloud:
         print('GCP:', ' '.join(args[:3]))
         # Only repeat IAM binding additions, never builds/jobs/secret writes.
         for attempt in range(5):
-            result = subprocess.run(['gcloud', *args, '--project', self.project, '--quiet'],
+            # Global flags must precede --container, which starts a scoped parser.
+            result = subprocess.run(['gcloud', '--project', self.project, '--quiet', *args],
                                     input=data, capture_output=True)
             if not result.returncode:
                 return result.stdout.decode().strip()
@@ -61,7 +62,7 @@ class GCloud:
         return bool(member and ('Service account ' + member + ' does not exist.').encode() in stderr)
 
     def describe(self, *args):
-        result = subprocess.run(['gcloud', *args, '--project', self.project, '--format=json'], capture_output=True)
+        result = subprocess.run(['gcloud', '--project', self.project, '--format=json', *args], capture_output=True)
         if result.returncode:
             # Storage uses a different 404 message from other gcloud groups.
             # Accept only the exact requested bucket, never an arbitrary 404
@@ -319,14 +320,14 @@ class Preview(GCloud):
         return 'GENERATED_AT_APPLY_ONLY'
 
     def describe(self, *args):
-        print('[DRY RUN]', shlex.join(['gcloud', *args, '--project', self.project, '--format=json']))
+        print('[DRY RUN]', shlex.join(['gcloud', '--project', self.project, '--format=json', *args]))
         if args[:3] == ('run', 'services', 'describe') and self.deployed:
             return {'status': {'url': 'https://dinequeue-preview.example.invalid'}}
         return None
 
     def call(self, *args, data=None):
         redacted = ['--password=<GENERATED_AT_APPLY>' if arg.startswith('--password=') else arg for arg in args]
-        print('[DRY RUN]', shlex.join(['gcloud', *redacted, '--project', self.project, '--quiet']))
+        print('[DRY RUN]', shlex.join(['gcloud', '--project', self.project, '--quiet', *redacted]))
         if data is not None:
             print('[DRY RUN] stdin: generated secret value withheld')
         if args[:3] == ('sql', 'users', 'list'):

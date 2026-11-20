@@ -16,6 +16,8 @@ import subprocess
 import tarfile
 import tempfile
 import time
+import urllib.error
+import urllib.request
 from urllib.parse import urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,15 +35,15 @@ class GCloud:
         return secrets.token_hex(24)
 
     def preflight(self):
-        # Check the required CLI component before IAM changes or an image build.
+        # Check CLI authentication before IAM changes or an image build.
         env = dict(os.environ, CLOUDSDK_PAGER='cat', PAGER='cat')
         try:
-            result = subprocess.run(['gcloud', '--quiet', 'alpha', 'run', 'deploy', '--help'],
+            result = subprocess.run(['gcloud', '--quiet', 'auth', 'print-access-token'],
                                     capture_output=True, env=env, timeout=60)
         except (OSError, subprocess.TimeoutExpired):
-            raise DeploymentError('Required gcloud alpha CLI preflight could not finish; check the local SDK before applying the plan.') from None
-        if result.returncode:
-            raise DeploymentError('Required gcloud alpha run deploy is unavailable; check the installed SDK before applying the plan.')
+            raise DeploymentError('gcloud authentication preflight could not finish; check the active login before applying the plan.') from None
+        if result.returncode or not result.stdout.strip():
+            raise DeploymentError('gcloud authentication failed; check the active login before applying the plan.')
 
     @staticmethod
     def _error_hint(stderr):
@@ -91,6 +93,63 @@ class GCloud:
         member = next((arg.split('serviceAccount:', 1)[1] for arg in args
                        if arg.startswith('--member=serviceAccount:')), None)
         return bool(member and ('Service account ' + member + ' does not exist.').encode() in stderr)
+
+    def _run_v2_request(self, method, path, body=None):
+        # Never export/write/log access tokens. No redirect may forward this header.
+        result = subprocess.run(['gcloud','--quiet','auth','print-access-token'],
+                                capture_output=True, timeout=60)
+        token = result.stdout.decode().strip()
+        if result.returncode or not token or any(c.isspace() for c in token):
+            raise DeploymentError('Cannot obtain Cloud Run API credentials; check the active gcloud login.')
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+        request = urllib.request.Request('https://run.googleapis.com/v2/' + path,
+            method=method, data=json.dumps(body).encode() if body is not None else None,
+            headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
+        try:
+            with urllib.request.build_opener(NoRedirect()).open(request,timeout=30) as response:
+                data = json.loads(response.read(1048576))
+        except urllib.error.HTTPError as error:
+            code = error.code
+            error.close()
+            raise DeploymentError(f'Cloud Run v2 {method} failed (HTTP {code}); request/credential payloads withheld.') from None
+        except (urllib.error.URLError, TimeoutError, ValueError):
+            raise DeploymentError('Cloud Run v2 response unavailable or invalid; inspect service state before retrying.') from None
+        if not isinstance(data,dict):
+            raise DeploymentError('Cloud Run v2 returned an invalid response object.')
+        return data
+
+    def configure_service(self, body):
+        name = body['name']
+        prefix = f'projects/{self.project}/locations/'
+        if not re.fullmatch(re.escape(prefix) + r'[a-z]+-[a-z]+[0-9]/services/dinequeue',name):
+            raise DeploymentError('Invalid Cloud Run v2 target.')
+        print('GCP: Cloud Run v2 PATCH dinequeue; waiting for readiness')
+        query = urlencode({'allowMissing':'true','updateMask':'template,labels,ingress,traffic'})
+        operation = self._run_v2_request('PATCH',name+'?'+query,body)
+        deadline = time.monotonic()+600
+        operation_name = operation.get('name','')
+        # Operation results may use the project number rather than the project ID.
+        location = name.split('/locations/',1)[1].split('/',1)[0]
+        operation_pattern = r'projects/(?:'+re.escape(self.project)+r'|[0-9]+)/locations/'+re.escape(location)+r'/operations/[A-Za-z0-9_.-]+'
+        if not re.fullmatch(operation_pattern,operation_name):
+            raise DeploymentError('Cloud Run v2 returned an invalid operation name.')
+        while True:
+            if 'error' in operation:
+                raise DeploymentError('Cloud Run v2 operation failed; inspect Cloud Run revision conditions or the operation in Console.')
+            if operation.get('done') is True:
+                response = operation.get('response')
+                if not isinstance(response,dict) or not response.get('name'):
+                    raise DeploymentError('Cloud Run v2 operation completed without a service result.')
+                condition = response.get('terminalCondition')
+                if not isinstance(condition,dict) or condition.get('state') != 'CONDITION_SUCCEEDED' or response.get('reconciling'):
+                    raise DeploymentError('Cloud Run v2 service is not ready; inspect revision conditions before granting public access.')
+                return
+            if time.monotonic() >= deadline:
+                raise DeploymentError('Cloud Run v2 readiness wait timed out; inspect the existing operation before retrying.')
+            time.sleep(5)
+            operation = self._run_v2_request('GET',operation_name)
 
     def describe(self, *args):
         result = subprocess.run(['gcloud', '--project', self.project, '--format=json', *args], capture_output=True)
@@ -149,6 +208,7 @@ def plan(project, region, sha, demo):
             'web': {'image': 'web:' + sha, 'ingress_port': 8080, 'api_origin': 'http://127.0.0.1:8081', 'secrets': []},
             'api': {'image': 'api:' + sha, 'port': 8081, 'secrets': ['dinequeue-database-url:1']},
         },
+        'service_api': 'Cloud Run v2; native cloudSqlInstance volume (no alpha CSI driver)',
         'service_identities': ['dinequeue-runtime', 'dinequeue-jobs', 'dinequeue-builder'],
         'images': ['api', 'web', 'db-tools'], 'deploy_by': 'resolved sha256 digest',
         'limits': {'min_instances': 0, 'max_instances': 1, 'concurrency': 10},
@@ -231,24 +291,40 @@ def origin_checked(value):
     return value.rstrip('/')
 
 
+def service_spec_v2(project, region, connection, images, origin, sha):
+    def env(values):
+        return [{'name':key, 'value':value} for key,value in values.items()]
+    def probe(path, port):
+        return {'httpGet':{'path':path,'port':port}, 'periodSeconds':5,
+                'timeoutSeconds':4, 'failureThreshold':24}
+    return {
+        'name':f'projects/{project}/locations/{region}/services/dinequeue',
+        'labels':{'source-sha':sha}, 'ingress':'INGRESS_TRAFFIC_ALL',
+        'traffic':[{'type':'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST','percent':100}],
+        'template':{
+            'labels':{'source-sha':sha}, 'serviceAccount':f'dinequeue-runtime@{project}.iam.gserviceaccount.com',
+            'executionEnvironment':'EXECUTION_ENVIRONMENT_GEN2', 'timeout':'60s',
+            'maxInstanceRequestConcurrency':10,
+            'scaling':{'minInstanceCount':0,'maxInstanceCount':1},
+            'volumes':[{'name':'db-sockets','cloudSqlInstance':{'instances':[connection]}}],
+            'containers':[
+                {'name':'web','image':images['web'],'ports':[{'containerPort':8080}],
+                 'resources':{'limits':{'cpu':'1','memory':'512Mi'}}, 'dependsOn':['api'],
+                 'env':env({'NODE_ENV':'production','API_INTERNAL_URL':'http://127.0.0.1:8081'}),
+                 'startupProbe':probe('/api/health/ready',8080)},
+                {'name':'api','image':images['api'],
+                 'resources':{'limits':{'cpu':'1','memory':'512Mi'}},
+                 'volumeMounts':[{'name':'db-sockets','mountPath':'/cloudsql'}],
+                 'env':env({'APP_ENV':'production','API_PORT':'8081','APP_ORIGIN':origin,'CLOUD_SQL_INSTANCE':connection}) + [
+                     {'name':'DATABASE_URL','valueSource':{'secretKeyRef':{'secret':'dinequeue-database-url','version':'1'}}}],
+                 'startupProbe':probe('/health/ready',8081)},
+            ],
+        },
+    }
+
+
 def deploy_service(g, region, connection, images, origin, sha):
-    # Only web has a container port. The API is a non-public localhost sidecar.
-    # Explicit Cloud SQL volumes for a selected sidecar are exposed by alpha.
-    # The v1 built-in volume name "cloudsql" cannot be manually mounted.
-    g.call('alpha', 'run', 'deploy', 'dinequeue', '--region=' + region,
-           '--service-account=dinequeue-runtime@' + g.project + '.iam.gserviceaccount.com',
-           '--execution-environment=gen2',
-           '--add-volume=name=db-sockets,type=cloudsql,instances=' + connection,
-           '--min-instances=0', '--max-instances=1', '--concurrency=10', '--timeout=60',
-           '--labels=source-sha=' + sha,
-           '--container=web', '--image=' + images['web'], '--port=8080', '--memory=512Mi', '--cpu=1',
-           '--set-env-vars=NODE_ENV=production,API_INTERNAL_URL=http://127.0.0.1:8081',
-           '--depends-on=api', '--startup-probe=httpGet.path=/api/health/ready,httpGet.port=8080,periodSeconds=5,timeoutSeconds=4,failureThreshold=24',
-           '--container=api', '--image=' + images['api'], '--memory=512Mi', '--cpu=1',
-           '--add-volume-mount=volume=db-sockets,mount-path=/cloudsql',
-           '--set-env-vars=APP_ENV=production,API_PORT=8081,APP_ORIGIN=' + origin + ',CLOUD_SQL_INSTANCE=' + connection,
-           '--set-secrets=DATABASE_URL=dinequeue-database-url:1',
-           '--startup-probe=httpGet.path=/health/ready,httpGet.port=8081,periodSeconds=5,timeoutSeconds=4,failureThreshold=24')
+    g.configure_service(service_spec_v2(g.project, region, connection, images, origin, sha))
 
 
 def apply(g, region, sha, demo, stage_source=source_stage):
@@ -359,6 +435,11 @@ class Preview(GCloud):
     preview = True
     deployed = False
 
+    def configure_service(self, body):
+        print('[DRY RUN] Cloud Run v2 PATCH allowMissing=true; native service body:')
+        print(json.dumps(body,indent=2))
+        self.deployed = True
+
     def new_secret(self):
         return 'GENERATED_AT_APPLY_ONLY'
 
@@ -377,8 +458,6 @@ class Preview(GCloud):
             return '[]'
         if args[:3] == ('artifacts', 'docker', 'images'):
             return args[4].rsplit(':', 1)[0] + '@sha256:' + '0' * 64
-        if args[:3] == ('alpha', 'run', 'deploy'):
-            self.deployed = True
         return ''
 
 

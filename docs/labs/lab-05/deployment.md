@@ -497,6 +497,21 @@ resource/job safely in Console before retrying. Do not copy raw debug logs that
 might include credentials. Original cloud scripts under `deploy/reference` are
 historical TokTickIT examples and must not be used as live recovery tools.
 
+Discovery recognizes the exact requested Storage bucket `not found: 404.` and
+Cloud Run `Cannot find service [...]` messages as absent resources. Other
+permission/network failures stop execution. Existing source buckets are inspected
+with `--raw` and must match the expected name and region, enable uniform
+bucket-level access and enforce public access prevention. A mismatch stops before
+bucket IAM changes or source upload; it does not modify or delete the bucket.
+
+IAM binding additions retry at most five attempts for recognized transient
+`INTERNAL`, `UNAVAILABLE`, `ABORTED` errors or a missing service account matching
+the requested member. Retries use exponential backoff with jitter (1–2, 2–3,
+4–5 and 8–9 seconds). Permission/authentication/invalid-argument failures stop
+immediately. Builds, jobs, account creation and secret writes are not retried by
+this wrapper. See [Google's IAM retry guidance](https://docs.cloud.google.com/iam/docs/retry-strategy).
+These local regression checks do not establish that a live deployment succeeded.
+
 ### 5.4–5.6 — Verify and collect real evidence
 
 The script configures storage auto-increase off at creation and on safe reruns;

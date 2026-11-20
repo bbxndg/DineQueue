@@ -35,6 +35,9 @@ class FakeGCloud:
             return {'region':'asia-southeast1', 'databaseVersion':'POSTGRES_18', 'settings': {'tier':'db-f1-micro', 'dataDiskSizeGb':'10', 'ipConfiguration': {'sslMode':'ENCRYPTED_ONLY'}}}
         if args[:3] == ('secrets', 'versions', 'describe'):
             return {'state':'ENABLED'}
+        if args[:3] == ('storage', 'buckets', 'describe') and self.mode == 'rerun':
+            return {'name': PROJECT+'-dinequeue-build', 'location': 'ASIA-SOUTHEAST1',
+                    'iamConfiguration': {'uniformBucketLevelAccess': {'enabled': True}, 'publicAccessPrevention': 'enforced'}}
         if self.mode == 'rerun':
             return {}
         return None
@@ -156,6 +159,24 @@ class FirstDeployTests(unittest.TestCase):
             with patch.object(d.subprocess, 'run', return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=stderr)):
                 self.assertIsNone(d.GCloud(PROJECT).describe('sql','instances','describe','test'))
 
+    def test_storage_bucket_404_is_missing_but_other_failures_still_abort(self):
+        bucket = 'gs://dinequeue-test-dinequeue-build'
+        missing = ('ERROR: (gcloud.storage.buckets.describe) '+bucket+' not found: 404.').encode()
+        with patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=missing+b'\n')):
+            self.assertIsNone(d.GCloud(PROJECT).describe('storage','buckets','describe',bucket,'--raw'))
+        for stderr in (
+            missing.replace(b'404.',b'403.'),
+            missing.replace(bucket.encode(),b'gs://another-bucket'),
+            b'network timeout while requesting a resource: 404',
+            b'PERMISSION_DENIED\n'+missing,
+        ):
+            with self.subTest(stderr=stderr), patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=stderr)):
+                with self.assertRaises(d.DeploymentError):
+                    d.GCloud(PROJECT).describe('storage','buckets','describe',bucket)
+        with patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=missing)):
+            with self.assertRaises(d.DeploymentError):
+                d.GCloud(PROJECT).describe('sql','instances','describe',bucket)
+
     def test_secret_version_must_exist(self):
         f = FakeGCloud('rerun')
         with patch.object(f, 'describe', side_effect=[{}, None]):
@@ -208,6 +229,106 @@ class FirstDeployTests(unittest.TestCase):
             with self.assertRaises(d.DeploymentError):
                 d.secret_value(fake,'dinequeue-demo-host-password',lambda:'never-generated')
         self.assertEqual(fake.calls,[])
+
+
+
+    def test_cloud_run_missing_service_requires_exact_operation_and_name(self):
+        missing = b'ERROR: (gcloud.run.services.describe) Cannot find service [dinequeue]'
+        for stderr, absent in ((missing, True), (missing+b'\n', True),
+                               (missing.replace(b'[dinequeue]', b'[another]'), False),
+                               (b'PERMISSION_DENIED\n'+missing, False),
+                               (b'network timeout', False)):
+            with self.subTest(stderr=stderr), patch.object(d.subprocess, 'run', return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=stderr)):
+                if absent:
+                    self.assertIsNone(d.GCloud(PROJECT).describe('run','services','describe','dinequeue','--region=asia-southeast1'))
+                else:
+                    with self.assertRaises(d.DeploymentError):
+                        d.GCloud(PROJECT).describe('run','services','describe','dinequeue','--region=asia-southeast1')
+        with patch.object(d.subprocess, 'run', return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=missing)):
+            with self.assertRaises(d.DeploymentError):
+                d.GCloud(PROJECT).describe('sql','instances','describe','dinequeue')
+
+    def test_iam_binding_retries_transient_errors_but_not_permanent_denials(self):
+        args = ('projects','add-iam-policy-binding',PROJECT,'--member=serviceAccount:new@example.invalid','--role=roles/cloudsql.client')
+        good = subprocess.CompletedProcess([],0,stdout=b'updated',stderr=b'')
+        for stderr in (b'ERROR: Service account new@example.invalid does not exist.', b'UNAVAILABLE', b'INTERNAL', b'ABORTED'):
+            with self.subTest(stderr=stderr), patch.object(d.subprocess,'run',side_effect=[subprocess.CompletedProcess([],1,stdout=b'',stderr=stderr),good]) as run, patch.object(d.time,'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(d.GCloud(PROJECT).call(*args),'updated')
+                self.assertEqual(run.call_count,2)
+                sleep.assert_called_once()
+        for stderr in (b'PERMISSION_DENIED', b'INVALID_ARGUMENT', b'Service account other@example.invalid does not exist.', b'UNAVAILABLE PERMISSION_DENIED'):
+            with self.subTest(stderr=stderr), patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=stderr)) as run, patch.object(d.time,'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(d.DeploymentError): d.GCloud(PROJECT).call(*args)
+                self.assertEqual(run.call_count,1)
+                sleep.assert_not_called()
+
+    def test_iam_retries_are_bounded_and_do_not_repeat_non_iam_mutations(self):
+        failure = subprocess.CompletedProcess([],1,stdout=b'secret-canary',stderr=b'UNAVAILABLE secret-canary')
+        with patch.object(d.subprocess,'run',return_value=failure) as run, patch.object(d.time,'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()) as output:
+            with self.assertRaises(d.DeploymentError) as error:
+                d.GCloud(PROJECT).call('projects','add-iam-policy-binding',PROJECT)
+            self.assertEqual(run.call_count,5)
+            self.assertEqual(sleep.call_count,4)
+            for call, base in zip(sleep.call_args_list, (1,2,4,8)):
+                self.assertGreaterEqual(call.args[0],base)
+                self.assertLessEqual(call.args[0],base+1)
+            self.assertNotIn('secret-canary',output.getvalue()+str(error.exception))
+        with patch.object(d.subprocess,'run',return_value=failure) as run, patch.object(d.time,'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(d.DeploymentError): d.GCloud(PROJECT).call('secrets','versions','add','test',data=b'secret-canary')
+            self.assertEqual(run.call_count,1)
+            sleep.assert_not_called()
+
+    def test_existing_bucket_mismatch_aborts_before_upload_or_bucket_binding(self):
+        valid = {'name': PROJECT+'-dinequeue-build', 'location':'ASIA-SOUTHEAST1',
+                 'iamConfiguration': {'uniformBucketLevelAccess': {'enabled':True}, 'publicAccessPrevention':'enforced'}}
+        variants = [dict(valid, location='US'), dict(valid, name='another-bucket'), {},
+                    dict(valid, iamConfiguration={'uniformBucketLevelAccess':{'enabled':False}, 'publicAccessPrevention':'enforced'}),
+                    dict(valid, iamConfiguration={'uniformBucketLevelAccess':{'enabled':True}, 'publicAccessPrevention':'inherited'})]
+        for metadata in variants:
+            fake = FakeGCloud('rerun')
+            original = fake.describe
+            def describe(*args):
+                if args[:3] == ('storage','buckets','describe'): return metadata
+                return original(*args)
+            with self.subTest(metadata=metadata), patch.object(fake,'describe',side_effect=describe), contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(d.DeploymentError):
+                    d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
+            self.assertFalse(any(a[:2] == ('builds','submit') or a[:3] == ('storage','buckets','add-iam-policy-binding') for _,a,_ in fake.calls))
+
+
+    def test_failed_provision_does_not_update_service_or_grant_public_access(self):
+        fake=FakeGCloud();original=fake.call
+        def call(*args,**kwargs):
+            if args[:4]==('run','jobs','execute','dinequeue-provision-demo'):
+                raise d.DeploymentError('provision fixture failure')
+            return original(*args,**kwargs)
+        with patch.object(fake,'call',side_effect=call),self.assertRaises(d.DeploymentError):d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
+        self.assertFalse(any(args[:2]==('run','deploy') or '--member=allUsers' in args for _,args,_ in fake.calls))
+
+    def test_build_failure_stops_before_migration(self):
+        fake=FakeGCloud();original=fake.call
+        def call(*args,**kwargs):
+            if args[:2]==('builds','submit'):raise d.DeploymentError('build fixture failure')
+            return original(*args,**kwargs)
+        with patch.object(fake,'call',side_effect=call),self.assertRaises(d.DeploymentError):d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
+        self.assertFalse(any(args[:2]==('run','jobs') for _,args,_ in fake.calls))
+
+    def test_wrong_repository_digest_stops_before_migration(self):
+        fake=FakeGCloud();original=fake.call
+        def call(*args,**kwargs):
+            if args[:3]==('artifacts','docker','images'):return 'other.example/image@sha256:'+'b'*64
+            return original(*args,**kwargs)
+        with patch.object(fake,'call',side_effect=call),self.assertRaises(d.DeploymentError):d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
+        self.assertFalse(any(args[:2]==('run','jobs') for _,args,_ in fake.calls))
+
+    def test_public_iam_failure_does_not_report_completed_deployment(self):
+        fake=FakeGCloud();original=fake.call
+        def call(*args,**kwargs):
+            if '--member=allUsers' in args:raise d.DeploymentError('public policy fixture failure')
+            return original(*args,**kwargs)
+        with patch.object(fake,'call',side_effect=call),contextlib.redirect_stdout(io.StringIO()) as output:
+            with self.assertRaises(d.DeploymentError):d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
+        self.assertNotIn('Deployment command completed',output.getvalue())
 
 
 if __name__ == '__main__': unittest.main()

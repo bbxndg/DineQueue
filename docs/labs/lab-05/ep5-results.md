@@ -201,3 +201,71 @@ base `97a8f8281ced3c402809316215597fce48a801a1`.
 
 These checks validate command construction with mocked subprocesses. No live SDK
 parser, Cloud Run deployment, new image build or cloud mutation was run locally.
+
+### Reserved Cloud SQL mount recovery — 20 November 2026
+
+The user reported the live API rejection:
+`VolumeMount name 'cloudsql' is reserved`. The service command now declares an
+explicit Cloud SQL volume `db-sockets` and mounts it into the API at `/cloudsql`
+using the documented `gcloud alpha run deploy` volume flags. It does not combine
+the custom volume with the legacy service annotation. Jobs retain their existing
+single-container built-in connection configuration.
+
+Branch: `fix/lab5-ep5-cloudsql-volume`, tested working-tree changes on base
+`c21982612f21113f2c2960a7e03ed4387198dde4` (not a commit identifying this fix).
+
+- New reserved-name/explicit-instance/container-scope regression: failed against
+  the old command (28 deployment tests, one failure).
+- `python3 -m unittest discover -s deploy/tests -p 'test_*.py' -v` — **36/36 PASS**
+  after the fix (28 deployment tests, 8 mocked smoke-tool tests).
+- `PROJECT_ID=dinequeue-test SOURCE_SHA=c21982612f21113f2c2960a7e03ed4387198dde4 DRY_RUN=1 bash deploy/deploy.sh --demo`
+  — PASS, simulation only. `git diff --check` — PASS.
+
+The local checks validate command construction and failure ordering with mocked
+responses. The alpha SDK parser, real volume mount, startup/readiness and public
+HTTPS journey remain unverified on GCP. No Docker image or cloud resource was
+changed locally during this recovery.
+
+### Deployment-only audit — 20 November 2026
+
+Scope narrowed to making deployment succeed: CLI argument handling, Cloud SQL
+mount, container startup/readiness, bootstrap URL and deployment recovery. No
+application, business-rule, Dockerfile or CI changes. The exploratory changes to
+`deploy/smoke_test.py` and its tests were removed from the working tree.
+
+Tested working tree: `fix/lab5-ep5-cloudsql-volume`, based on
+`c21982612f21113f2c2960a7e03ed4387198dde4`. The base SHA does not identify these
+uncommitted fixes. In addition to the volume correction above:
+
+- Check alpha CLI availability before resource mutation/build, with a 60-second
+  preflight timeout and a fixed diagnostic if the SDK is absent or unavailable.
+- Retry API-enable HTTP 429 failures after 60–61 seconds, at most five attempts.
+  Do not retry permanent denials or unrelated secret writes/jobs/builds.
+- Report fixed error categories without provider payloads; reject ambiguous
+  discovery responses mixing not-found with denial/network failures, or a
+  non-object JSON response.
+- Permit bootstrap when an existing service has no URL; stop before granting
+  public access if a deploy still returns no valid HTTPS URL.
+
+Validation of the narrowed working tree:
+
+| Check | Result and limit |
+|---|---|
+| `python3 -m unittest discover -s deploy/tests -p 'test_*.py' -v` | 44/44 PASS: 36 deployment tests plus 8 unchanged smoke-tool tests, with mocked cloud responses |
+| `python3 deploy/tests/check_gcloud_sdk.py /tmp/dinequeue-deploy-audit/sdk-source` | SDK 594.0.0 parsed 56 planned fresh-deployment commands; SDK configuration transforms built both bootstrap/exact-origin service specs; no command Run method or cloud connection |
+| Real installed SDK `GCloud.preflight()` | PASS, alpha CLI help only, isolated SDK config |
+| Dry run with project `dinequeue-test`, region `asia-southeast1`, source SHA equal to the base above | PASS, simulation only |
+| Existing production API/web images using shared localhost and a disposable local PostgreSQL Unix socket | Startup/readiness passed; readiness returned 503 with DB stopped and recovered to 200 after DB restart. Local socket verification does not emulate Cloud Run's managed CSI driver |
+| `bash -n` on deploy/release/teardown entrypoints and `git diff --check` | PASS |
+
+SDK core, dependencies, alpha and Unix wrapper archives were downloaded from
+Google's official component manifest and SHA-256 verified before use. The SDK
+audit uses isolated configuration and blocked socket connections; it does not
+exercise Cloud Run admission, regional feature availability, IAM or live quotas.
+The prior local runtime audit used existing image IDs, not newly built images.
+Disposable local audit containers/socket volume/network/private credentials were
+removed; developer dev/EP3 resources were excluded.
+
+Cloud Run server-side acceptance and actual cloud startup/readiness remain pending
+after the fixes reach reviewed main. This audit does not claim a successful GCP
+deployment, real managed socket connection, or approval to close Issue #16.

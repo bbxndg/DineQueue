@@ -51,12 +51,107 @@ class FakeGCloud:
             return image.rsplit(':', 1)[0] + '@sha256:' + 'b' * 64
         if args[:3] == ('run', 'jobs', 'execute') and self.mode == 'migration-fail':
             raise d.DeploymentError('synthetic migration failure')
-        if args[:2] == ('run', 'deploy'):
+        if args[:3] == ('alpha', 'run', 'deploy'):
             self.deployed = True
         return ''
 
 
 class FirstDeployTests(unittest.TestCase):
+    def test_cli_preflight_is_bounded_and_rejects_missing_component_or_timeout(self):
+        for result in (subprocess.CompletedProcess([],1,stdout=b'',stderr=b'private-canary'),
+                       FileNotFoundError('private-canary'), subprocess.TimeoutExpired('private-canary',60)):
+            kwargs = {'side_effect':result} if isinstance(result,Exception) else {'return_value':result}
+            with self.subTest(result=type(result).__name__), patch.object(d.subprocess,'run',**kwargs):
+                with self.assertRaises(d.DeploymentError) as error: d.GCloud(PROJECT).preflight()
+                self.assertNotIn('private-canary',str(error.exception))
+        with patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout=b'help',stderr=b'')) as run:
+            d.GCloud(PROJECT).preflight()
+            self.assertEqual(run.call_args.kwargs['timeout'],60)
+            self.assertEqual(run.call_args.args[0],['gcloud','--quiet','alpha','run','deploy','--help'])
+
+    def test_exhausted_api_quota_is_bounded_and_permanent_denials_stop(self):
+        failure = subprocess.CompletedProcess([],1,stdout=b'',stderr=b'429 RESOURCE_EXHAUSTED private-canary')
+        with patch.object(d.subprocess,'run',return_value=failure) as run, patch.object(d.time,'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(d.DeploymentError,'Quota/rate limit') as error:
+                d.GCloud(PROJECT).call('services','enable','run.googleapis.com')
+            self.assertEqual(run.call_count,5)
+            self.assertEqual(sleep.call_count,4)
+            self.assertNotIn('private-canary',str(error.exception))
+        for stderr in (b'403', b'429 PERMISSION_DENIED', b'429 403'):
+            with self.subTest(stderr=stderr), patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=stderr)) as run, patch.object(d.time,'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(d.DeploymentError): d.GCloud(PROJECT).call('services','enable','run.googleapis.com')
+                self.assertEqual(run.call_count,1)
+                sleep.assert_not_called()
+
+    def test_discovery_requires_resource_object(self):
+        for payload in (b'[]', b'null', b'"unexpected"', b'not-json'):
+            with self.subTest(payload=payload), patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout=payload,stderr=b'')):
+                with self.assertRaises(d.DeploymentError): d.GCloud(PROJECT).describe('sql','instances','describe','test')
+
+    def test_live_preflight_failure_stops_before_resource_mutation(self):
+        env = {'PROJECT_ID':PROJECT, 'SOURCE_SHA':SHA,
+               'CONFIRM_PROJECT':PROJECT, 'ALLOW_PUBLIC_SERVICE':'true'}
+        with patch.object(d,'verify_source'), patch.object(d.GCloud,'preflight',create=True,side_effect=d.DeploymentError('CLI unavailable')), patch.object(d,'apply') as apply:
+            with self.assertRaises(d.DeploymentError): d.main(['--apply'],env)
+            apply.assert_not_called()
+
+    def test_api_enable_rate_limit_is_retried_without_leaking_error_payload(self):
+        failure = subprocess.CompletedProcess([],1,stdout=b'',stderr=b'429 RESOURCE_EXHAUSTED private-canary')
+        success = subprocess.CompletedProcess([],0,stdout=b'',stderr=b'')
+        with patch.object(d.subprocess,'run',side_effect=[failure,success]) as run, patch.object(d.time,'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()) as output:
+            d.GCloud(PROJECT).call('services','enable','run.googleapis.com')
+            self.assertEqual(run.call_count,2)
+            self.assertGreaterEqual(sleep.call_args.args[0],60)
+            self.assertNotIn('private-canary',output.getvalue())
+
+    def test_discovery_mixed_not_found_and_denial_is_not_missing(self):
+        for stderr in (b'NOT_FOUND PERMISSION_DENIED', b'HTTPError 404 network timeout', b'NOT_FOUND UNAVAILABLE'):
+            with self.subTest(stderr=stderr), patch.object(d.subprocess,'run',return_value=subprocess.CompletedProcess([],1,stdout=b'',stderr=stderr)):
+                with self.assertRaises(d.DeploymentError): d.GCloud(PROJECT).describe('sql','instances','describe','test')
+
+    def test_existing_service_without_url_can_bootstrap_and_then_set_real_origin(self):
+        fake = FakeGCloud('rerun')
+        original = fake.describe
+        def describe(*args):
+            if args[:3] == ('run','services','describe') and not fake.deployed:
+                return {'status': {'conditions': []}}
+            return original(*args)
+        with patch.object(fake,'describe',side_effect=describe), contextlib.redirect_stdout(io.StringIO()):
+            d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
+        deployments = [a for _,a,_ in fake.calls if a[:3] == ('alpha','run','deploy')]
+        self.assertEqual(len(deployments),2)
+        self.assertTrue(any('APP_ORIGIN=https://not-yet-public.invalid' in a for a in deployments[0]))
+        self.assertTrue(any('APP_ORIGIN=https://dinequeue.example.test' in a for a in deployments[1]))
+
+    def test_missing_post_deploy_url_stops_before_public_access_or_completion(self):
+        for response in (None, {}, {'status':{}}, {'status':{'url':'http://invalid.example'}}):
+            fake = FakeGCloud()
+            original = fake.describe
+            def describe(*args):
+                if args[:3] == ('run','services','describe') and fake.deployed:
+                    return response
+                return original(*args)
+            with self.subTest(response=response), patch.object(fake,'describe',side_effect=describe), contextlib.redirect_stdout(io.StringIO()) as output:
+                with self.assertRaises(d.DeploymentError):
+                    d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
+                self.assertFalse(any('--member=allUsers' in a for _,a,_ in fake.calls))
+                self.assertNotIn('Deployment command completed',output.getvalue())
+
+    def test_service_uses_explicit_cloudsql_volume_without_reserved_name(self):
+        fake = FakeGCloud()
+        connection = PROJECT + ':asia-southeast1:dinequeue-pg'
+        images = {'web': 'web-digest', 'api': 'api-digest'}
+        d.deploy_service(fake, 'asia-southeast1', connection, images,
+                         'https://example.test', SHA)
+        args = fake.calls[-1][1]
+        self.assertEqual(args[:4], ('alpha', 'run', 'deploy', 'dinequeue'))
+        volume = '--add-volume=name=db-sockets,type=cloudsql,instances=' + connection
+        self.assertIn(volume, args[:args.index('--container=web')])
+        api_args = args[args.index('--container=api'):]
+        self.assertIn('--add-volume-mount=volume=db-sockets,mount-path=/cloudsql', api_args)
+        self.assertFalse(any('volume=cloudsql,' in arg for arg in args))
+        self.assertFalse(any(arg.startswith('--set-cloudsql-instances=') for arg in args))
+
     def test_multicontainer_deploy_keeps_global_flags_outside_container_scope(self):
         images = {name: 'registry.example/' + name + '@sha256:' + 'b' * 64
                   for name in ('api', 'web')}
@@ -108,16 +203,16 @@ class FirstDeployTests(unittest.TestCase):
         f = self.run_apply()
         calls = [args for kind,args,_ in f.calls if kind=='call']
         migration = next(i for i,a in enumerate(calls) if a[:4]==('run','jobs','execute','dinequeue-migrate'))
-        deployment = next(i for i,a in enumerate(calls) if a[:2]==('run','deploy'))
+        deployment = next(i for i,a in enumerate(calls) if a[:3]==('alpha','run','deploy'))
         public = next(i for i,a in enumerate(calls) if '--member=allUsers' in a)
         self.assertLess(migration, deployment)
         self.assertLess(deployment, public)
         self.assertTrue(any('--wait' in a for a in calls if a[:3]==('run','jobs','execute')))
         for a in calls:
-            if a[:2]==('run','deploy'):
+            if a[:3]==('alpha','run','deploy'):
                 self.assertIn('--container=api', a)
                 self.assertIn('--depends-on=api', a)
-                self.assertIn('--add-volume-mount=volume=cloudsql,mount-path=/cloudsql', a)
+                self.assertIn('--add-volume-mount=volume=db-sockets,mount-path=/cloudsql', a)
                 self.assertTrue(any('API_PORT=8081' in x for x in a))
                 self.assertFalse(any('PORT=8081' in x and 'API_PORT=8081' not in x for x in a))
                 self.assertIn('--port=8080', a)
@@ -129,7 +224,7 @@ class FirstDeployTests(unittest.TestCase):
             if '--role=roles/secretmanager.secretAccessor' in args:
                 self.assertEqual(args[:2], ('secrets','add-iam-policy-binding'))
                 if 'dinequeue-runtime@' in ' '.join(args): self.assertEqual(args[2], 'dinequeue-database-url')
-            if args[:2]==('run','deploy'):
+            if args[:3]==('alpha','run','deploy'):
                 before_api = args[:args.index('--container=api')]
                 self.assertFalse(any('set-secrets' in x for x in before_api))
                 self.assertFalse(any('DEMO_' in x for x in args))
@@ -138,7 +233,7 @@ class FirstDeployTests(unittest.TestCase):
         f = FakeGCloud('migration-fail')
         with patch.object(d, 'source_stage'), self.assertRaises(d.DeploymentError):
             d.apply(f, 'asia-southeast1', SHA, True, stage_source=lambda *_: None)
-        self.assertFalse(any(a[:2]==('run','deploy') or '--member=allUsers' in a for _,a,_ in f.calls))
+        self.assertFalse(any(a[:3]==('alpha','run','deploy') or '--member=allUsers' in a for _,a,_ in f.calls))
 
     def test_partial_credentials_never_reset_password_or_continue(self):
         f = FakeGCloud('partial')
@@ -326,7 +421,7 @@ class FirstDeployTests(unittest.TestCase):
                 raise d.DeploymentError('provision fixture failure')
             return original(*args,**kwargs)
         with patch.object(fake,'call',side_effect=call),self.assertRaises(d.DeploymentError):d.apply(fake,'asia-southeast1',SHA,True,stage_source=lambda *_:None)
-        self.assertFalse(any(args[:2]==('run','deploy') or '--member=allUsers' in args for _,args,_ in fake.calls))
+        self.assertFalse(any(args[:3]==('alpha','run','deploy') or '--member=allUsers' in args for _,args,_ in fake.calls))
 
     def test_build_failure_stops_before_migration(self):
         fake=FakeGCloud();original=fake.call

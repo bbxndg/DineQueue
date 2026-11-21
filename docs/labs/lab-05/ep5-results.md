@@ -1,11 +1,18 @@
-# EP5 preparation — actual local verification
+# EP5 — local preparation and actual cloud verification
 
 Date: 18 November 2026 (Asia/Bangkok). Tracking: Issue #16.
 Branch: `feat/lab5-ep5-first-gcp-deployment`.
 
-**Local preparation passed. GCP resources, Cloud Build, Cloud Run deployment,
-Cloud SQL connectivity/IAM and live smoke tests have NOT been executed.**
-Do not close Issue #16 based on this report.
+**Updated 20 November 2026:** the user supplied a successful real GCP deployment
+and four-endpoint public smoke output for main
+`7269e9ed28b10293a80f6f2c58c9c8a64937da99`, then reported that the manual browser
+journey passed. See [cloud verification and evidence inventory](ep5-cloud-results.md).
+The user has updated Issue #16; confirm its acceptance/evidence before closure.
+
+The sections below preserve the **18 November local preparation** and subsequent
+fix history. Their NOT RUN/PENDING statements describe those historical snapshots;
+they do not override the separately dated cloud results. EP6/EP7 authentication
+and automated releases, and EP8 restart/redeploy proof, remain separate work.
 
 ## Tested snapshot
 

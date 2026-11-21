@@ -3,7 +3,8 @@
 Tracking: [Issue #18](https://github.com/bbxndg/DineQueue/issues/18).
 Preparation branch: `feat/lab5-ep7-auto-deploy`, from `gcp-staging` `8916397`.
 See [contract](ep7-contract.md) and [local verification](ep7-results.md).
-Remote authentication and deployment are NOT RUN by this local preparation.
+Release A authentication/deployment passed in Actions attempt 2; see the results
+for evidence and limits. Release B repeatability and EP8 checks remain pending.
 
 ## 7.1–7.2 — DineQueue mapping
 

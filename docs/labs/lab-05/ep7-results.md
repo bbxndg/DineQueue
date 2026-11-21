@@ -6,8 +6,8 @@ Pre-implementation contract commit: `add7384`.
 The deployment suite (77 tests), CI helpers (7 tests) and actionlint were rerun
 on implementation/workflow commit `8e2e43002e4467f5e62c83a1d00a6d8af82d1bd1`.
 The other offline checks below were performed on the same script content before
-that commit. This record is a later documentation-only change; it does not claim
-a hosted Actions run or a deployed release. See [runbook](ep7-runbook.md).
+that commit. The initial local record was a documentation-only change; subsequent
+live release A evidence is recorded separately below. See [runbook](ep7-runbook.md).
 
 ## Implemented scope
 
@@ -50,21 +50,73 @@ credential-file rejection and cleanup. They perform no real image builds.
 No new Go, web or browser regression run is claimed here: their source is
 unchanged and the actual main pipeline must run the reused CI before deployment.
 
-## Live evidence still required
+## Actual pipeline release A
 
-- Hosted PR CI and teammate review of the final committed snapshot.
-- First main pipeline release A: real WIF authentication, registry pushes,
-  migration execution, ready Cloud Run revision and passing public smoke.
-- Run/PR URLs, full A SHA, digest/revision/traffic evidence from Console.
-- Separate small visible-change release B after A succeeds, demonstrating a
-  second automatic deployment without a manual deploy command.
-- Keep both full image SHAs for EP8 rollback/roll-forward and persistence proof.
+Verified through read-only GitHub Actions metadata and deployment-job logs on
+21 November 2026. The user separately reports completing the GCP Console
+comparison in 7.6 and opening the public URL; those Console/browser checks were
+not executed by the agent.
 
-Optional authenticated scripted smoke remains SKIP unless both inputs are
-configured; previous EP5 manual browser evidence is not a new pipeline test.
-Issue #18 stays open pending actual release/evidence acceptance. Its older
-staging-deployment wording differs from the course/EP6 main-only scope used here;
-no second cloud environment or additional WIF permissions were created.
+- Feature PR: [#37](https://github.com/bbxndg/DineQueue/pull/37).
+- Release PR: [#38](https://github.com/bbxndg/DineQueue/pull/38).
+- Release A SHA: `65c7a496127e8d04615162c85c7dffb0ea9babdd`.
+- [Deploy demo run 44902787482, attempt 2](https://github.com/bbxndg/DineQueue/actions/runs/44902787482/attempts/2)
+  completed successfully. [CI job](https://github.com/bbxndg/DineQueue/actions/runs/44902787482/job/136848001553)
+  and [deploy job](https://github.com/bbxndg/DineQueue/actions/runs/44902787482/job/136849243077)
+  both passed.
+- Deploy job confirms WIF authentication, all three image builds/pushes,
+  migration/deployment and public smoke success.
+- URL: `https://dinequeue-zdfotp22gq-as.a.run.app`.
+- Ready revision: `dinequeue-00003-qwp`.
+- Registry prefix: `asia-southeast1-docker.pkg.dev/cpe334-dinequeue-514914/dinequeue`.
 
-EP5's deployed SHA remains `7269e9ed28b10293a80f6f2c58c9c8a64937da99`.
-Local preparation does not replace that deployment evidence with a feature SHA.
+| Image | Resolved digest from the release output |
+|---|---|
+| api | `sha256:c1ddb68a2ccb998f8e49ffb3e65e9eaf1abfd1694b40d978ce25adc3fb3f79c6` |
+| web | `sha256:e8655a7e54dd576818780f352148e8d40085fc9ce3b3aeb0ce03f41a676ce8af` |
+| db-tools | `sha256:b643383214de9477cf04c4b9b311b0c802465a723f8d96c8ee6bd57b0cc7960d` |
+
+The deploy log reports PASS for `/api/health/live`, `/api/health/ready`, `/login`
+and anonymous `/api/v1/auth/me`. Authenticated smoke is SKIP, as deliberately
+chosen for optional 7.3; no automated Host/Customer journey is claimed.
+
+Attempt 1 is retained as failure evidence: WIF and image builds passed, but the
+first registry push was denied `artifactregistry.repositories.uploadArtifacts`.
+Migration/deploy/smoke were skipped. After the repository-permission walkthrough,
+the owner reran the same workflow; attempt 2 succeeded without a source change.
+
+## 7.7 release B preparation and remaining evidence
+
+Staging is fast-forwarded to A before creating `feat/lab5-ep7-deploy-proof`.
+The pre-implementation proof contract is in [the contract](ep7-contract.md).
+The login introduction changes from `Sign in to your restaurant waitlist account.`
+to `Sign in to join the waitlist or manage your restaurant queue.` Signed-out
+visitors can use this sentence to distinguish B from A at `/login`.
+
+Proof source commit: `2a2c451d7d2ad890255916f337e5234fa9149fd4` (the same
+one-line source change was checked in the working tree before committing).
+
+| Local proof command | Actual result |
+|---|---|
+| `npm test` | PASS; local runner reports 1 passing test-file entry, no failures |
+| `npm run lint` | PASS, exit 0 |
+| `npm run typecheck` | PASS, exit 0 |
+| `npm run build` | Local verification blocked: two attempts failed with `Could not parse output from TypeScript's --showConfig.` A retry outside the sandbox made no further progress and was interrupted (exit 130); no build PASS is claimed |
+| `git diff --check` | PASS |
+
+The local diagnostic ran TypeScript `--showConfig` directly and parsed valid JSON.
+The same CLI launched with Node `child_process.spawn` returned exit 0 with zero
+stdout/stderr bytes, reproducing the missing output that prevents Next's JSON
+parse. No source/dependency/configuration workaround was made. Hosted PR CI must
+verify the proof build before merge; release A's earlier passing build does not
+establish that this proof commit passed.
+
+Hosted proof/release PR CI, review, release B pipeline, full B SHA, Console
+comparison and public visible-change verification are still pending. Preserve
+A and B for the separate EP8 persistence/rollback walkthrough; Issue #18 stays
+open until B and evidence acceptance are complete.
+
+Issue #18's older staging-deployment wording differs from the course/EP6 main-only
+scope used here; no second cloud environment is created. EP5's historical SHA
+remains `7269e9ed28b10293a80f6f2c58c9c8a64937da99`; A above is the subsequent
+pipeline release, not a replacement of that historical evidence.

@@ -593,3 +593,16 @@ Official references: [Cloud Run containers](https://docs.cloud.google.com/run/do
 [deployment flags](https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy),
 [Cloud SQL from Cloud Run](https://docs.cloud.google.com/sql/docs/postgres/connect-run),
 [Cloud SQL supported versions](https://docs.cloud.google.com/sql/docs/postgres/db-versions).
+
+## Episode 6 — GitHub identity and merge gates
+
+Tracking: [Issue #17](https://github.com/bbxndg/DineQueue/issues/17).
+Branch: `feat/lab5-ep6-identity-merge-gates`.
+See [the EP6 contract](ep6-contract.md) and [Console/GitHub runbook](ep6-runbook.md).
+Status updated 21 November 2026: [EP6 evidence](ep6-results.md) records the
+main-only ruleset, restricted environment and failed required-check proof (PR #35,
+closed without merge). IAM/WIF configuration is user-reported; real WIF success/
+denial remains NOT RUN until EP7. Issue #17 is already closed by its owner.
+The deferred EP5 cloud-evidence update is included in this branch. Integrate this
+PR into `gcp-staging`; release to main together with EP7, per user instruction.
+No EP7 workflow, CI, app or Docker change is included.

@@ -606,3 +606,14 @@ denial remains NOT RUN until EP7. Issue #17 is already closed by its owner.
 The deferred EP5 cloud-evidence update is included in this branch. Integrate this
 PR into `gcp-staging`; release to main together with EP7, per user instruction.
 No EP7 workflow, CI, app or Docker change is included.
+
+
+## Episode 7 — automated main releases
+
+Tracking: [Issue #18](https://github.com/bbxndg/DineQueue/issues/18). Branch:
+`feat/lab5-ep7-auto-deploy`, from staging merge `8916397` (EP6 PR #36).
+See [contract](ep7-contract.md), [runbook](ep7-runbook.md) and [local results](ep7-results.md).
+The workflow uses the course's main-only `demo` deployment. Staging remains the
+reviewed integration path; no additional staging cloud service/environment is
+provisioned despite Issue #18's earlier wording. Live WIF, first/second automatic
+release and EP8 rollback/persistence results must be recorded after execution.

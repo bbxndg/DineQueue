@@ -394,7 +394,11 @@ Copy the PR URL from the pull request page. Open the `test-and-docker` check, th
 
 Tracking: [Issue #16](https://github.com/bbxndg/DineQueue/issues/16), branch
 `feat/lab5-ep5-first-gcp-deployment`, [contract](ep5-contract.md), DEC-032.
-**Status: local preparation verified; see [actual local results and pending cloud gates](ep5-results.md). No GCP resource creation or deployment is claimed.**
+**Status updated 20 November 2026:** real deployment and public smoke passed on
+main `7269e9ed28b10293a80f6f2c58c9c8a64937da99` from user-supplied output; the
+user also reports successful manual browser verification. See
+[EP5 cloud evidence](ep5-cloud-results.md) and [historical preparation](ep5-results.md).
+EP6 authentication/gates, EP7 automation and EP8 persistence proof remain pending.
 
 ### Selected topology and difference from the course example
 

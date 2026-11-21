@@ -11,3 +11,5 @@
 docs
 **/__pycache__
 **/*.pyc
+# Never send temporary WIF credentials to the Docker daemon/build context.
+**/gha-creds-*.json

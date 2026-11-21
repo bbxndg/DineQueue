@@ -67,3 +67,26 @@ and a second visible-change release both pass and match Cloud Run/registry/jobs.
 §7.7's visible change is a separate proof branch after first live success.
 EP8 persistence/rollback execution remains separate, though the pipeline must
 support existing-image dispatch from the start.
+
+## 7.7 visible-change proof contract
+
+Recorded before the copy change on 21 November 2026. Release A is main
+`65c7a496127e8d04615162c85c7dffb0ea9babdd`; Actions run `44902787482`, attempt 2,
+completed successfully. The user reports completing the Console comparison and
+opening the public URL. Staging is fast-forwarded to A before creating
+`feat/lab5-ep7-deploy-proof`.
+
+Change only the login-page introductory sentence from
+`Sign in to your restaurant waitlist account.` to
+`Sign in to join the waitlist or manage your restaurant queue.`
+The new text must be visible to a signed-out visitor at `/login` after release B.
+Authentication, queue rules, styles, Dockerfiles and CI/deploy configuration are
+outside this change. Run existing web unit tests, lint, build and typecheck;
+record their actual results and tested source commit. No extra assertion that
+merely compares this sentence is needed.
+
+Use reviewed proof PR into staging, then reviewed release PR into main. B must
+start through the existing push workflow, complete successfully, match the
+revision/digests in Console and display the new sentence after a hard refresh.
+Until those live checks happen, B is pending and Issue #18 stays open. Preserve
+the full A and B SHAs for the separate EP8 persistence/rollback walkthrough.

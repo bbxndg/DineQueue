@@ -10,3 +10,5 @@ bin/
 .aws
 __pycache__/
 *.py[cod]
+# Temporary credentials created by google-github-actions/auth.
+gha-creds-*.json

@@ -394,7 +394,11 @@ Copy the PR URL from the pull request page. Open the `test-and-docker` check, th
 
 Tracking: [Issue #16](https://github.com/bbxndg/DineQueue/issues/16), branch
 `feat/lab5-ep5-first-gcp-deployment`, [contract](ep5-contract.md), DEC-032.
-**Status: local preparation verified; see [actual local results and pending cloud gates](ep5-results.md). No GCP resource creation or deployment is claimed.**
+**Status updated 20 November 2026:** real deployment and public smoke passed on
+main `7269e9ed28b10293a80f6f2c58c9c8a64937da99` from user-supplied output; the
+user also reports successful manual browser verification. See
+[EP5 cloud evidence](ep5-cloud-results.md) and [historical preparation](ep5-results.md).
+EP6 authentication/gates, EP7 automation and EP8 persistence proof remain pending.
 
 ### Selected topology and difference from the course example
 
@@ -589,3 +593,27 @@ Official references: [Cloud Run containers](https://docs.cloud.google.com/run/do
 [deployment flags](https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy),
 [Cloud SQL from Cloud Run](https://docs.cloud.google.com/sql/docs/postgres/connect-run),
 [Cloud SQL supported versions](https://docs.cloud.google.com/sql/docs/postgres/db-versions).
+
+## Episode 6 — GitHub identity and merge gates
+
+Tracking: [Issue #17](https://github.com/bbxndg/DineQueue/issues/17).
+Branch: `feat/lab5-ep6-identity-merge-gates`.
+See [the EP6 contract](ep6-contract.md) and [Console/GitHub runbook](ep6-runbook.md).
+Status updated 21 November 2026: [EP6 evidence](ep6-results.md) records the
+main-only ruleset, restricted environment and failed required-check proof (PR #35,
+closed without merge). IAM/WIF configuration is user-reported; real WIF success/
+denial remains NOT RUN until EP7. Issue #17 is already closed by its owner.
+The deferred EP5 cloud-evidence update is included in this branch. Integrate this
+PR into `gcp-staging`; release to main together with EP7, per user instruction.
+No EP7 workflow, CI, app or Docker change is included.
+
+
+## Episode 7 — automated main releases
+
+Tracking: [Issue #18](https://github.com/bbxndg/DineQueue/issues/18). Branch:
+`feat/lab5-ep7-auto-deploy`, from staging merge `8916397` (EP6 PR #36).
+See [contract](ep7-contract.md), [runbook](ep7-runbook.md) and [local results](ep7-results.md).
+The workflow uses the course's main-only `demo` deployment. Staging remains the
+reviewed integration path; no additional staging cloud service/environment is
+provisioned despite Issue #18's earlier wording. Live WIF, first/second automatic
+release and EP8 rollback/persistence results must be recorded after execution.

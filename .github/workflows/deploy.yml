@@ -1,0 +1,114 @@
+# Adapted from the course Deploy demo workflow for DineQueue's three images.
+name: Deploy demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Existing full commit SHA: reuse/rollback without build or migration. Empty = normal main release.'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Never cancel a migration/deployment midway when a newer main commit arrives.
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.ref == 'refs/heads/main' && !inputs.image_tag
+    uses: ./.github/workflows/ci-docker.yml
+
+  deploy:
+    needs: test
+    if: >-
+      always() && !cancelled() && github.ref == 'refs/heads/main' &&
+      (needs.test.result == 'success' ||
+       (github.event_name == 'workflow_dispatch' && inputs.image_tag != '' && needs.test.result == 'skipped'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: demo
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      IMAGE_TAG: ${{ inputs.image_tag || github.sha }}
+      ROLLBACK: ${{ inputs.image_tag != '' }}
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # Existing-image dispatch must belong to accepted main history.
+
+      - name: Validate deployment settings before authentication
+        env:
+          WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
+          SMOKE_EMAIL: ${{ vars.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: |
+          python3 deploy/release.py
+          git merge-base --is-ancestor "$IMAGE_TAG" HEAD || { echo 'Release SHA must belong to reviewed main history.'; exit 1; }
+          [[ "$WIF_PROVIDER" =~ ^projects/[0-9]+/locations/global/workloadIdentityPools/github-actions/providers/github-main$ ]] || { echo 'Invalid WIF provider resource name.'; exit 1; }
+          [[ "$WIF_SERVICE_ACCOUNT" == "dinequeue-deployer@$PROJECT_ID.iam.gserviceaccount.com" ]] || { echo 'Invalid deployer identity.'; exit 1; }
+          if { [[ -n "$SMOKE_EMAIL" ]] && [[ -z "$SMOKE_PASSWORD" ]]; } || { [[ -z "$SMOKE_EMAIL" ]] && [[ -n "$SMOKE_PASSWORD" ]]; }; then
+            echo 'Configure both optional smoke inputs or neither.'
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud without a key
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: '594.0.0'
+
+      - name: Build and push three production images from tracked source
+        if: env.ROLLBACK != 'true'
+        run: bash deploy/build-images.sh
+
+      - name: Verify digests, validate request, migrate and deploy
+        run: bash deploy/release.sh --apply
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.14'
+
+      - name: Smoke test public URL
+        env:
+          SMOKE_EMAIL: ${{ vars.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: python3 deploy/smoke_test.py "$SERVICE_URL"
+
+      # Default success condition: never mark a failed rollout/smoke successful.
+      - name: Record deployment
+        run: |
+          {
+            printf '### DineQueue demo deployment\n'
+            printf -- '- Workflow source SHA: %s\n' "$GITHUB_SHA"
+            printf -- '- Commit image tag: %s\n' "$IMAGE_TAG"
+            printf -- '- Rollback/reuse: %s\n' "$ROLLBACK"
+            printf -- '- API digest: %s\n' "$DEPLOYED_API_IMAGE"
+            printf -- '- Web digest: %s\n' "$DEPLOYED_WEB_IMAGE"
+            printf -- '- DB tools digest: %s\n' "$DEPLOYED_DB_TOOLS_IMAGE"
+            printf -- '- Ready revision: %s\n' "$DEPLOYED_REVISION"
+            printf -- '- URL: %s\n' "$SERVICE_URL"
+            printf -- '- Public smoke: passed. See smoke output for optional login PASS/SKIP.\n'
+          } >> "$GITHUB_STEP_SUMMARY"

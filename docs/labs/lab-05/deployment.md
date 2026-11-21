@@ -615,5 +615,7 @@ Tracking: [Issue #18](https://github.com/bbxndg/DineQueue/issues/18). Branch:
 See [contract](ep7-contract.md), [runbook](ep7-runbook.md) and [local results](ep7-results.md).
 The workflow uses the course's main-only `demo` deployment. Staging remains the
 reviewed integration path; no additional staging cloud service/environment is
-provisioned despite Issue #18's earlier wording. Live WIF, first/second automatic
-release and EP8 rollback/persistence results must be recorded after execution.
+provisioned despite Issue #18's earlier wording. Release A
+`65c7a496127e8d04615162c85c7dffb0ea9babdd` passed in Actions attempt 2; see the
+results for links and digests. Second-release proof and EP8 rollback/persistence
+are still pending.

@@ -53,7 +53,9 @@ test('T-010/018/019/020 My Ticket empty, join, persisted reload and cross-user p
     const denied = await otherPage.request.get(`/api/v1/me/queue-entries/${ticket.id}`);
     expect(denied.status()).toBe(404);
     expect(await denied.json()).toMatchObject({ error: { code: 'NOT_FOUND', message: 'Resource not found.' } });
-    await otherPage.goto(`/my-queue/${ticket.id}`);
+    // Issue #41 (UAT-05): the foreign ticket page itself must answer HTTP 404, not 200 + "not found" UI.
+    const foreignPage = await otherPage.goto(`/my-queue/${ticket.id}`);
+    expect(foreignPage?.status()).toBe(404);
     await expect(otherPage.getByRole('heading', { name: 'Ticket not found' })).toBeVisible();
     await expect(otherPage.getByTestId('ticket-code')).toHaveCount(0);
     await expect(otherPage.getByText(ticket.ticketCode, { exact: true })).toHaveCount(0);
@@ -73,9 +75,17 @@ test('T-010/018/019/020 My Ticket empty, join, persisted reload and cross-user p
   expect(ownEntries.some(entry => entry.id === ticket.id)).toBe(false);
   await expect(page.getByTestId('ticket-code')).toHaveText(ownEntries.map(entry => entry.ticketCode));
   await expect(page.locator(`a[href="/my-queue/${ticket.id}"]`)).toHaveCount(0);
-  await page.goto(`/my-queue/${ticket.id}`);
+  const foreignAfterSwitch = await page.goto(`/my-queue/${ticket.id}`);
+  expect(foreignAfterSwitch?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: 'Ticket not found' })).toBeVisible();
   await expect(page.getByTestId('ticket-code')).toHaveCount(0);
+  // Missing (well-formed, unknown) and malformed ids are also 404 pages (F-03 contract).
+  const missing = await page.goto('/my-queue/00000000-0000-4000-8000-000000000000');
+  expect(missing?.status()).toBe(404);
+  await expect(page.getByRole('heading', { name: 'Ticket not found' })).toBeVisible();
+  const malformed = await page.goto('/my-queue/not-a-uuid');
+  expect(malformed?.status()).toBe(404);
+  await expect(page.getByRole('heading', { name: 'Ticket not found' })).toBeVisible();
 });
 
 test('T-021 My Ticket requires a session and redirects Hosts', async ({ page, context }) => {

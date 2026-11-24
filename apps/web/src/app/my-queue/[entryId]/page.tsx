@@ -6,6 +6,9 @@ import { TicketCard } from '@/components/ticket-card';
 import { MyTicketShell } from '@/components/my-ticket-shell';
 import { RefreshTicket } from '@/components/refresh-ticket';
 
+// Issue #41: keep this route outside every loading.tsx/Suspense boundary (see the (main) and
+// my-queue/(list) route groups). Streaming would commit HTTP 200 before notFound() runs, so a
+// foreign, missing or malformed ticket id must be rejected before the response starts.
 export default async function TicketDetailPage({ params }: { params: Promise<{ entryId: string }> }) {
   const session = await requireSession();
   if (session.user.role !== 'CUSTOMER') redirect('/host/queue');

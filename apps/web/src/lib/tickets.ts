@@ -4,7 +4,7 @@ import { backendGet } from '@/lib/auth';
 
 export type Ticket = {
   id: string; queueId: string; ticketCode: string; serviceDate: string;
-  partySize: number; status: 'WAITING' | 'CALLED' | 'COMPLETED'; joinedAt: string;
+  partySize: number; isReady: boolean; status: 'WAITING' | 'CALLED' | 'COMPLETED'; joinedAt: string;
   queueName: string; restaurantName: string; timezone: string;
 };
 

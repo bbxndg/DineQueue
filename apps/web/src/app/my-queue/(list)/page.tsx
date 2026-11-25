@@ -17,6 +17,6 @@ export default async function MyQueuePage() {
     {tickets.length === 0 ? <div className="mt-8 rounded-2xl border border-wine/30 bg-white p-6">
       <p role="status">You do not have an active ticket.</p>
       <Link href="/join" className="mt-5 inline-block rounded-lg bg-wine px-5 py-3 font-semibold text-white">Join Waitlist</Link>
-    </div> : tickets.map(ticket => <TicketCard key={ticket.id} ticket={ticket} showDetails />)}
+    </div> : tickets.map(ticket => <TicketCard csrfToken={session.csrfToken} key={ticket.id} ticket={ticket} showDetails />)}
   </MyTicketShell>;
 }

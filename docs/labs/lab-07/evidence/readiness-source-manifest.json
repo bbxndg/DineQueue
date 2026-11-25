@@ -1,0 +1,33 @@
+{
+  "base_sha": "8539b24cb7374064668f2053544b1e4c706eb0bc",
+  "state": "Captured during uncommitted verification; all app/test hashes subsequently match the committed source SHA below. No post-commit integration rerun is claimed.",
+  "sha256": {
+    "apps/api/db/migrations/0003_customer_readiness.sql": "30b219a91baab53bbf37bc8df65c8902ccc901940913e185911ba02cd7df9f4b",
+    "apps/api/internal/queue/host_http.go": "f70b198ed2ea6c70bfb9364342c8fbd424403909fb24cb1e635ea8efea70197f",
+    "apps/api/internal/queue/host_integration_test.go": "e4deb0890ac68ef067108bb120254509491058da1f246e00fdaee5935c7d2788",
+    "apps/api/internal/queue/host_repository.go": "d631b23e317d7e72a9b3621586366c1d2bb919bda23b2cacf38061b0dc8accf3",
+    "apps/api/internal/queue/host_service.go": "435e126b94b38c04f9ce8ef523ed8383e0368d37b0f1b4871b01c6052f078b53",
+    "apps/api/internal/queue/http.go": "e765f511aed6e79933e2488ac4fe6bb5606abc2b28abb9975f90f0e6096b4e4a",
+    "apps/api/internal/queue/my_ticket_integration_test.go": "8d93750cfb3392182ae0c0b7ac008fee7ac27712fa1bcdd56b03dffcf62889c6",
+    "apps/api/internal/queue/readiness.go": "0475b4b0fd670f30cbc94773ac001bc3d5dc84865aa6c7142bb9cb06518bf95a",
+    "apps/api/internal/queue/readiness_integration_test.go": "2894d0b65a7278d13223879963a40a837f381824a3f737d1936c88bd9c422f46",
+    "apps/api/internal/queue/readiness_repository.go": "fc1b48c0a870088ea5fedf1a3c01eaf33c69ca8d9c7d5f4d72aa2197bdc52a04",
+    "apps/api/internal/queue/readiness_rules_integration_test.go": "4ca8fe7a6cdcf98684ae7b348e720a4a8695509c20f5c80724127cd71219cd3e",
+    "apps/api/internal/queue/readiness_test.go": "41aa170ee225385652f98116b0d79ab827a509f782cc771dd8298f83de17925c",
+    "apps/api/internal/queue/repository.go": "971b1742d40879235234e8adee67847e93d56119dfaeb8cfd64494ee89150793",
+    "apps/api/internal/queue/service.go": "8891229ecdd956b9a310fdf7781a67c90d5811917ac3a18898ba4e70dfe65ea3",
+    "apps/web/e2e/queue-operations.spec.ts": "7aae225a05259cac79814c18af8bd5ca15d485ecb8c7ddb1e11e2d8411c44f92",
+    "apps/web/e2e/readiness.spec.ts": "cb70022d548d6d9d93a2212e91d06941bb61337e5b70ae6c991c8af11bdce8d5",
+    "apps/web/e2e/sprint1-review.spec.ts": "585d9fee939c00b13549311ed32e1d92ec31487a00f9281b1da82ad5d39f3bd8",
+    "apps/web/next.config.mjs": "b44577bd5ea533634d66ecea8fc8f56eb06eff6162af9f153dd30bfbd5706bc2",
+    "apps/web/src/app/my-queue/(list)/page.tsx": "0fa8b5ff093a8d663bcf66fe0557d724618d11867ed6393a1e15e40355fccb2d",
+    "apps/web/src/app/my-queue/[entryId]/page.tsx": "b52c08340b2d09e4721f9a5c12ee717f22f8b5d4d1b2edf9bc5a726ea34f88e9",
+    "apps/web/src/components/host-board.tsx": "36204cda0f9e62b8946e17d9bbebc7982630d593e345087d537123f755bf6b94",
+    "apps/web/src/components/join-form.tsx": "b0ff6c80768122a458ab3bd7edb6e4c151f5203b6a328b2340e1f8947c4b5afe",
+    "apps/web/src/components/readiness-control.tsx": "d002cb0b1ce8b3db8322917c8f5c902d0b3f7e9cfdb86387d6cf8fd13dc5066c",
+    "apps/web/src/components/ticket-card.tsx": "af4e03b97f978215b6ba87d125808b358270bc51c3cefbce0ee1351a0df7eb06",
+    "apps/web/src/lib/host.ts": "b887d5b950bb3da827cd523f8839b584c6f76f018d46bee58b90b6ed82aae42a",
+    "apps/web/src/lib/tickets.ts": "b4937f20e5145cad4762fd8e7360898fc67451981a8c00d8295b50ac8d0fa1ff"
+  },
+  "matching_committed_source_sha": "c7b6b27120edf1eefb057a84c114e5c4f0f75a84"
+}

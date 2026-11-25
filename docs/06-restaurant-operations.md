@@ -1,7 +1,7 @@
 # 06. Restaurant Operations — Domain Design v2
 
 > Lab 7 #44 proposed addendum: [readiness-aware calling and automatic updates](labs/lab-07/readiness-contract.md).
-> This versions the S1 FIFO/manual-refresh behavior for this change only; teammate review is pending.
+> This versions the S1 FIFO/manual-refresh behavior for this change only; contract review is recorded on PR #45; readiness local evidence and pending polling are tracked separately.
 
 **Status:** proposed engineering decisions; not implemented/tested. **Topic:** CPE 334 theme 9 (queue and service management). **Revision:** 2026-11-05. This document elaborates the team's chosen domain; the course does not prescribe any of these specific table rules.
 

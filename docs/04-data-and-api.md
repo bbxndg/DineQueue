@@ -1,5 +1,7 @@
 # 04. Database Design and API Contract
 
+> Lab 7 #44 extends Entry/Ticket/HostEntry with `isReady`, adds owner-only readiness PATCH and versions call eligibility. See the [shared contract](labs/lab-07/readiness-contract.md) for JSON/errors, migration 0003 and queue-to-entry locking; [local results](labs/lab-07/readiness-results.md).
+
 **Status:** proposed implementation contract. API response shapes and status/error codes are team choices. They are not prescribed by the CPE 334 PDF.
 
 Machine-readable export of the implemented Sprint 1 routes:

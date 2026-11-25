@@ -2,11 +2,14 @@
 
 Version: DQ-L7-CR44-v0.1, 25 November 2026 (Asia/Bangkok).
 Issue: https://github.com/bbxndg/DineQueue/issues/44
-Status: **DRAFT FOR TEAM REVIEW — NOT IMPLEMENTED / NOT TESTED**.
+Status: **CONTRACT REVIEWED on PR #45; readiness implemented in the local worktree;
+polling NOT IMPLEMENTED**. Local evidence: [readiness results](readiness-results.md).
+Original contract commit: `323d8e7c1796466fd6d3cea46044c72cd4ac20d4`;
+review by softkoi: 26 Nov 2026 00:00:50 ICT (25 Nov 17:00:50 UTC).
+These implementation notes do not replace the original reviewed contract.
 
 This is the shared source of truth for both feature branches and their AI assistants.
-Read this file and [STS](readiness-sts.md) before changing code. The team must review
-and commit the contract before implementation; do not backfill pre-implementation
+Read this file and [STS](readiness-sts.md) before changing code. The contract was committed and reviewed before readiness implementation; do not backfill pre-implementation
 review or RED evidence after coding.
 
 ## Assessment and versions
@@ -20,8 +23,8 @@ change is assessed: readiness-aware calling; polling supports that workflow.
 |---|---|
 | Accepted Sprint 1 baseline from Lab 6 | PENDING team confirmation of accepted SHA and UAT/re-test evidence |
 | Actual pre-change local main | `1524502386065be2eb6025c04bae72a5398c7228` (includes #41 ticket-page HTTP 404 fix via #43) |
-| Contract commit and teammate review | PENDING |
-| RED / GREEN / integrated release / deployed revision | NOT RUN / NOT RELEASED |
+| Contract commit and teammate review | `323d8e7`; softkoi APPROVED [PR #45](https://github.com/bbxndg/DineQueue/pull/45), merged into staging at `8539b24` |
+| RED / GREEN / integrated release / deployed revision | Local worktree results linked above; feature integration/release/deployment PENDING |
 
 A clean local checkout of main is a source baseline, not proof of accepted UAT or
 current cloud deployment. Later main fixes must be integrated deliberately and
@@ -51,7 +54,8 @@ boolean, not a new ticket status. Lifecycle remains WAITING -> CALLED -> COMPLET
 6. A repeated set to the current value while WAITING returns 200 without a second
    version increment. This is a set operation, never a server-side toggle.
 
-Items 1–6 and the API below require teammate review. No team approval is claimed.
+Items 1–6 and the API below were reviewed in PR #45. Implementation PR review
+and release acceptance are still pending.
 Future S2 matching must filter readiness alongside capacity/availability and recheck
 it inside call+hold transactions. Implementing S2 matching/holds is outside #44.
 
@@ -175,8 +179,9 @@ Current source map:
 ## Instructions for teammate's AI
 
 Read README, AGENTS, SRS, domain rules, this contract and STS. Work on
-`feat/lab7-ticket-polling` branched from `lab7-staging` **after the contract commit
-is shared**. Do not create a second readiness API/migration or independently
+`feat/lab7-ticket-polling` branched from `lab7-staging` **after the readiness feature PR is reviewed and
+merged**, per the user's integration sequence agreed on 26 November. Pull staging
+first so the readiness API and UI are available; do not branch from old main. Do not create a second readiness API/migration or independently
 change FIFO/defaults. Both PR descriptions use `Part of #44`; neither closes the
 issue before integrated acceptance. Both teammates review each other's work. The documentation branch is integrated
 first; merging it is not evidence of teammate approval. Record the actual contract

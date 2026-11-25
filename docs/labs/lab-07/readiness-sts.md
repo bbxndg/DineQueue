@@ -1,7 +1,9 @@
 # Lab 7 STS — readiness and automatic status updates
 
 Version DQ-L7-CR44-v0.1; 25 November 2026. Issue #44.
-Status: **PLANNED; every test below NOT RUN**. Contract: [shared source](readiness-contract.md).
+Status: **Readiness coverage locally executed; polling coverage NOT RUN**.
+See [actual test names/results and limits](readiness-results.md); the matrix below
+is planned coverage and does not mark every row complete. Contract: [shared source](readiness-contract.md).
 
 Use isolated real PostgreSQL for transaction/migration tests and synthetic accounts
 for API/browser tests. Never run destructive fixtures on Cloud SQL/demo data.

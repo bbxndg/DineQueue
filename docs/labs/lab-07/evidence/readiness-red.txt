@@ -1,0 +1,9 @@
+=== RUN   TestL7NewJoinStartsNotReady
+    readiness_integration_test.go:14: new ticket must explicitly start Not ready; got map[id:94a8ee4b-573a-46c2-a183-84209cc2e279 joinedAt:2026-11-25T17:47:30.941765Z partySize:2 queueId:10000000-0000-4000-8000-000000000001 serviceDate:2026-11-26 status:WAITING ticketCode:A-001]
+--- FAIL: TestL7NewJoinStartsNotReady (0.43s)
+=== RUN   TestL7NoReadyPartiesCannotBeCalled
+    readiness_integration_test.go:21: unconfirmed party must not be called: HTTP 200 map[calledAt:2026-11-25T17:47:31.311343Z completedAt:<nil> id:18cffd6d-fd58-432e-85fe-abc1816b230f joinedAt:2026-11-25T17:47:31.306805Z partySize:2 queueId:10000000-0000-4000-8000-000000000001 serviceDate:2026-11-26 status:CALLED ticketCode:A-001]
+--- FAIL: TestL7NoReadyPartiesCannotBeCalled (0.37s)
+FAIL
+FAIL	dinequeue.local/api/internal/queue	0.818s
+FAIL

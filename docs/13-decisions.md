@@ -199,3 +199,21 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
   deployment, TA approval, cost estimate or test PASS is implied here.
 - Contract and tests: `labs/lab-05/ep5-contract.md`; execution results follow actual
   tests. EP6 identity/required gates and EP7 automation remain separate.
+
+
+## DEC-033 — Lab 7 readiness-aware calling (#44), 25 November 2026
+
+Status: **PROPOSED — teammate contract review pending**. See the
+[shared contract](labs/lab-07/readiness-contract.md) and
+[STS](labs/lab-07/readiness-sts.md) before implementing either feature branch.
+
+- The instructor announcement supplied by the user removes instructor/TA approval
+  for Lab 7 change requests; this does not imply approval of unrelated domain rules.
+- One change request combines owner readiness and automatic status updates.
+- Proposed BR-003-L7-v1 calls the oldest ready WAITING ticket; original join order
+  is retained, and an already CALLED party cannot be displaced.
+- Proposed new-ticket default is Not ready; existing rows are backfilled Ready.
+  The team must review this compatibility choice before implementation.
+- Main source at planning: `1524502386065be2eb6025c04bae72a5398c7228`.
+  Accepted Lab 6 baseline evidence is still to be confirmed separately.
+- No code, test execution, reviewer approval or deployment is claimed.

@@ -74,13 +74,15 @@ Resolve and independently re-test **at least one accepted defect**. If none is l
 | Five dated objective engineering metrics + <=100 word interpretation | 15 |
 | Release-readiness checklist + three short retrospective answers | 10 |
 
-**Important:** A feature already in baseline Sprint backlog does not itself fulfill Lab 7. Obtain a **separate instructor/TA-approved change** to an already implemented rule.
+**Updated instructor announcement (supplied by the user, 25 Nov 2026):** Instructor/TA approval is no longer required for the Lab 7 change request. The team must choose a sufficiently substantial, bounded change to behavior already implemented in Sprint 1. An unchanged Sprint 2/3 backlog feature alone does not fulfill Lab 7. Teammate contract review before implementation remains required.
 
-Possible **candidate to request approval**, not pre-approved: Change no-show handling from immediately terminal after one call to requiring a configurable minimum time delay; or adjust the max party-size validation. Do not implement as a Lab 7 item without approval.
+Issue #44 shared source of truth: [readiness contract](lab-07/readiness-contract.md) and [STS](lab-07/readiness-sts.md). Both are drafts; no implementation or test result is claimed.
+
+Selected change request: readiness-aware calling with automatic status updates, tracked in #44. Defaults, existing-ticket migration and API details await teammate contract review. No-show is existing Sprint 2 backlog scope and must not be presented as an implemented Sprint 1 baseline rule.
 
 ### Change-impact template
 
-- Change ID: `CR-[fill]`; approved by `[fill]`, date `[fill]`.
+- Change ID: `CR-[fill]`; team agreement/review by `[fill]`, date `[fill]`; instructor/TA approval not required under the updated announcement.
 - Old rule: `[fill]` → new rule `[fill]`.
 - Affected IDs: FR-__, BR-__, F-__, SDS sections, AC-__, tests T-__, database/API/UI paths.
 - Updated reviewed contract PR: `[fill]`.

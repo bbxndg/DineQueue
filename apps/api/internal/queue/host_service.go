@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrNoReadyParties    = errors.New("no waiting party is ready")
 	ErrQueueEmpty        = errors.New("no waiting entry to call")
 	ErrCallInProgress    = errors.New("queue already has a called entry")
 	ErrInvalidTransition = errors.New("entry cannot make this status change")
@@ -31,6 +32,7 @@ type HostEntry struct {
 	TicketCode  string     `json:"ticketCode"`
 	ServiceDate string     `json:"serviceDate"`
 	PartySize   int        `json:"partySize"`
+	IsReady     bool       `json:"isReady"`
 	Status      string     `json:"status"`
 	JoinedAt    time.Time  `json:"joinedAt"`
 	CalledAt    *time.Time `json:"calledAt"`
@@ -47,7 +49,7 @@ func utcPointer(value *time.Time) *time.Time {
 
 func hostEntryFromRow(row hostEntryRow) HostEntry {
 	return HostEntry{ID: row.ID, QueueID: row.QueueID, TicketCode: TicketCode(row.TicketPrefix, row.SequenceNumber),
-		ServiceDate: row.ServiceDate, PartySize: row.PartySize, Status: row.Status, JoinedAt: row.JoinedAt.UTC(),
+		ServiceDate: row.ServiceDate, PartySize: row.PartySize, IsReady: row.IsReady, Status: row.Status, JoinedAt: row.JoinedAt.UTC(),
 		CalledAt: utcPointer(row.CalledAt), CompletedAt: utcPointer(row.CompletedAt)}
 }
 
@@ -151,7 +153,7 @@ func (s *Service) transitionTime(previous time.Time) time.Time {
 	return at
 }
 
-// CallNext atomically promotes the oldest WAITING entry to CALLED (BR-003, BR-005).
+// CallNext atomically promotes the oldest ready WAITING entry to CALLED (BR-003, BR-005).
 func (s *Service) CallNext(ctx context.Context, user auth.User, queueID string) (HostEntry, error) {
 	var entry HostEntry
 	err := s.repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -171,7 +173,14 @@ func (s *Service) CallNext(ctx context.Context, user auth.User, queueID string) 
 			return err
 		}
 		if len(rows) == 0 {
-			return ErrQueueEmpty
+			waiting, err := repository.entriesByStatus(ctx, queueID, "WAITING")
+			if err != nil {
+				return err
+			}
+			if len(waiting) == 0 {
+				return ErrQueueEmpty
+			}
+			return ErrNoReadyParties
 		}
 		row := rows[0]
 		at := s.transitionTime(row.JoinedAt)

@@ -6,7 +6,7 @@ export type HostQueue = { id: string; name: string; restaurantName: string; time
 
 export type HostEntry = {
   id: string; queueId: string; ticketCode: string; serviceDate: string; partySize: number;
-  status: 'WAITING' | 'CALLED' | 'COMPLETED'; joinedAt: string; calledAt: string | null; completedAt: string | null;
+  isReady: boolean; status: 'WAITING' | 'CALLED' | 'COMPLETED'; joinedAt: string; calledAt: string | null; completedAt: string | null;
 };
 
 async function hostGet<T>(path: string): Promise<T> {

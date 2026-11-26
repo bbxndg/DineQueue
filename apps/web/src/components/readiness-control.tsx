@@ -17,6 +17,7 @@ export function ReadinessControl({ entryId, isReady, csrfToken }: {
     try {
       const response = await fetch(`/api/v1/me/queue-entries/${encodeURIComponent(entryId)}/readiness`, {
         method: 'PATCH', credentials: 'same-origin', cache: 'no-store',
+        signal: AbortSignal.timeout(15_000),
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ isReady: !isReady }),
       });

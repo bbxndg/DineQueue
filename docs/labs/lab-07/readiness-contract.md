@@ -47,7 +47,7 @@ boolean, not a new ticket status. Lifecycle remains WAITING -> CALLED -> COMPLET
    explain that it may be skipped and provide no wait-time guarantee.
 4. Keep BR-005: at most one CALLED ticket per queue. Existing CALLED takes priority
    over empty/no-ready error checks. Complete semantics remain manual S1 completion.
-5. **Proposed team decision:** new tickets start Not ready. Join UI explicitly tells
+5. **Reviewed team decision (PR #45):** new tickets start Not ready. Join UI explicitly tells
    Customers to confirm Ready. Existing rows are backfilled Ready so migration
    does not silently remove existing waiting parties from eligibility. Lifecycle
    guards still make readiness uneditable for existing CALLED/COMPLETED rows.
@@ -59,7 +59,7 @@ and release acceptance are still pending.
 Future S2 matching must filter readiness alongside capacity/availability and recheck
 it inside call+hold transactions. Implementing S2 matching/holds is outside #44.
 
-## Shared HTTP/JSON interface (proposed, freeze after review)
+## Shared HTTP/JSON interface (reviewed in PR #45)
 
 Preserve existing envelopes and fields. Add required JSON boolean `isReady` to
 Customer Entry/Ticket and HostEntry DTOs, including join and transition responses.
@@ -115,7 +115,9 @@ service calls or treat a client-side Ready badge as authoritative.
 
 Readiness: show explicit readiness text and labelled owner controls on WAITING
 cards in `/my-queue` and owned detail. Disable while a mutation is pending; use
-confirmed response, not an optimistic authoritative status. On 409 refetch state
+confirmed response, not an optimistic authoritative status. Readiness PATCH has
+a 15-second client timeout; timeout does not prove the write failed, so show the
+existing uncertainty message and let the Customer refresh before retrying. On 409 refetch state
 and explain the ticket was changed. Non-WAITING has no editable readiness control.
 Host waiting list shows readiness, keeps skipped parties visible, and explains
 NO_READY_PARTIES. Disable Call Next if none eligible, but backend still decides.
@@ -193,7 +195,7 @@ failing tests against actual pre-change behavior. Compile errors, missing import
 or deliberately broken fixtures are not valid RED evidence. Existing strict-FIFO
 tests legitimately need versioned Ready fixtures; retain ordering/permission and
 concurrency assertions rather than deleting coverage. Record actual commands,
-SHAs, dates, pass/fail/skip counts and CI URLs. No PASS is claimed by this draft.
+SHAs, dates, pass/fail/skip counts and CI URLs. This contract alone does not establish PASS; actual dated results are linked above.
 
 Final release: reviewed feature PRs -> lab7-staging -> regression -> reviewed main
 PR -> pipeline deploy -> changed/preserved behavior checks. Capture all versions

@@ -135,11 +135,16 @@ test('Sprint 1 review: Host retries a real read failure without navigating away'
       await expect(host.page.getByTestId('waiting-row')).toContainText(ticket.ticketCode);
       sql('ALTER TABLE queue_entries RENAME TO s1_review_unavailable;');
       renamed = true;
+      // Lab 7 (#44): the failed read keeps the last board with a stale notice
+      // (never an empty queue), and the same Refresh recovers in place.
       await host.page.getByRole('button', { name: 'Refresh queue', exact: true }).click();
-      await expect(host.page.getByRole('heading', { name: 'We cannot load your account right now' })).toBeVisible();
+      await expect(host.page.getByTestId('live-stale')).toBeVisible();
+      await expect(host.page.getByTestId('waiting-row')).toContainText(ticket.ticketCode);
+      await expect(host.page.getByText('No parties are waiting.', { exact: true })).toHaveCount(0);
       sql('ALTER TABLE s1_review_unavailable RENAME TO queue_entries;');
       renamed = false;
-      await host.page.getByRole('button', { name: 'Try again', exact: true }).click();
+      await host.page.getByRole('button', { name: 'Refresh queue', exact: true }).click();
+      await expect(host.page.getByTestId('live-stale')).toHaveCount(0);
       await expect(host.page.getByTestId('waiting-row')).toContainText(ticket.ticketCode);
       await expect(host.page).toHaveURL(/\/host\/queue$/);
     } finally {

@@ -67,6 +67,15 @@ WHERE e.queue_id = ? AND e.status = ? ORDER BY e.joined_at, e.id`, queueID, stat
 	return rows, err
 }
 
+// hasWaitingEntries is used under the queue lock; it does not load/sort the board.
+func (r *Repository) hasWaitingEntries(ctx context.Context, queueID string) (bool, error) {
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(`SELECT EXISTS (
+        SELECT 1 FROM queue_entries WHERE queue_id = ? AND status = 'WAITING'
+    )`, queueID).Scan(&exists).Error
+	return exists, err
+}
+
 func (r *Repository) oldestWaitingForUpdate(ctx context.Context, queueID string) ([]hostEntryRow, error) {
 	var rows []hostEntryRow
 	err := r.db.WithContext(ctx).Raw(hostProjection+`

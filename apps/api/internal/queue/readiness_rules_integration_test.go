@@ -107,11 +107,23 @@ func TestL7ReadinessValidationPrivacyAndCSRF(t *testing.T) {
 		{"empty", id, owner, `{}`, true, 400},
 	} {
 		t.Run(tc.label, func(t *testing.T) {
+			before, err := f.service.EntryDetail(context.Background(), auth.User{ID: ticketOwner(t, f, id), Role: "CUSTOMER"}, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			beforeVersion := entryState(t, f, id).Version
 			r := readinessPatch(t, f, tc.id, tc.token, tc.body, tc.csrf)
 			if r.status != tc.want {
 				t.Fatalf("%s %v", tc.label, r)
 			}
 			noPrivateFields(t, tc.label, r.body)
+			after, err := f.service.EntryDetail(context.Background(), auth.User{ID: ticketOwner(t, f, id), Role: "CUSTOMER"}, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if after.IsReady != before.IsReady || after.Status != before.Status || entryState(t, f, id).Version != beforeVersion {
+				t.Fatalf("rejected %s request changed persisted readiness/status/version", tc.label)
+			}
 		})
 	}
 	r := readinessPatch(t, f, id, owner, `{"isReady":true}`, true)

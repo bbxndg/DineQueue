@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "DineQueue Sprint 1 API",
-    "version": "2.0-sprint1",
-    "description": "Implemented S1 only. Private responses are Cache-Control: no-store. Error responses never expose DB details. Explicit SQL migrations and seeded accounts are configured separately. HTTP local port may be 8081 with the developer override; public browser traffic normally uses Next.js same-origin rewrites."
+    "version": "2.0-sprint1-lab7",
+    "description": "Implemented S1 only. Private responses are Cache-Control: no-store. Error responses never expose DB details. Explicit SQL migrations and seeded accounts are configured separately. HTTP local port may be 8081 with the developer override; public browser traffic normally uses Next.js same-origin rewrites. Lab 7 #44 adds owner readiness and readiness-aware FIFO; automatic polling is separate."
   },
   "servers": [
     {
@@ -815,8 +815,8 @@
     },
     "/api/v1/host/queues/{queueId}/call-next": {
       "post": {
-        "summary": "Call oldest WAITING ticket",
-        "description": "Assigned HOST only, no request body. Queue lock and grant recheck in one transaction; 409 CALL_IN_PROGRESS or QUEUE_EMPTY. Host may drain an inactive queue.",
+        "summary": "Call oldest ready WAITING ticket",
+        "description": "Assigned HOST only, no request body. Queue lock and grant recheck in one transaction. CALL_IN_PROGRESS takes precedence; otherwise QUEUE_EMPTY if no waiting tickets, or NO_READY_PARTIES if all waiting tickets are not ready. Select by original joined_at then id. Host may drain an inactive queue.",
         "x-requirement-ids": [
           "FR-007",
           "FR-009",
@@ -876,7 +876,7 @@
             }
           },
           "409": {
-            "description": "Business conflict; see operation description",
+            "description": "CALL_IN_PROGRESS, QUEUE_EMPTY, or NO_READY_PARTIES.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1054,6 +1054,152 @@
           }
         ]
       }
+    },
+    "/api/v1/me/queue-entries/{entryId}/readiness": {
+      "patch": {
+        "summary": "Set own WAITING ticket readiness",
+        "description": "CUSTOMER owner only. Explicit boolean set, not a toggle. Same value is idempotent. Unknown, malformed and foreign IDs return the same 404; non-WAITING returns 409 INVALID_TRANSITION. Queue then entry locking serializes with calling.",
+        "x-requirement-ids": [
+          "FR-005",
+          "FR-007",
+          "BR-003-L7-v1",
+          "BR-007"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ticket"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED or INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN or CSRF_REJECTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Generic INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INVALID_TRANSITION: ticket is no longer WAITING.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            },
+            "description": "Canonical 36-character UUID. Malformed/alternate encodings return 404."
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "description": "Must exactly equal configured APP_ORIGIN.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "description": "Value from login/me for the current session.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "isReady"
+                ],
+                "properties": {
+                  "isReady": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "examples": {
+                "ready": {
+                  "value": {
+                    "isReady": true
+                  }
+                },
+                "notReady": {
+                  "value": {
+                    "isReady": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1188,6 +1334,10 @@
           "joinedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "isReady": {
+            "type": "boolean",
+            "description": "Party readiness; owner can change it only while WAITING. New tickets default false; pre-migration tickets are backfilled true."
           }
         },
         "required": [
@@ -1197,7 +1347,8 @@
           "serviceDate",
           "partySize",
           "status",
-          "joinedAt"
+          "joinedAt",
+          "isReady"
         ]
       },
       "Ticket": {
@@ -1247,6 +1398,10 @@
           },
           "timezone": {
             "type": "string"
+          },
+          "isReady": {
+            "type": "boolean",
+            "description": "Party readiness; owner can change it only while WAITING. New tickets default false; pre-migration tickets are backfilled true."
           }
         },
         "required": [
@@ -1259,7 +1414,8 @@
           "joinedAt",
           "queueName",
           "restaurantName",
-          "timezone"
+          "timezone",
+          "isReady"
         ]
       },
       "HostEntry": {
@@ -1314,6 +1470,10 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "isReady": {
+            "type": "boolean",
+            "description": "Party readiness; owner can change it only while WAITING. New tickets default false; pre-migration tickets are backfilled true."
           }
         },
         "required": [
@@ -1325,7 +1485,8 @@
           "status",
           "joinedAt",
           "calledAt",
-          "completedAt"
+          "completedAt",
+          "isReady"
         ]
       },
       "Queue": {

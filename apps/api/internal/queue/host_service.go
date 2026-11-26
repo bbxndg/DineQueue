@@ -173,11 +173,11 @@ func (s *Service) CallNext(ctx context.Context, user auth.User, queueID string) 
 			return err
 		}
 		if len(rows) == 0 {
-			waiting, err := repository.entriesByStatus(ctx, queueID, "WAITING")
+			hasWaiting, err := repository.hasWaitingEntries(ctx, queueID)
 			if err != nil {
 				return err
 			}
-			if len(waiting) == 0 {
+			if !hasWaiting {
 				return ErrQueueEmpty
 			}
 			return ErrNoReadyParties

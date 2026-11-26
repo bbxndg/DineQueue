@@ -1,0 +1,106 @@
+# date: 2026-11-26T20:25:09+07:00  HEAD: 33ebad5010da16ef9ed9069fe2c4f461243cc7f4  branch: feat/lab7-ticket-polling
+# worktree: ?? apps/web/e2e/polling.spec.ts
+# command: npm run test:e2e --workspace @dinequeue/web -- polling.spec.ts
+
+> @dinequeue/web@0.0.0 test:e2e
+> playwright test polling.spec.ts
+
+
+Running 3 tests using 1 worker
+
+  x  1 e2e\polling.spec.ts:75:1 › L7-T-19a Host call becomes CALLED on Customer list and detail without refresh (16.6s)
+  x  2 e2e\polling.spec.ts:93:1 › L7-T-19b Customer readiness and call state reach the Host board without refresh (16.5s)
+  x  3 e2e\polling.spec.ts:110:1 › L7-T-19c Completion leaves the active list; owned detail stays readable (16.5s)
+
+
+  1) e2e\polling.spec.ts:75:1 › L7-T-19a Host call becomes CALLED on Customer list and detail without refresh
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByTestId('ticket-status')
+    Expected: "CALLED"
+    Received: "WAITING"
+    Timeout:  15000ms
+
+    Call log:
+      - Expect "toHaveText" getByTestId('ticket-status') with timeout 15000ms
+      - waiting for getByTestId('ticket-status')
+        33 × locator resolved to <dd data-testid="ticket-status" class="font-semibold text-wine">WAITING</dd>
+           - unexpected value "WAITING"
+
+
+      84 |     await expect(detail.getByTestId('ticket-status')).toHaveText('WAITING');
+      85 |     await hostPost(f, '/call-next');
+    > 86 |     await expect(list.getByTestId('ticket-status')).toHaveText('CALLED', AUTO);
+         |                                                     ^
+      87 |     await expect(detail.getByTestId('ticket-status')).toHaveText('CALLED', AUTO);
+      88 |     await expect(list.getByText('Your ticket has been called. Please go to the counter.', { exact: true })).toBeVisible();
+      89 |     await expect(list.getByRole('button', { name: /Mark (not )?ready/ })).toHaveCount(0);
+        at D:\DineQueue\apps\web\e2e\polling.spec.ts:86:53
+        at withQueue (D:\DineQueue\apps\web\e2e\polling.spec.ts:39:5)
+        at D:\DineQueue\apps\web\e2e\polling.spec.ts:76:3
+
+
+  2) e2e\polling.spec.ts:93:1 › L7-T-19b Customer readiness and call state reach the Host board without refresh
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByTestId('waiting-row').getByText('Ready', { exact: true })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByTestId('waiting-row').getByText('Ready', { exact: true }) with timeout 15000ms
+      - waiting for getByTestId('waiting-row').getByText('Ready', { exact: true })
+
+
+       99 |     await expect(host.getByRole('button', { name: 'Call next', exact: true })).toBeDisabled();
+      100 |     await setReady(f, ticket.id, true);
+    > 101 |     await expect(host.getByTestId('waiting-row').getByText('Ready', { exact: true })).toBeVisible(AUTO);
+          |                                                                                       ^
+      102 |     await expect(host.getByRole('button', { name: 'Call next', exact: true })).toBeEnabled();
+      103 |     // A call made by another Host session: current card fills, waiting list empties.
+      104 |     await hostPost(f, '/call-next');
+        at D:\DineQueue\apps\web\e2e\polling.spec.ts:101:87
+        at withQueue (D:\DineQueue\apps\web\e2e\polling.spec.ts:39:5)
+        at D:\DineQueue\apps\web\e2e\polling.spec.ts:94:3
+
+
+  3) e2e\polling.spec.ts:110:1 › L7-T-19c Completion leaves the active list; owned detail stays readable
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('You do not have an active ticket.', { exact: true })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('You do not have an active ticket.', { exact: true }) with timeout 15000ms
+      - waiting for getByText('You do not have an active ticket.', { exact: true })
+
+
+      122 |     await expect(host.getByTestId('current-ticket')).toHaveText(ticket.ticketCode);
+      123 |     await hostPost(f, `/entries/${ticket.id}/complete`);
+    > 124 |     await expect(list.getByText('You do not have an active ticket.', { exact: true })).toBeVisible(AUTO);
+          |                                                                                        ^
+      125 |     await expect(list.getByTestId('ticket-code')).toHaveCount(0);
+      126 |     await expect(detail.getByTestId('ticket-status')).toHaveText('COMPLETED', AUTO);
+      127 |     await expect(host.getByText('No ticket is currently called.', { exact: true })).toBeVisible(AUTO);
+        at D:\DineQueue\apps\web\e2e\polling.spec.ts:124:88
+        at withQueue (D:\DineQueue\apps\web\e2e\polling.spec.ts:39:5)
+        at D:\DineQueue\apps\web\e2e\polling.spec.ts:111:3
+
+
+  3 failed
+    e2e\polling.spec.ts:75:1 › L7-T-19a Host call becomes CALLED on Customer list and detail without refresh
+    e2e\polling.spec.ts:93:1 › L7-T-19b Customer readiness and call state reach the Host board without refresh
+    e2e\polling.spec.ts:110:1 › L7-T-19c Completion leaves the active list; owned detail stays readable
+npm error Lifecycle script `test:e2e` failed with error:
+npm error code 1
+npm error path D:\DineQueue\apps\web
+npm error workspace @dinequeue/web@0.0.0
+npm error location D:\DineQueue\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c playwright test polling.spec.ts

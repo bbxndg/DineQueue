@@ -52,7 +52,7 @@ Select existing queue/ownership/auth/Host concurrency suites plus #41 HTTP statu
 coverage. Keep old preserved-rule assertions. Only update strict-FIFO expectations
 and new-ticket fixture setup where the reviewed requirement changed; explain why.
 
-Planned commands (NOT RUN for Lab 7): root `npm test`, `npm run lint`,
+Verification commands (historical outcomes in readiness-results.md; rerun for each changed release): root `npm test`, `npm run lint`,
 `npm run typecheck`, `npm run build`; from apps/api `go test -race ./...`,
 `go vet ./...`, and `go test -tags=integration -race -count=1 -v ./...` with isolated
 TEST_DATABASE_URL. Run existing Playwright harness with isolated API/DB (see its

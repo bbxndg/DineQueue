@@ -32,11 +32,15 @@ test('T-029 Host calls next and completes; customer sees CALLED then COMPLETED',
     const queueId: string = (await (await host.request.get('/api/v1/host/queues')).json()).queues[0].id;
     const headers = { Origin: base(), 'X-CSRF-Token': csrfToken };
     const api = `/api/v1/host/queues/${queueId}`;
-    // Lab 7: explicitly mark earlier isolated test fixtures ready. Preserve the
+    // Lab 7: explicitly mark earlier fixtures in this queue ready. Preserve the
     // original calling/complete assertions; production never permits Host opt-in.
     if (!process.env.TEST_DATABASE_URL) throw new Error('Isolated TEST_DATABASE_URL required.');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(queueId)) {
+      throw new Error('Invalid queue ID from the Host service.');
+    }
     execFileSync('psql', ['--no-psqlrc', '--dbname', process.env.TEST_DATABASE_URL,
-      '--set', 'ON_ERROR_STOP=1', '--command', "UPDATE queue_entries SET is_ready=true WHERE status='WAITING'"], { stdio: 'ignore' });
+      '--set', 'ON_ERROR_STOP=1', '--command',
+      `UPDATE queue_entries SET is_ready=true WHERE status='WAITING' AND queue_id='${queueId}'`], { stdio: 'ignore' });
     // Drain tickets left by earlier specs so FIFO reaches this test's ticket.
     for (let i = 0; i < 100; i++) {
       const current = (await (await host.request.get(`${api}/current`)).json()).entry;

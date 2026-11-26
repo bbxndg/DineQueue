@@ -15,6 +15,8 @@ export type LiveState<T> = {
 export type LiveResource<T> = LiveState<T> & {
   refresh: () => Promise<void>;
   runMutation: <R>(fn: () => Promise<R>) => Promise<R>;
+  /** A write saw 401/403/404: stop polling and use the single access-loss path. */
+  reportAccessLost: (status: AccessLoss) => void;
 };
 
 /**
@@ -51,5 +53,11 @@ export function useLiveResource<T>(initial: T, key: string, read: (signal: Abort
 
   const refresh = useCallback(() => pollerRef.current?.refresh() ?? Promise.resolve(), []);
   const runMutation = useCallback(<R,>(fn: () => Promise<R>) => pollerRef.current ? pollerRef.current.runMutation(fn) : fn(), []);
-  return { ...state, refresh, runMutation };
+  const reportAccessLost = useCallback((status: AccessLoss) => {
+    // Stopping first also cancels the post-write refetch, so the view
+    // navigates once, from the same effect that handles polled 401/403/404.
+    pollerRef.current?.stop();
+    setState(s => (s.accessLost ? s : { ...s, accessLost: status }));
+  }, []);
+  return { ...state, refresh, runMutation, reportAccessLost };
 }

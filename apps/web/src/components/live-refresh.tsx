@@ -7,6 +7,7 @@ import type { ReadFailure } from '@/lib/poll-coordinator';
 export type LiveRefresh = {
   refresh: () => Promise<void>;
   runMutation: <R>(fn: () => Promise<R>) => Promise<R>;
+  reportAccessLost: (status: 401 | 403 | 404) => void;
 };
 
 export const LiveRefreshContext = createContext<LiveRefresh | null>(null);

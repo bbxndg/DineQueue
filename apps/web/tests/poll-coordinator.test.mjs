@@ -100,6 +100,27 @@ test('a mutation invalidates the pre-write read and refreshes after commit', asy
   assert.deepEqual(log.data, ['after-write']);
 });
 
+test('overlapping mutations and a manual refresh share one refetch after the last write', async () => {
+  const { clock, log, poller, reads } = setup();
+  poller.start();
+  const first = deferred(); const second = deferred();
+  const a = poller.runMutation(() => first.promise);
+  const b = poller.runMutation(() => second.promise);
+  await poller.refresh(); // manual Refresh while writes are pending
+  first.resolve('a'); await a; await flush();
+  assert.equal(log.reads, 0, 'no read while another write is still pending');
+  await clock.advance(20000);
+  assert.equal(log.reads, 0, 'no timer read while a write is pending');
+  second.resolve('b'); await b; await flush();
+  assert.equal(log.reads, 1, 'exactly one refetch after the last write');
+  reads[0].resolve(ok('after-both')); await flush();
+  assert.deepEqual(log.data, ['after-both']);
+  // A failed write still refetches committed state.
+  await assert.rejects(poller.runMutation(async () => { throw new Error('409'); }));
+  await flush();
+  assert.equal(log.reads, 2);
+});
+
 test('a stale response that resolves after a mutation is never applied', async () => {
   // Simulate a fetch implementation that ignores abort and resolves late.
   const clock = fakeTimers();

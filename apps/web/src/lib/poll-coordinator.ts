@@ -142,6 +142,9 @@ export function createPoller<T>(options: PollerOptions<T>): Poller {
         mutations -= 1;
         // Always refetch afterwards (success, conflict or failure): the
         // committed server state, not the pre-write snapshot, is authoritative.
+        // Overlapping writes share one refetch, issued when the last settles;
+        // a manual refresh during a write is not a mutation and is deferred to
+        // that same read (see "overlapping mutations ..." unit test).
         if (mutations === 0 && !stopped) void read();
       }
     },

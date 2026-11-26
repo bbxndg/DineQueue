@@ -224,3 +224,29 @@ test('L7-T-17 confirmation and focus survive polling; a new current ticket reset
     await hostPost(f.host, f.queue, `/entries/${bTicket.id}/complete`);
   });
 });
+
+test('L7-T-16 a write that gets 401 navigates to sign-in once and clears the view (review #47)', async ({ browser }) => {
+  await withQueue(browser, async f => {
+    const ticket = await join(f.customer, f.queue);
+    await setReady(f.customer, ticket.id, true);
+    const host = f.host.page;
+    const customer = f.customer.page;
+    await host.goto(`/host/queue?queue=${f.queue}`);
+    await customer.goto(`/my-queue/${ticket.id}`);
+    await expect(host.getByRole('button', { name: 'Call next', exact: true })).toBeEnabled();
+    await expect(customer.getByTestId('ticket-readiness')).toHaveText('Ready to be called');
+    const loginNavigations = { host: 0, customer: 0 };
+    host.on('framenavigated', frame => { if (frame === host.mainFrame() && frame.url().endsWith('/login')) loginNavigations.host++; });
+    customer.on('framenavigated', frame => { if (frame === customer.mainFrame() && frame.url().endsWith('/login')) loginNavigations.customer++; });
+    // Revoke both real sessions, then write through the UI.
+    sql(`DELETE FROM sessions WHERE user_id IN ('${f.host.userId}','${f.customer.userId}');`);
+    await host.getByRole('button', { name: 'Call next', exact: true }).click();
+    await expect(host).toHaveURL(/\/login$/);
+    await customer.getByRole('button', { name: 'Mark not ready', exact: true }).click();
+    await expect(customer).toHaveURL(/\/login$/);
+    await host.waitForTimeout(1_500);
+    expect(loginNavigations).toEqual({ host: 1, customer: 1 });
+    await expect(host.getByTestId('current-ticket')).toHaveCount(0);
+    await expect(customer.getByTestId('ticket-code')).toHaveCount(0);
+  });
+});

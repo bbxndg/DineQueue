@@ -31,7 +31,12 @@ export function ReadinessControl({ entryId, isReady, csrfToken }: {
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ isReady: !isReady }),
       });
-      if (response.status === 401) { router.replace('/login'); router.refresh(); return false; }
+      if (response.status === 401) {
+        // In a polled view the view's access-loss handler is the single redirect.
+        if (live) live.reportAccessLost(401);
+        else { router.replace('/login'); router.refresh(); }
+        return false;
+      }
       if (!response.ok) {
         setError(response.status === 409 ? 'This ticket has changed. Readiness can change only while waiting.'
           : response.status === 404 ? 'This ticket is no longer available.'

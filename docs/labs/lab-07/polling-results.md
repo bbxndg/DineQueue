@@ -142,3 +142,27 @@ HTTPS/Cloud Run.
 5. Host Complete → Confirm → Customer list shows "You do not have an active
    ticket."; details show COMPLETED.
 6. Switch the Customer tab away for a while and back: the view updates at once.
+
+## Review follow-up — PR #47 (bbxndg, 26 Nov 2026)
+
+Local worktree verification after the review commit's changes (base `79dfa78`):
+
+| Review point | Change |
+|---|---|
+| `poll-coordinator.ts:145` overlapping writes | Behaviour confirmed and documented in code: overlapping writes share one refetch after the last settles; a manual refresh during a write is deferred to that read. New unit test "overlapping mutations and a manual refresh share one refetch after the last write" (also covers a failed write still refetching). |
+| `host-board.tsx:72` double 401 navigation | A write that gets 401 now calls `reportAccessLost(401)`: the poller stops (no post-write refetch) and the existing access-loss effect is the only redirect. Same for the Customer readiness control inside polled views; outside them the old path is unchanged. New browser test checks exactly one `/login` navigation for Host and Customer. |
+| `live-reads.ts:51` reconciliation | No change requested. |
+
+| Check | Result | Evidence |
+|---|---|---|
+| `npm test` | 11 passed, 0 failed | — |
+| lint, typecheck, build, `git diff --check` | PASS | — |
+| Full browser, first run | 34 passed, 1 failed: `my-ticket.spec.ts` asked for the session right after clicking Sign out and got 200 | [first run](evidence/polling-review-first-run.txt) |
+| `my-ticket.spec.ts` alone, clean DB and cleared limiter, 3 runs | 2/2 passed each time | — |
+| Full browser after the test waits for the sign-out redirect before asserting 401 | **35 passed**, 0 failed, 0 skipped (4.8 min) | [regression](evidence/polling-review-browser-regression.txt) |
+
+The Sign out race was in the test (no wait for the logout request), not in the
+app; the 401 assertion is unchanged. `apps/api` is unchanged, so the Go results
+above still apply and were not rerun. Hosted CI did not run on PR #47 because
+the workflow triggers only on PRs into `gcp-staging` and `main`; CI triggers were
+not changed in this work.

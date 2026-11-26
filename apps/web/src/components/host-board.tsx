@@ -75,10 +75,10 @@ export function HostBoard({ queueId, timezone, csrfToken, current: initialCurren
             method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': csrfToken },
           });
           const body = await response.json().catch(() => null);
-          if (!response.ok) {
-            setError(errorMessage(response.status, body?.error?.code));
-            if (response.status === 401) router.replace('/login');
-          } else setNotice(success(body));
+          // 401 uses the same access-loss path as polled reads: one redirect.
+          if (response.status === 401) live.reportAccessLost(401);
+          else if (!response.ok) setError(errorMessage(response.status, body?.error?.code));
+          else setNotice(success(body));
         } catch { setError('Unable to connect. Please try again.'); }
       });
     } finally { setPending(false); }

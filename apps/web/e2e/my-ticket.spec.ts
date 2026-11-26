@@ -61,6 +61,9 @@ test('T-010/018/019/020 My Ticket empty, join, persisted reload and cross-user p
     await expect(otherPage.getByText(ticket.ticketCode, { exact: true })).toHaveCount(0);
   } finally { await other.close(); }
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  // Sign-out redirects only after the logout request completes; checking before
+  // that raced the request (intermittent 200 seen in a Lab 7 full run).
+  await expect(page).toHaveURL(/\/login$/);
   expect((await page.request.get(`/api/v1/me/queue-entries/${ticket.id}`)).status()).toBe(401);
   await page.goto(`/my-queue/${ticket.id}`);
   await expect(page).toHaveURL(/\/login$/);

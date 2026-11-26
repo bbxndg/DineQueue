@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ReadinessControl } from '@/components/readiness-control';
-import type { Ticket } from '@/lib/tickets';
+import type { Ticket } from '@/lib/ticket-types';
 
 const statusMessages = {
   WAITING: 'Please stay nearby. The host will call your ticket number.',

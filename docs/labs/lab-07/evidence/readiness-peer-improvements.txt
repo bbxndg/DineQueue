@@ -1,0 +1,132 @@
+Queue integration/race tests; go vet and API compile also exited 0
+=== RUN   TestHostHandlersRequireIdentity
+--- PASS: TestHostHandlersRequireIdentity (0.00s)
+=== RUN   TestF04WaitingListIsFIFO
+--- PASS: TestF04WaitingListIsFIFO (0.93s)
+=== RUN   TestF04CallNextCallsOldestWaiting
+--- PASS: TestF04CallNextCallsOldestWaiting (0.90s)
+=== RUN   TestF04CallNextBusinessConflicts
+--- PASS: TestF04CallNextBusinessConflicts (0.88s)
+=== RUN   TestF04ConcurrentCallNextClaimsOnce
+--- PASS: TestF04ConcurrentCallNextClaimsOnce (0.92s)
+=== RUN   TestF04AccessControl
+2026/11/25 18:38:32 session rejected: unauthenticated
+2026/11/25 18:38:32 session rejected: unauthenticated
+2026/11/25 18:38:32 session rejected: unauthenticated
+2026/11/25 18:38:32 session rejected: unauthenticated
+--- PASS: TestF04AccessControl (1.05s)
+=== RUN   TestF04CompleteThenCallNext
+--- PASS: TestF04CompleteThenCallNext (0.95s)
+=== RUN   TestF04InvalidCompletion
+--- PASS: TestF04InvalidCompletion (0.95s)
+=== RUN   TestF04MalformedEntryDoesNotTakeQueueLock
+--- PASS: TestF04MalformedEntryDoesNotTakeQueueLock (0.87s)
+=== RUN   TestF04ConcurrentCompleteSucceedsOnce
+--- PASS: TestF04ConcurrentCompleteSucceedsOnce (0.99s)
+=== RUN   TestF03CustomerRoleRequired
+2026/11/25 18:38:37 session rejected: unauthenticated
+2026/11/25 18:38:37 session rejected: unauthenticated
+2026/11/25 18:38:37 session rejected: unauthenticated
+--- PASS: TestF03CustomerRoleRequired (0.90s)
+=== RUN   TestF03PersistedValuesLifecycleAndPrivacy
+2026/11/25 18:38:38 session rejected: unauthenticated
+--- PASS: TestF03PersistedValuesLifecycleAndPrivacy (0.95s)
+=== RUN   TestF03ActiveAcrossQueuesHasStableOrderAndNoCache
+--- PASS: TestF03ActiveAcrossQueuesHasStableOrderAndNoCache (0.90s)
+=== RUN   TestF02JoinCreatesWaitingTicket
+--- PASS: TestF02JoinCreatesWaitingTicket (0.89s)
+=== RUN   TestF02InvalidPartySizeCreatesNothing
+--- PASS: TestF02InvalidPartySizeCreatesNothing (0.89s)
+=== RUN   TestF02DuplicateSequentialJoinConflicts
+--- PASS: TestF02DuplicateSequentialJoinConflicts (0.90s)
+=== RUN   TestF02ConcurrentDuplicateJoinCreatesOne
+--- PASS: TestF02ConcurrentDuplicateJoinCreatesOne (0.90s)
+=== RUN   TestF02ConcurrentCustomersGetUniqueNumbers
+--- PASS: TestF02ConcurrentCustomersGetUniqueNumbers (0.89s)
+=== RUN   TestF02UnknownAndInactiveQueue
+--- PASS: TestF02UnknownAndInactiveQueue (0.85s)
+=== RUN   TestF02RoleSessionAndCSRFGates
+2026/11/25 18:38:45 session rejected: unauthenticated
+2026/11/25 18:38:45 session rejected: unauthenticated
+--- PASS: TestF02RoleSessionAndCSRFGates (0.84s)
+=== RUN   TestF02ServiceDateUsesRestaurantTimezone
+--- PASS: TestF02ServiceDateUsesRestaurantTimezone (0.84s)
+=== RUN   TestF03ActiveAndDetailEntry
+--- PASS: TestF03ActiveAndDetailEntry (0.85s)
+=== RUN   TestF03EmptyActiveList
+--- PASS: TestF03EmptyActiveList (0.85s)
+=== RUN   TestF03CrossUserPrivacy
+2026/11/25 18:38:48 session rejected: unauthenticated
+--- PASS: TestF03CrossUserPrivacy (0.87s)
+=== RUN   TestL7NewJoinStartsNotReady
+--- PASS: TestL7NewJoinStartsNotReady (0.85s)
+=== RUN   TestL7NoReadyPartiesCannotBeCalled
+--- PASS: TestL7NoReadyPartiesCannotBeCalled (0.85s)
+=== RUN   TestL7ReadinessOwnerLifecycleAndFIFO
+--- PASS: TestL7ReadinessOwnerLifecycleAndFIFO (0.89s)
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/guest
+2026/11/25 18:38:52 session rejected: unauthenticated
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/host
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/foreign
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/missing
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/malformed
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/csrf
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/null
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/number
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/unknown
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/duplicate
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/empty
+--- PASS: TestL7ReadinessValidationPrivacyAndCSRF (0.88s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/guest (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/host (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/foreign (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/missing (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/malformed (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/csrf (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/null (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/number (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/unknown (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/duplicate (0.00s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/empty (0.00s)
+=== RUN   TestL7ReadinessInactiveQueueAndPersistence
+--- PASS: TestL7ReadinessInactiveQueueAndPersistence (0.86s)
+=== RUN   TestL7ReadinessMigrationPreservesExistingTickets
+--- PASS: TestL7ReadinessMigrationPreservesExistingTickets (0.86s)
+=== RUN   TestL7ReadinessCallRaceBothCommitOrders
+=== RUN   TestL7ReadinessCallRaceBothCommitOrders/not-ready-first
+=== RUN   TestL7ReadinessCallRaceBothCommitOrders/call-first
+--- PASS: TestL7ReadinessCallRaceBothCommitOrders (1.73s)
+    --- PASS: TestL7ReadinessCallRaceBothCommitOrders/not-ready-first (0.86s)
+    --- PASS: TestL7ReadinessCallRaceBothCommitOrders/call-first (0.87s)
+=== RUN   TestParseReadinessStrictBoolean
+--- PASS: TestParseReadinessStrictBoolean (0.00s)
+=== RUN   TestS1NoncanonicalQueueIDsReturnNotFound
+--- PASS: TestS1NoncanonicalQueueIDsReturnNotFound (0.86s)
+=== RUN   TestS1HostDrainsInactiveQueueInFIFOIncludingTiesAndPreviousDays
+--- PASS: TestS1HostDrainsInactiveQueueInFIFOIncludingTiesAndPreviousDays (0.92s)
+=== RUN   TestS1ConcurrentCompleteAndCallNextPreserveLifecycle
+--- PASS: TestS1ConcurrentCompleteAndCallNextPreserveLifecycle (0.88s)
+=== RUN   TestS1HostTransitionSQLFailureRollsBack
+--- PASS: TestS1HostTransitionSQLFailureRollsBack (0.94s)
+=== RUN   TestParsePartySize
+--- PASS: TestParsePartySize (0.00s)
+=== RUN   TestTicketCode
+--- PASS: TestTicketCode (0.00s)
+PASS
+ok  	dinequeue.local/api/internal/queue	32.353s
+
+Final readiness browser tests
+> @dinequeue/web@0.0.0 test:e2e
+> playwright test readiness-errors.spec.ts readiness.spec.ts
+
+
+Running 3 tests using 1 worker
+
+(node:335587) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/readiness-errors.spec.ts:53:1 › L7 readiness network failure preserves state and recovers after refresh (625ms)
+  ✓  2 e2e/readiness-errors.spec.ts:69:1 › L7 stale readiness update gets real 409 and refreshes to CALLED (441ms)
+  ✓  3 e2e/readiness.spec.ts:11:1 › L7 readiness: skip unavailable party, restore original FIFO, lock readiness after call (2.6s)
+
+  3 passed (4.3s)

@@ -14,6 +14,7 @@ const nextConfig = {
       { source: '/api/v1/queues', destination: `${backendOrigin}/api/v1/queues` },
       { source: '/api/v1/queues/:queueId/entries', destination: `${backendOrigin}/api/v1/queues/:queueId/entries` },
       { source: '/api/v1/me/queue-entries/active', destination: `${backendOrigin}/api/v1/me/queue-entries/active` },
+      { source: '/api/v1/me/queue-entries/:entryId/readiness', destination: `${backendOrigin}/api/v1/me/queue-entries/:entryId/readiness` },
       { source: '/api/v1/me/queue-entries/:entryId', destination: `${backendOrigin}/api/v1/me/queue-entries/:entryId` },
       { source: '/api/v1/host/queues', destination: `${backendOrigin}/api/v1/host/queues` },
       { source: '/api/v1/host/queues/:queueId/entries', destination: `${backendOrigin}/api/v1/host/queues/:queueId/entries` },

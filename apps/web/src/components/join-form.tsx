@@ -76,6 +76,7 @@ export function JoinForm({ queues, csrfToken }: { queues: ServiceQueue[]; csrfTo
     {size >= LARGE_PARTY && size <= MAX && <p role="note" className="rounded-lg border border-ink/20 bg-white p-3 text-sm">
       Parties of {size} may be seated across connected tables. Combined seating is not guaranteed.
     </p>}
+    <p className="text-sm">Your ticket starts Not ready. After joining, mark Ready when your whole party is available.</p>
     {error && <p role="alert" aria-live="polite" className="rounded-lg border border-wine/30 bg-white p-3 text-wine">{error}</p>}
     {duplicate && <Link href="/my-queue" prefetch={false} className="font-semibold text-wine underline">View My Ticket</Link>}
     <button disabled={pending} className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">{pending ? 'Joining…' : 'Join waitlist'}</button>

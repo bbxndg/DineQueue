@@ -20,6 +20,6 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ e
       <Link href="/my-queue" prefetch={false}>My Ticket</Link>
       <RefreshTicket />
     </div>
-    <TicketCard ticket={ticket} />
+    <TicketCard csrfToken={session.csrfToken} ticket={ticket} />
   </MyTicketShell>;
 }

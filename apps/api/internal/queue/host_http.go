@@ -25,6 +25,8 @@ func hostError(c fiber.Ctx, err error) error {
 		return failure(c, 403, "FORBIDDEN", "Access denied.")
 	case errors.Is(err, ErrNotFound):
 		return failure(c, 404, "NOT_FOUND", "Resource not found.")
+	case errors.Is(err, ErrNoReadyParties):
+		return failure(c, 409, "NO_READY_PARTIES", "No waiting party is ready to be called.")
 	case errors.Is(err, ErrQueueEmpty):
 		return failure(c, 409, "QUEUE_EMPTY", "No waiting party to call.")
 	case errors.Is(err, ErrCallInProgress):

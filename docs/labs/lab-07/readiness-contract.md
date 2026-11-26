@@ -2,11 +2,14 @@
 
 Version: DQ-L7-CR44-v0.1, 25 November 2026 (Asia/Bangkok).
 Issue: https://github.com/bbxndg/DineQueue/issues/44
-Status: **DRAFT FOR TEAM REVIEW — NOT IMPLEMENTED / NOT TESTED**.
+Status: **CONTRACT REVIEWED on PR #45; readiness implemented in the local worktree;
+polling NOT IMPLEMENTED**. Local evidence: [readiness results](readiness-results.md).
+Original contract commit: `323d8e7c1796466fd6d3cea46044c72cd4ac20d4`;
+review by softkoi: 26 Nov 2026 00:00:50 ICT (25 Nov 17:00:50 UTC).
+These implementation notes do not replace the original reviewed contract.
 
 This is the shared source of truth for both feature branches and their AI assistants.
-Read this file and [STS](readiness-sts.md) before changing code. The team must review
-and commit the contract before implementation; do not backfill pre-implementation
+Read this file and [STS](readiness-sts.md) before changing code. The contract was committed and reviewed before readiness implementation; do not backfill pre-implementation
 review or RED evidence after coding.
 
 ## Assessment and versions
@@ -20,8 +23,8 @@ change is assessed: readiness-aware calling; polling supports that workflow.
 |---|---|
 | Accepted Sprint 1 baseline from Lab 6 | PENDING team confirmation of accepted SHA and UAT/re-test evidence |
 | Actual pre-change local main | `1524502386065be2eb6025c04bae72a5398c7228` (includes #41 ticket-page HTTP 404 fix via #43) |
-| Contract commit and teammate review | PENDING |
-| RED / GREEN / integrated release / deployed revision | NOT RUN / NOT RELEASED |
+| Contract commit and teammate review | `323d8e7`; softkoi APPROVED [PR #45](https://github.com/bbxndg/DineQueue/pull/45), merged into staging at `8539b24` |
+| RED / GREEN / integrated release / deployed revision | Local worktree results linked above; feature integration/release/deployment PENDING |
 
 A clean local checkout of main is a source baseline, not proof of accepted UAT or
 current cloud deployment. Later main fixes must be integrated deliberately and
@@ -44,18 +47,19 @@ boolean, not a new ticket status. Lifecycle remains WAITING -> CALLED -> COMPLET
    explain that it may be skipped and provide no wait-time guarantee.
 4. Keep BR-005: at most one CALLED ticket per queue. Existing CALLED takes priority
    over empty/no-ready error checks. Complete semantics remain manual S1 completion.
-5. **Proposed team decision:** new tickets start Not ready. Join UI explicitly tells
+5. **Reviewed team decision (PR #45):** new tickets start Not ready. Join UI explicitly tells
    Customers to confirm Ready. Existing rows are backfilled Ready so migration
    does not silently remove existing waiting parties from eligibility. Lifecycle
    guards still make readiness uneditable for existing CALLED/COMPLETED rows.
 6. A repeated set to the current value while WAITING returns 200 without a second
    version increment. This is a set operation, never a server-side toggle.
 
-Items 1–6 and the API below require teammate review. No team approval is claimed.
+Items 1–6 and the API below were reviewed in PR #45. Implementation PR review
+and release acceptance are still pending.
 Future S2 matching must filter readiness alongside capacity/availability and recheck
 it inside call+hold transactions. Implementing S2 matching/holds is outside #44.
 
-## Shared HTTP/JSON interface (proposed, freeze after review)
+## Shared HTTP/JSON interface (reviewed in PR #45)
 
 Preserve existing envelopes and fields. Add required JSON boolean `isReady` to
 Customer Entry/Ticket and HostEntry DTOs, including join and transition responses.
@@ -111,7 +115,9 @@ service calls or treat a client-side Ready badge as authoritative.
 
 Readiness: show explicit readiness text and labelled owner controls on WAITING
 cards in `/my-queue` and owned detail. Disable while a mutation is pending; use
-confirmed response, not an optimistic authoritative status. On 409 refetch state
+confirmed response, not an optimistic authoritative status. Readiness PATCH has
+a 15-second client timeout; timeout does not prove the write failed, so show the
+existing uncertainty message and let the Customer refresh before retrying. On 409 refetch state
 and explain the ticket was changed. Non-WAITING has no editable readiness control.
 Host waiting list shows readiness, keeps skipped parties visible, and explains
 NO_READY_PARTIES. Disable Call Next if none eligible, but backend still decides.
@@ -175,8 +181,9 @@ Current source map:
 ## Instructions for teammate's AI
 
 Read README, AGENTS, SRS, domain rules, this contract and STS. Work on
-`feat/lab7-ticket-polling` branched from `lab7-staging` **after the contract commit
-is shared**. Do not create a second readiness API/migration or independently
+`feat/lab7-ticket-polling` branched from `lab7-staging` **after the readiness feature PR is reviewed and
+merged**, per the user's integration sequence agreed on 26 November. Pull staging
+first so the readiness API and UI are available; do not branch from old main. Do not create a second readiness API/migration or independently
 change FIFO/defaults. Both PR descriptions use `Part of #44`; neither closes the
 issue before integrated acceptance. Both teammates review each other's work. The documentation branch is integrated
 first; merging it is not evidence of teammate approval. Record the actual contract
@@ -188,7 +195,7 @@ failing tests against actual pre-change behavior. Compile errors, missing import
 or deliberately broken fixtures are not valid RED evidence. Existing strict-FIFO
 tests legitimately need versioned Ready fixtures; retain ordering/permission and
 concurrency assertions rather than deleting coverage. Record actual commands,
-SHAs, dates, pass/fail/skip counts and CI URLs. No PASS is claimed by this draft.
+SHAs, dates, pass/fail/skip counts and CI URLs. This contract alone does not establish PASS; actual dated results are linked above.
 
 Final release: reviewed feature PRs -> lab7-staging -> regression -> reviewed main
 PR -> pipeline deploy -> changed/preserved behavior checks. Capture all versions

@@ -81,7 +81,8 @@ func TestF03PersistedValuesLifecycleAndPrivacy(t *testing.T) {
 	}
 	assertTicket := func(body map[string]any, status string) {
 		t.Helper()
-		if len(body) != 10 || body["id"] != id || body["queueId"] != auth.DemoQueueID || body["ticketCode"] != created.body["ticketCode"] || body["partySize"] != float64(persisted.PartySize) || body["status"] != status || body["serviceDate"] != persisted.ServiceDate {
+		// Lab 7 adds only the public readiness boolean; retain the exact DTO/private-field checks.
+		if len(body) != 11 || body["isReady"] != false || body["id"] != id || body["queueId"] != auth.DemoQueueID || body["ticketCode"] != created.body["ticketCode"] || body["partySize"] != float64(persisted.PartySize) || body["status"] != status || body["serviceDate"] != persisted.ServiceDate {
 			t.Fatalf("T-018 DTO/persisted mismatch: %v", body)
 		}
 		stamp, err := time.Parse(time.RFC3339Nano, body["joinedAt"].(string))

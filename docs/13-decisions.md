@@ -203,7 +203,7 @@ not team/TA sign-off on DEC-023 or all domain decisions. See `features/sprint1-f
 
 ## DEC-033 — Lab 7 readiness-aware calling (#44), 25 November 2026
 
-Status: **PROPOSED — teammate contract review pending**. See the
+Status: **Contract reviewed on PR #45; readiness local verification recorded; polling pending**. See the
 [shared contract](labs/lab-07/readiness-contract.md) and
 [STS](labs/lab-07/readiness-sts.md) before implementing either feature branch.
 
@@ -213,7 +213,8 @@ Status: **PROPOSED — teammate contract review pending**. See the
 - Proposed BR-003-L7-v1 calls the oldest ready WAITING ticket; original join order
   is retained, and an already CALLED party cannot be displaced.
 - Proposed new-ticket default is Not ready; existing rows are backfilled Ready.
-  The team must review this compatibility choice before implementation.
+  softkoi approved this compatibility choice in PR #45 before implementation.
 - Main source at planning: `1524502386065be2eb6025c04bae72a5398c7228`.
   Accepted Lab 6 baseline evidence is still to be confirmed separately.
-- No code, test execution, reviewer approval or deployment is claimed.
+- Actual readiness implementation/checks are recorded in `labs/lab-07/readiness-results.md`.
+  Feature PR review, integrated release and deployment remain pending.

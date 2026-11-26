@@ -59,7 +59,13 @@ async function join(client: Client, queue: string): Promise<{ id: string; ticket
     headers: { Origin: process.env.F01_BASE_URL!, 'X-CSRF-Token': client.csrf }, data: { partySize: 2 },
   });
   expect(response.status()).toBe(201);
-  return response.json();
+  const ticket = await response.json();
+  // Lab 7: these preserved lifecycle tests explicitly opt the owner into calling.
+  const ready = await client.page.request.patch(`/api/v1/me/queue-entries/${ticket.id}/readiness`, {
+    headers: { Origin: process.env.F01_BASE_URL!, 'X-CSRF-Token': client.csrf }, data: { isReady: true },
+  });
+  expect(ready.status()).toBe(200);
+  return ticket;
 }
 
 async function transition(client: Client, queue: string, suffix: string) {
@@ -207,6 +213,9 @@ for (const width of [360, 1280]) {
       await customer.page.keyboard.press('Enter');
       await expect(customer.page.getByTestId('ticket-status')).toHaveText('WAITING');
       await checkAccessibleLayout(customer.page, width, 'ticket-waiting');
+      await tabTo(customer.page, customer.page.getByRole('button', { name: 'Mark ready', exact: true }));
+      await customer.page.keyboard.press('Enter');
+      await expect(customer.page.getByTestId('ticket-readiness')).toHaveText('Ready to be called');
       await tabTo(customer.page, customer.page.getByRole('link', { name: 'View ticket details', exact: true }));
       await customer.page.keyboard.press('Enter');
       await expect(customer.page.getByRole('heading', { name: 'Ticket details', exact: true })).toBeVisible();

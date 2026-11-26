@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLiveRefresh } from '@/components/live-refresh';
 
 export function ReadinessControl({ entryId, isReady, csrfToken }: {
   entryId: string; isReady: boolean; csrfToken: string;
 }) {
   const router = useRouter();
+  const live = useLiveRefresh();
   const [pending, setPending] = useState(false);
   const [refreshing, startRefresh] = useTransition();
   const [error, setError] = useState('');
@@ -14,6 +16,14 @@ export function ReadinessControl({ entryId, isReady, csrfToken }: {
   async function setReadiness() {
     if (pending || refreshing) return;
     setPending(true); setError('');
+    // In a polled view the write suspends and invalidates reads, then the view
+    // refetches the committed state; otherwise fall back to a server refresh.
+    const write = live ? live.runMutation(submit) : submit().then(done => { if (done) startRefresh(() => router.refresh()); });
+    try { await write; } finally { setPending(false); }
+  }
+
+  /** Returns false when navigation away (401) makes a refresh pointless. */
+  async function submit(): Promise<boolean> {
     try {
       const response = await fetch(`/api/v1/me/queue-entries/${encodeURIComponent(entryId)}/readiness`, {
         method: 'PATCH', credentials: 'same-origin', cache: 'no-store',
@@ -21,19 +31,21 @@ export function ReadinessControl({ entryId, isReady, csrfToken }: {
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ isReady: !isReady }),
       });
-      if (response.status === 401) { router.replace('/login'); router.refresh(); return; }
+      if (response.status === 401) { router.replace('/login'); router.refresh(); return false; }
       if (!response.ok) {
         setError(response.status === 409 ? 'This ticket has changed. Readiness can change only while waiting.'
           : response.status === 404 ? 'This ticket is no longer available.'
           : response.status === 403 ? 'This action could not be verified. Refresh and try again.'
           : 'Unable to change readiness. Please try again.');
       } else {
-        // Consume the committed response; the refreshed server view remains authoritative.
+        // Consume the committed response; the refreshed view remains authoritative.
         await response.json();
       }
-      startRefresh(() => router.refresh());
-    } catch { setError('Unable to connect. Your readiness has not been confirmed. Refresh before trying again.'); }
-    finally { setPending(false); }
+      return true;
+    } catch {
+      setError('Unable to connect. Your readiness has not been confirmed. Refresh before trying again.');
+      return true;
+    }
   }
 
   return <div className="mt-5 grid gap-3" aria-busy={pending || refreshing}>

@@ -2,7 +2,7 @@
 
 > Lab 7 #44 extends Entry/Ticket/HostEntry with `isReady`, adds owner-only readiness PATCH and versions call eligibility. See the [shared contract](labs/lab-07/readiness-contract.md) for JSON/errors, migration 0003 and queue-to-entry locking; [local results](labs/lab-07/readiness-results.md).
 
-**Status:** proposed implementation contract. API response shapes and status/error codes are team choices. They are not prescribed by the CPE 334 PDF.
+**Status:** current S1/Lab 7 interfaces plus proposed S2 additions. [DQ-S2-INTERFACES-2.1](features/sprint2-ui-api-data.md) is the detailed S2 review draft and supersedes conflicting v2 sketches. No new route is implemented by this documentation change. API response shapes and status/error codes are team choices. They are not prescribed by the CPE 334 PDF.
 
 Machine-readable export of the implemented Sprint 1 routes:
 [`api/sprint1.openapi.json`](api/sprint1.openapi.json). S2 proposed routes below
@@ -31,7 +31,7 @@ erDiagram
   restaurants ||--o{ floor_zones : contains
   floor_zones ||--o{ dining_tables : contains
   floor_zones ||--o{ table_connections : edges
-  queue_entries ||--o| seating_assignments : seating_group
+  queue_entries ||--o{ seating_assignments : seating_history
   seating_assignments ||--|{ seating_assignment_tables : members
   dining_tables ||--o{ seating_assignment_tables : occupied_in
 ```
@@ -108,13 +108,14 @@ erDiagram
 | `service_date` | date not null | Numbering scope |
 | `sequence_number` | positive int not null | Human number, e.g. 14 |
 | `party_size` | int CHECK 1 <= n <= 16 | Number of diners |
-| `status` | enum WAITING/CALLED/COMPLETED (S1) | State |
+| `status` | text CHECK WAITING/CALLED/COMPLETED in 0002 | S1 state; S2 adds terminal values through a new reviewed migration |
 | `joined_at` | timestamptz not null | Fairness order |
 | `called_at` | timestamptz nullable | Call time |
 | `completed_at` | timestamptz nullable | Completion time |
 | `called_by` | UUID nullable FK users | Audit |
 | `completed_by` | UUID nullable FK users | Audit |
-| `version` | integer default 1 | Optional optimistic control |
+| `version` | integer default 1 | Persisted transition version |
+| `is_ready` | boolean NOT NULL, new default false | Lab 7 owner readiness; existing rows backfilled true by 0003 |
 
 **Essential SQL constraints/indexes** (implement with migrations and confirm against test PostgreSQL):
 
@@ -139,92 +140,24 @@ ON queue_entries (queue_id, status, joined_at, id);
 
 **Migration caution:** Keep one CALLED per service queue in v2; revise queue status enum/constraints when adding CANCELLED/NO_SHOW. Use SQL migrations for partial unique indexes and tested rollback. Do not assume ORM schema alone handles them.
 
-## 2. Sprint 2 floor and seating extensions — definitive v2 design
+## 2. Sprint 2 floor and seating data review draft
 
-All records are within a restaurant; enforce FK/transactional same-restaurant and zone checks. Do not use the location of visual cards to infer combinability. Use PostgreSQL `timestamptz` and store UTC instants.
+The complete field/constraint and migration definitions are in [S2 UI/API/data sections 6–8](features/sprint2-ui-api-data.md#6-persistent-model-and-invariants). They are proposed schema, not applied migrations.
 
-### `floor_zones`
+| Entity | Responsibility and invariant |
+|---|---|
+| service_queues additions | Explicit MANUAL/SEATING mode, five-minute hold policy; existing rows stay MANUAL until guarded activation |
+| restaurant_floor_state | Restaurant-wide layout version and shared transaction lock, including cross-queue claims |
+| floor_zones / dining_tables | Same-restaurant/zone references, capacity1–8, persisted state/version and display coordinates |
+| table_connections | Active approved undirected low/high pair; no self, duplicate or cross-zone combinations |
+| seating_assignments | HELD/ACTIVE/CLOSED/RELEASED, queue/entry/zone, versions and lifecycle times; CLOSED carries DIRTY/CLEANING/CLEANED turnover |
+| seating_assignment_tables | Historical N:M membership with capacity snapshot and released_at; unique outstanding table claim retained until release or finish-cleaning |
+| queue_entries additions | Add CANCELLED/NO_SHOW with versioned lifecycle CHECKs/terminal metadata; preserve old times, IDs, is_ready and uniqueness |
+| operation_events / operation_requests | Append-only transition/selection audit and scoped idempotency results committed with business state |
 
-| Field | Type / constraint | Purpose |
-|---|---|---|
-| `id` | UUID PK | Stable floor zone |
-| `restaurant_id` | UUID FK restaurants | Owning restaurant |
-| `name` | varchar(80) | Main/Terrace/Private |
-| `layout_version` | bigint >= 1 | Detect stale previews |
-| `is_active` | bool | Whether eligible for seating |
+Memberships remain claimed during dirty/cleaning turnover, rather than being released at checkout as in the old sketch. An explicit turnover phase prevents an old assignment cleaning tables reallocated to a new group. Same-zone connectivity and summed capacity require service validation under locks; a simple cross-row CHECK is not sufficient.
 
-### `dining_tables`
-
-| Field | Type / constraint | Purpose |
-|---|---|---|
-| `id` | UUID PK | Physical table |
-| `restaurant_id`, `zone_id` | UUID FKs | Restaurant/floor scope |
-| `code` | varchar(20), unique per restaurant | T4, T5 |
-| `capacity` | integer CHECK 1..8 | **Individual** table capacity |
-| `status` | enum AVAILABLE/HELD/OCCUPIED/DIRTY/CLEANING/OUT_OF_SERVICE | Lifecycle |
-| `position_x`, `position_y` | numeric bounded | Display coordinates, not adjacency proof |
-| `version` | bigint default 1 | Snapshot protection |
-| `updated_at` | timestamptz | Status update |
-
-### `table_connections` — approved physical adjacency graph
-
-| Field | Type / constraint | Purpose |
-|---|---|---|
-| `table_low_id`, `table_high_id` | UUID FKs, composite PK with `low_id < high_id` | Unique undirected edge |
-| `is_active` | boolean default true | Explicit permitted combination |
-| `approved_by` | UUID FK users nullable for seeded edges | Trace decision |
-| `created_at` | timestamptz | Audit |
-
-**Important:** `table_low_id < table_high_id` is a stable canonical order; physical floor joins must be manager-validated. A DB CHECK cannot enforce same-zone membership across two FKs by itself: service + transaction/trigger (if required) validates those referenced rows. Prevent removing an edge while held/active assignments rely on it, or record a reviewed migration policy.
-
-### `seating_assignments` — one party, 1–3 physical tables
-
-| Field | Type / constraint | Purpose |
-|---|---|---|
-| `id` | UUID PK | Group assignment |
-| `queue_entry_id` | UUID unique FK | One seating assignment per queue entry in v2 |
-| `status` | HELD/ACTIVE/CLOSED/RELEASED | Hold, seat, checkout lifecycle |
-| `created_by` | UUID FK users | Authorized Host |
-| `hold_expires_at` | timestamptz nullable | Server-controlled hold expiry |
-| `held_at`, `seated_at`, `closed_at` | timestamptz | Operations analytics |
-| `capacity_snapshot` | integer >= party size | Snapshot of all member seats |
-| `restaurant_id`, `zone_id` | UUID FKs | Scope consistency |
-| `idempotency_key` | unique per actor/operation scope | Safe UI repeat behavior |
-
-### `seating_assignment_tables` — the crucial N:M membership table
-
-| Field | Type / constraint | Purpose |
-|---|---|---|
-| `assignment_id`, `table_id` | UUID FKs, composite PK | Which tables belong to which party |
-| `released_at` | timestamptz nullable | Non-null after RELEASED/CLOSED |
-| `capacity_at_assignment` | integer 1..8 | Historical capacity snapshot |
-
-Partial unique index `table_id WHERE released_at IS NULL` ensures one table cannot be concurrently HELD or ACTIVE for two different assignments. All membership rows for a group are created/closed in a **single transaction**. Status column and membership index are mutually consistent only with transaction service checks and tests.
-
-### `queue_events` / `table_events`
-
-- Append-only event with `id`, actor, restaurant, queue entry / assignment / table references, `action`, server timestamp, status from/to, restricted JSON metadata (reason and selected table IDs only; no session secrets).
-- Event records begin Sprint 2 for important mutations (call, hold, seat, no-show, checkout, clean) and feed Sprint 3 analytics.
-
-### Migration/invariant SQL sketch (adapt to actual schema)
-
-```sql
-ALTER TABLE queue_entries
-  ADD CONSTRAINT chk_party_size CHECK (party_size BETWEEN 1 AND 16);
-
--- Physical table capacity remains <= 8; group capacity is summed at runtime.
-ALTER TABLE dining_tables
-  ADD CONSTRAINT chk_table_capacity CHECK (capacity BETWEEN 1 AND 8);
-
-CREATE UNIQUE INDEX uq_open_table_member
-ON seating_assignment_tables (table_id)
-WHERE released_at IS NULL;
-
-CREATE INDEX idx_tables_zone_state
-ON dining_tables (zone_id, status, id);
-```
-
-**Migration note:** If a `chk_party_size` constraint already exists, replace it with `DROP CONSTRAINT` then `ADD CONSTRAINT` in a reviewed migration, not duplicate it. Creation-order/foreign-key state and exact constraint names must be checked against the actual DB, then integration-tested. PostgreSQL cannot directly enforce cross-row connectedness or summed group capacity with a simple CHECK; business transactions + explicit tests remain essential.
+Do not edit applied migrations 0001–0003 or use startup AutoMigrate. Stage additive floor data under #50 and common seating/lifecycle data under #52; #53/#54 reuse that schema. Provision/activate explicitly with database confirmation; never fabricate old assignments, alter existing readiness/passwords or silently convert a legacy CALLED ticket. See the contract for MANUAL compatibility and the application rollback boundary.
 
 ## 3. API design conventions
 
@@ -274,7 +207,7 @@ not-found contract without letting PostgreSQL parsing errors become 500 response
 | GET | `/me/queue-entries/{entryId}` | none | 200 own detail, including COMPLETED | 401,403,404 |
 
 Both read endpoints require CUSTOMER at HTTP and service layers (DEC-030).
-Read summaries contain the seven entry-summary fields below plus `queueName`,
+Read summaries contain the eight entry-summary fields below plus `queueName`,
 `restaurantName` and `timezone`. `serviceDate` is YYYY-MM-DD, `joinedAt` UTC;
 no customer identity or staff audit fields are returned. Active entries include
 prior business dates and inactive queues, ordered `(joined_at,id)`; detail queries
@@ -290,6 +223,7 @@ Example 201 response:
   "ticketCode": "A-014",
   "serviceDate": "2026-11-05",
   "partySize": 4,
+  "isReady": false,
   "status": "WAITING",
   "joinedAt": "2026-11-05T04:15:00.000Z"
 }
@@ -301,45 +235,35 @@ Example 201 response:
 |---|---|---|---|---|
 | GET | `/host/queues` | none | 200 `{queues:[{id,name,restaurantName,timezone,isActive}]}` assigned only | 401,403 |
 | GET | `/host/queues/{queueId}/entries?status=WAITING` | none | 200 `{entries:[...]}` oldest first `(joined_at,id)` | 400,401,403,404 |
-| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null|...}` | 401,403,404 |
-| POST | `/host/queues/{queueId}/call-next` | empty body | 200 updated CALLED entry | 400,401,403,404,409 `CALL_IN_PROGRESS`/`QUEUE_EMPTY` |
+| GET | `/host/queues/{queueId}/current` | none | 200 `{entry:null}` or `{entry:HostEntry}` | 401,403,404 |
+| POST | `/host/queues/{queueId}/call-next` | empty body | 200 updated CALLED entry | 400,401,403,404,409 `CALL_IN_PROGRESS`/`QUEUE_EMPTY`/`NO_READY_PARTIES` |
 | POST | `/host/queues/{queueId}/entries/{entryId}/complete` | empty body | 200 updated COMPLETED entry | 400,401,403,404,409 `INVALID_TRANSITION` |
 
 All paths are under `/api/v1`, require role HOST plus a queue grant (unknown queue
 UUID → 403, malformed ID → 404), and mutations require Origin + CSRF (DEC-031).
-Host entry DTO: `id, queueId, ticketCode, serviceDate, partySize, status, joinedAt,
+Host entry DTO: `id, queueId, ticketCode, serviceDate, partySize, isReady, status, joinedAt,
 calledAt, completedAt`; no customer identity or actor IDs.
 
 **S1 compatibility:** Host's `Complete` confirms party was seated/handled manually, before digital table assignment exists. S2 introduces table-assignment precondition via recorded contract revision.
 
-### Proposed S2 extensions (updated; always under `/api/v1`)
+### Proposed S2 interfaces
 
-| Method | Path | Role | Request / response shape | Principal validation |
-|---|---|---|---|---|
-| GET | `/host/restaurants/{id}/floor` | assigned Host | `{zones:[{id,name,layoutVersion,tables,connections}]}` | Scope, statuses server-backed |
-| GET | `/host/queues/{id}/matching?entryId={uuid}` | assigned Host | `200 {entryId,candidates:[{tableIds,totalSeats,unusedSeats,reason}],snapshotVersion}` | Read-only candidate preview |
-| POST | `/host/queues/{id}/match-and-call` | assigned Host | `{entryId,tableIds:[...],expectedLayoutVersion,idempotencyKey}` → `{ticket,assignment,holdExpiresAt}` | Connected & capacity-safe, atomic HELD/ CALLED |
-| POST | `/host/seating-assignments/{id}/seat` | assigned Host | `{expectedVersion}` → active assignment + occupied table IDs | Valid unexpired HELD group; atomic |
-| POST | `/host/seating-assignments/{id}/checkout` | assigned Host | `{expectedVersion}` → CLOSED + all DIRTY | Must be ACTIVE; whole group |
-| POST | `/host/seating-assignments/{id}/start-cleaning` | assigned Host | `{expectedVersion}` → all member tables CLEANING | CLOSED group, all DIRTY |
-| POST | `/host/seating-assignments/{id}/finish-cleaning` | assigned Host | `{expectedVersion}` → all member tables AVAILABLE | whole group CLEANING only |
-| POST | `/me/queue-entries/{id}/cancel` | owning Customer | no body → CANCELLED | WAITING only |
-| POST | `/host/queue-entries/{id}/no-show` | assigned Host | `{reasonCode}` → NO_SHOW and release all HELD members | CALLED only |
+All paths remain under `/api/v1`. Full request/response DTOs, strict validation, idempotency, privacy, error precedence and expiry semantics are defined in [S2 UI/API/data sections 1–5](features/sprint2-ui-api-data.md#1-scope-and-shared-transport).
 
-**10-person example request:**
+| Method | Path | Contract |
+|---|---|---|
+| GET | `/host/queues/{queueId}/floor` | Granted queue's floor snapshot, private assignments scoped to that queue |
+| GET | `/host/queues/{queueId}/matching` | Selected tableId list or one entryId recommendation query; no writes |
+| POST | `/host/queues/{queueId}/match-and-call` | Explicit party/set/expected versions/key; atomic CALLED and HELD |
+| POST | `/host/queues/{queueId}/seating-assignments/{id}/seat` | Unexpired HELD to ACTIVE/OCCUPIED and ticket COMPLETED |
+| POST | `/host/queues/{queueId}/seating-assignments/{id}/checkout` | Whole ACTIVE group to CLOSED/DIRTY |
+| POST | `/host/queues/{queueId}/seating-assignments/{id}/start-cleaning` | Whole CLOSED/DIRTY group to CLEANING |
+| POST | `/host/queues/{queueId}/seating-assignments/{id}/finish-cleaning` | Whole group AVAILABLE; release claims; mark turnover CLEANED |
+| POST | `/host/queues/{queueId}/entries/{entryId}/no-show` | CALLED/HELD group to NO_SHOW/RELEASED/AVAILABLE |
+| POST | `/host/queues/{queueId}/expire-holds` | Idempotent server-deadline cleanup, separate audit transaction |
+| POST | `/me/queue-entries/{entryId}/cancel` | Only owner WAITING to CANCELLED; owned detail preserved |
 
-```json
-{
-  "entryId": "4a89b918-e95d-4e70-9b09-76c0ea181f8a",
-  "tableIds": ["<T4-uuid>", "<T5-uuid>"],
-  "expectedLayoutVersion": 3,
-  "idempotencyKey": "a-request-scoped-random-identifier"
-}
-```
-
-The API checks both tables have APPROVED connection in same zone, capacity 6+4 >=10, statuses AVAILABLE, queue entry WAITING, Host queue grants, and one CALLED per queue. It locks and commits all member states or rejects with an error; **the JSON is illustrative**, not a valid request until actual UUID values exist.
-
-**S1 backwards-compatibility:** `/host/queues/{queueId}/call-next` and bare `/complete` are valid for Sprint 1 without digital table handling. In Sprint 2 document whether to retire, alias or gate those operations; do **not** permit bypassing required seating assignment. New response shapes/409 codes must be formalized in S2 contracts and API tests.
+Queue-scoped Host routes replace the earlier proposed restaurant-only floor and unscoped assignment routes before implementation. This reuses the existing queue-grant boundary. MANUAL retains implemented call/complete; SEATING rejects those bare endpoints with TABLE_SELECTION_REQUIRED / SEATING_ASSIGNMENT_REQUIRED so the new lifecycle cannot be bypassed. Existing Customer envelopes, isReady, no-store, session and CSRF behavior remain.
 
 ### Proposed S3 extensions
 

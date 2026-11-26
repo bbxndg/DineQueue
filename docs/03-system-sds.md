@@ -1,6 +1,6 @@
 # 03. System-Level Software Design Specification (SDS)
 
-**Version:** DQ-SDS-2.0 proposed (2026-11-05), prior to implementation. Required by CPE 334 §§5.1–5.3, 8.1, Deliverable 1 rubric.
+**Version:** DQ-SDS-2.1 review draft (27 Nov 2026). Implemented baseline: main b4d1606 with Lab 7 readiness/polling; S2 additions remain unimplemented. The [S2 contract](features/sprint2-restaurant-operations-contracts.md) and [interfaces](features/sprint2-ui-api-data.md) supersede conflicting S2 sketches below.
 
 **Implementation boundary (updated 13 Nov 2026):** repository foundation lives in
 `apps/web` and `apps/api`; see `features/sprint1-foundation-contract.md` and
@@ -104,7 +104,7 @@ S1 can use predefined demo accounts; registration/password reset/email verificat
 - Start DB transaction; lock current `service_queues` row with `SELECT ... FOR UPDATE` **before** examining state.
 - Verify operator's queue permission.
 - If there is currently a `CALLED` ticket, respond `409 CALL_IN_PROGRESS`.
-- Select oldest `WAITING` entry sorted `(joined_at, id)`; update to `CALLED`, set `called_at`, `called_by`.
+- In MANUAL mode select the oldest Ready `WAITING` entry sorted `(joined_at, id)`; preserve NO_READY_PARTIES versus QUEUE_EMPTY and update CALLED/call audit. SEATING uses the selected-set call+hold transaction instead.
 - Commit; concurrent staff request waits for same queue lock and re-checks updated state. It must not call the same ticket.
 
 ### Completion
@@ -119,12 +119,12 @@ S1 can use predefined demo accounts; registration/password reset/email verificat
 
 - Model physical floor as `floor_zones`, `dining_tables(capacity CHECK 1..8, status, display_position)` and approved undirected `table_connections(low_id,high_id)`. Same-zone, connected sets of at most 3 tables are eligible, regardless of pixel proximity.
 - Read-only matching evaluates candidates deterministically; preview does not reserve tables. For party 10, T4(6)+T5(4) can match only if approved adjacent and both AVAILABLE. T7(8) alone cannot match.
-- Host **Call & Hold** locks queue scope, queue entry and selected tables in stable order, revalidates eligible ticket/connection/availability, creates HELD assignment and membership rows, marks **all** tables HELD and sets ticket CALLED in one SQL transaction.
-- Host **Seat** atomically sets all tables OCCUPIED, assignment ACTIVE and CALLED ticket COMPLETED (completion of *waiting*, not dining). The old S1 bare complete endpoint becomes guarded/retired by a versioned feature contract.
+- Host **Call & Hold** locks restaurant floor-state, queue, entry and selected tables in stable ID order, then assignment/action rows. Revalidate oldest fitting Ready party for the final selected set, topology/versions/availability, and commit all HELD members plus CALLED and event/key result together. The restaurant lock also coordinates shared tables across queues.
+- Host **Seat** atomically sets all tables OCCUPIED, assignment ACTIVE and CALLED ticket COMPLETED (completion of *waiting*, not dining). MANUAL keeps S1/Lab 7 completion; SEATING guards old bare call/complete endpoints and uses the explicit Seat route.
 - Host **No-show/hold expiry** releases all HELD tables, records event and resolves ticket/assignment terminal states. Avoid frontend-authoritative timers.
 - Host **Checkout** changes whole active assignment to CLOSED and all selected tables to DIRTY; cleaning proceeds DIRTY→CLEANING→AVAILABLE with server checks. Multiple-table groups are never partially released in v2.
-- Add partial unique index on active `seating_assignment_tables.table_id` for HELD/ACTIVE mapping (via `released_at IS NULL`), and unique open assignment per queue entry. Consistent row locks + guards + DB indexes are all required; do not rely on optimistic button disabling.
-- For a given selected set, choose oldest **eligible** WAITING ticket, with fairness and any overrides explicitly documented and TA-approved. No unverified 'optimal' or AI claim.
+- Add a partial unique index on `seating_assignment_tables.table_id WHERE released_at IS NULL`; retain the claim through CLOSED/DIRTY and CLOSED/CLEANING until finish-cleaning, or release it on no-show/expiry. Keep a unique HELD/ACTIVE assignment per queue entry and explicit turnover phase. Consistent row locks + guards + DB indexes are all required; do not rely on optimistic button disabling.
+- For the Host-selected set choose the oldest Ready fitting WAITING party. The user selected this policy in DEC-035; teammate review is pending. Valid alternate table sets are audited but cannot override the final set's eligible party.
 
 ### Concurrency-safe Go service layering
 
@@ -161,7 +161,7 @@ Customer mobile-first: `/login`, `/`, `/join`, `/my-queue`. Host desktop-first: 
 
 ## 8. Configuration and operations
 
-- Current config: `DATABASE_URL`, `APP_ORIGIN`, `APP_ENV`, `PORT`, web server-only `API_INTERNAL_URL`; four `SEED_*_PASSWORD` values only for opt-in seed tooling. The custom opaque-session design requires no global SESSION_SECRET (DEC-027). HOLD_TTL_MINUTES is future S2 configuration; cross-origin frontend deployment is not implemented. Provide `.env.example` placeholders only.
+- Current config: `DATABASE_URL`, `APP_ORIGIN`, `APP_ENV`, `PORT`, web server-only `API_INTERNAL_URL`; four `SEED_*_PASSWORD` values only for opt-in seed tooling. The custom opaque-session design requires no global SESSION_SECRET (DEC-027). S2 proposes persisted per-queue operations_mode and hold_ttl_seconds (default 300), explicit guarded activation and server expiry cleanup; it does not require a new global HOLD_TTL_MINUTES environment variable. Cross-origin frontend deployment is not implemented. Provide `.env.example` placeholders only.
 - API commands proposed: `go build ./...`, `go test ./...`, `go test -tags=integration ./...`, `go vet ./...`; SQL migrations and seeds via documented explicit scripts; Playwright frontend E2E. All need actual implementation first.
 - Health endpoints: `/health/live` and `/health/ready` for runtime and database readiness.
 - S1 local run: web, API and DB; real data persists between restarts; seed script idempotent.

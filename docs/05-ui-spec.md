@@ -1,6 +1,6 @@
 # 05. UI/UX Specification
 
-> Lab 7 #44 adds owner readiness controls and Host readiness badges. [Contract](labs/lab-07/readiness-contract.md) versions these S1 views. Readiness currently uses explicit refresh; automatic polling remains a separate pending feature branch.
+> Source baseline b4d1606 includes the Lab 7 owner readiness controls and automatic Customer/Host polling. The [S2 contract](features/sprint2-restaurant-operations-contracts.md) and [UI/API/data definitions](features/sprint2-ui-api-data.md) specify proposed extensions; S2 is not implemented by this draft.
 
 **Purpose:** Specify observable screens and state for feature engineering. Visuals are a concept, **not an approved mandatory screen layout**. Customer is mobile-first; Host is desktop-first. The previous DineQueue mockup is a visual reference; this file is the normative functional UI draft.
 
@@ -43,7 +43,7 @@ Inputs: Queue (seeded/readonly if only one); Party size control (1–16). Summar
 
 Fields: large human-readable ticket number, party size, current status, created/joined timestamp, selected queue. Optionally show **now called ticket** from privacy-safe data; must not expose names. For status WAITING show a waiting badge; CALLED show prominent 'Please go to the counter'; COMPLETED show 'Your waitlist service has finished'. Sprint 2 adds customer Cancel if WAITING.
 
-F-03 implements explicit Refresh status (no automatic refresh/ETA), queue and
+The maintained F-03 view includes Lab 7 visible-only polling and manual Refresh (no ETA), queue and
 restaurant labels, joined time in the labelled restaurant timezone, and an empty
 state with Join Waitlist. `/my-queue/{entryId}` is an owner-only detail bookmark,
 including COMPLETED; inaccessible details show generic not-found feedback.
@@ -58,7 +58,7 @@ Now-called public data and history listing remain outside F-03.
 - On narrow screens the waiting table keeps readable column spacing inside a
   labelled, keyboard-focusable horizontal scroll region; the document itself
   must not overflow horizontally.
-- **Call Next** button enabled only if no current called ticket and a WAITING entry exists.
+- In MANUAL mode **Call Next** is enabled only if no current called ticket and a Ready WAITING entry exists. SEATING uses floor selection and Call & Hold; old bare call/complete cannot bypass seating.
 - Important error: two Hosts racing to call next; losing request displays 'The queue has changed. Refreshing.' and refreshes state.
 - Complete confirmation belongs to one entry ID. When refresh shows a different
   current ticket, discard the old confirmation and require a new Complete action.
@@ -68,7 +68,9 @@ Now-called public data and history listing remain outside F-03.
 
 ### P-06 `/host/floor` — Interactive Floor Plan, Sprint 2
 
-Interactive zones and table cards: table code/capacity/coordinates, `AVAILABLE/HELD/OCCUPIED/DIRTY/CLEANING/OUT_OF_SERVICE`, plus accessible tabular/list fallback. Approved connectivity is drawn from `table_connections`, never pixel distance. Host selects one or multiple table cards and opens a matching drawer showing total seats and suitability. For a party of 10, an approved adjacent T4(6)+T5(4) set is valid, a lone 8-seat table is not. A separate **Call & Hold** confirmation shows selected queue, table IDs and expiry, then **Seat** confirms all OCCUPIED atomically. Conflicts reload authoritative floor data; check-out and cleaning follow explicit lifecycle.
+Use `/host/floor?queueId=...` with granted queue selection, zones and interactive cards plus an equivalent keyboard/list view. Show capacity, approved edges and AVAILABLE/HELD/OCCUPIED/DIRTY/CLEANING/OUT_OF_SERVICE text. Host selects 1–3 tables first; preview identifies the oldest fitting Ready party for that set and explains skipped parties. A different set may select a different party and requires reconfirmation. Ranking is advisory, not a lease or arbitrary priority override.
+
+Confirm Call & Hold with the exact party/set/versions, then Seat the unexpired HELD group. Floor assignment controls perform whole-group checkout, Start Cleaning and Finish Cleaning. An expired countdown disables Seat and offers server cleanup; browser timers do not mutate state. The detailed response/conflict/access/loading rules are in the S2 interface contract. Retain Lab 7's single refresh coordinator, stale notices, write invalidation and initial owner-detail HTTP404. Customer cancellation and CANCELLED/NO_SHOW detail states are specified in that same contract.
 
 ### P-07 `/host/history` and `/host/analytics` — Sprint 3
 

@@ -1,9 +1,6 @@
 # 06. Restaurant Operations — Domain Design v2
 
-> Lab 7 #44 proposed addendum: [readiness-aware calling and automatic updates](labs/lab-07/readiness-contract.md).
-> This versions the S1 FIFO/manual-refresh behavior for this change only; contract review is recorded on PR #45; readiness local evidence and pending polling are tracked separately.
-
-**Status:** proposed engineering decisions; not implemented/tested. **Topic:** CPE 334 theme 9 (queue and service management). **Revision:** 2026-11-05. This document elaborates the team's chosen domain; the course does not prescribe any of these specific table rules.
+> Sprint 2 revision DQ-S2-2.1, 27 Nov 2026, pre-implementation review draft. Main source b4d1606 includes Lab 7 readiness/polling. The [feature contract](features/sprint2-restaurant-operations-contracts.md), [UI/API/data](features/sprint2-ui-api-data.md) and [STS](testing/sprint2-operations-sts.md) control the new implementation; no S2 execution or acceptance is claimed.
 
 ## 1. Domain purpose and boundaries
 
@@ -41,9 +38,9 @@ For a party size `p`, enumerate **single tables** plus connected combinations of
 
 A combination is connected if every member table is reachable from every other through **selected** approved edges; 3-table chains are acceptable if approved. Adjacency is symmetric and stored once as ordered `(table_low_id, table_high_id)`.
 
-Candidate ranking (team proposal): **fewest tables → smallest unused capacity → stable lexicographic sorted table IDs**. The guest is chosen using the **oldest eligible WAITING ticket** for the selected set; if FIFO head cannot fit, record explicit `CAPACITY_NOT_ELIGIBLE`, not a secret discretionary skip. Matching is deterministic and explainable; it is not AI or medical-style priority scoring. If multiple sets and parties are eligible, keep a documented and deterministic ordering; do not imply mathematically globally optimal allocation.
+Candidate ranking (team proposal): **fewest tables → smallest unused capacity → stable lexicographic sorted table IDs**. The guest is chosen using the **oldest Ready fitting WAITING ticket** for the selected set; if FIFO head cannot fit, record explicit `CAPACITY_NOT_ELIGIBLE`, not a secret discretionary skip. Matching is deterministic and explainable; it is not AI or medical-style priority scoring. If multiple sets and parties are eligible, keep a documented and deterministic ordering; do not imply mathematically globally optimal allocation.
 
-**Policy issue for TA:** whether skipping earlier parties for feasible seating is acceptable, max joins/party size, table-moving rules, and how staff override works. Approval required before claiming those decisions as project facts.
+**User-selected policy, 27 Nov:** Host selects the set first, then the server chooses its oldest fitting Ready party, even if another set could fit an earlier oversized party. Returning Ready keeps original order. Host may choose an alternate valid set with an audit reason, but cannot override its eligible party. Teammate contract review remains pending; no unrelated TA approval is claimed.
 
 ## 3. State machines and invariants
 
@@ -52,14 +49,14 @@ Candidate ranking (team proposal): **fewest tables → smallest unused capacity 
 | From | Event | To | Preconditions | Sprint |
 |---|---|---|---|---|
 | — | Join | `WAITING` | signed-in Customer, queue active, size 1–16, no active duplicate | 1 |
-| `WAITING` | Call next (S1) | `CALLED` | authorized Host, strict FIFO, no concurrent CALLED ticket | 1 |
+| `WAITING` | Call next (S1) | `CALLED` | authorized Host, oldest Ready WAITING in MANUAL mode, no concurrent CALLED ticket | 1 |
 | `CALLED` | Complete manually (S1) | `COMPLETED` | authorized Host; means waitlist handled, not meal completed | 1 |
 | `WAITING` | Cancel | `CANCELLED` | ticket owner; cancellation window policy | 2 |
-| `WAITING` | Match + Call + Hold | `CALLED` | authorized Host, qualifying table set, no other active CALLED in queue | 2 |
+| `WAITING` | Match + Call + Hold | `CALLED` | authorized Host, qualifying selected set, oldest fitting Ready party, no other CALLED | 2 |
 | `CALLED` | Seat confirmed | `COMPLETED` | active HELD assignment of same group; all selected tables moved to OCCUPIED | 2 |
 | `CALLED` | Mark no-show | `NO_SHOW` | authorized Host; release entire held set | 2 |
 
-No transition out of `COMPLETED`, `CANCELLED`, `NO_SHOW`. No user-provided status or ticket number is authoritative. The S1 `Complete` endpoint's meaning is **revised in S2**; contract/test revisions must precede code changes. For S2, disable bare `complete` without a table assignment (or make it a guarded alias for Seat), documenting compatibility explicitly.
+No transition out of `COMPLETED`, `CANCELLED`, `NO_SHOW`. No user-provided status or ticket number is authoritative. The S1 `Complete` endpoint's meaning is **revised in S2**; contract/test revisions must precede code changes. For SEATING queues guard bare call/complete and require the explicit new routes. MANUAL preserves Lab 7; activation requires no legacy CALLED and preserves existing WAITING/history. See the S2 contract for the exact compatibility boundary.
 
 ### Table state
 
@@ -102,32 +99,32 @@ The `seating_assignments` record moves `HELD → ACTIVE → CLOSED` or `HELD →
 
 ### C. Host calls and holds a table set (S2)
 
-1. `POST /host/queues/{queueId}/match-and-call` with opaque ticket ID, sorted `tableIds`, `layoutVersion`/optional `expectedVersion`, idempotency key.
-2. Backend checks scoped permission, candidate eligibility and no outstanding CALLED ticket; locks the queue scope and selected table rows in a deterministic order; validates all rows are AVAILABLE and approved/connected.
+1. `POST /api/v1/host/queues/{queueId}/match-and-call` with explicit entry ID, selected table IDs, expected layout/entry/table versions and scoped idempotency key, as defined in the S2 interface contract.
+2. Backend checks scoped permission, candidate eligibility and no outstanding CALLED ticket; locks restaurant floor-state before queue, entry and selected tables in deterministic order; validates all members are AVAILABLE and approved/connected.
 3. Transaction inserts HELD assignment + member mappings, changes **all** selected table statuses to HELD, updates ticket to CALLED and appends an event. If any step fails, roll back all changes.
-4. Return explicit ticket, hold deadline, selected table IDs, authoritative updated versions. Other Hosts see updated HELD states after refresh.
+4. Return explicit ticket, hold deadline, selected table IDs, authoritative updated versions. Other Hosts see updated HELD states through the coordinated visible polling refresh.
 5. On conflict (409), UI discards preview and reloads. Do not retry blindly with stale IDs.
 
-**Lock order policy:** queue scope → queue entry → selected tables sorted by stable ID → assignment/mapping inserts. Every write path uses same ordering. Transaction-level PostgreSQL row locks and unique constraints protect against concurrent claim; code must catch deadlock/serialization conflicts and retry only a bounded number of safe attempts where idempotency is defined.
+**Lock order policy:** restaurant floor-state → queue → entry → member tables sorted by stable ID → assignment/action rows. Readiness/cancel retain queue→entry and never acquire floor-state afterward. Every path needing both floor and queue starts at floor-state; the shared restaurant lock protects overlapping sets across queues. Transaction-level PostgreSQL row locks and unique constraints protect against concurrent claim; code must catch deadlock/serialization conflicts and retry only a bounded number of safe attempts where idempotency is defined.
 
 ### D. Seat held party (S2)
 
 1. Host confirms the group arrived and tables are physically ready.
 2. Transaction locks relevant scope/assignment/member tables, verifies CALLED, HELD, not expired, and all member tables still HELD for that assignment.
 3. Update all tables to OCCUPIED; assignment HELD → ACTIVE, queue CALLED → COMPLETED, persist timestamps/events atomically.
-4. Reject repeated/expired/unauthorized seats with 409/403 and leave data unchanged.
+4. Reject repeated/expired/unauthorized seats with 409/403 without a partial seating write. Independently committed expiry cleanup may already have recorded NO_SHOW/release; it must not be rolled back by the later seat rejection.
 
 ### E. No-show, expiry, checkout and cleaning (S2)
 
 - **No-show:** only CALLED; release the entire HELD group → AVAILABLE, assignment → RELEASED, ticket → NO_SHOW, append event in one transaction.
-- **Expiry:** server-controlled expiry check inside each relevant operation, optionally a scheduled sweeper with idempotent cleanup. Expiry must not race with seat; only one winning transaction. On expiry, define whether the ticket becomes NO_SHOW or requires explicit staff decision (**TA/team decision**).
+- **Expiry:** five-minute deadline; server time at/after deadline forbids seating. The shared server cleanup records NO_SHOW/HOLD_EXPIRED and releases every member, with one winning outcome against Seat. Cleanup runs as a separate audited transaction before authorized seating mutations or via explicit expire-holds POST; GET/polling never writes and Cloud Run idle time is not a guaranteed scheduler.
 - **Checkout:** after guests leave, mark assignment CLOSED, all member tables DIRTY and create turnover event atomically. Ticket stays COMPLETED.
-- **Cleaning:** Host sets all group members DIRTY → CLEANING → AVAILABLE in group-level transactions, records actor/time; an OCCUPIED or HELD table can never be directly marked AVAILABLE.
+- **Cleaning:** Host sets all group members DIRTY → CLEANING → AVAILABLE in group-level transactions, records actor/time and explicit turnover phase, and releases claims only after cleaning finishes. A historical assignment cannot clean a later group; an OCCUPIED or HELD table cannot be directly marked AVAILABLE.
 
 ## 5. Fairness and operational exceptions
 
-- S1: strict FIFO, no skipping.
-- S2: oldest fitting waiting group **for a chosen valid connected table set**; show `skipped 6-person group: selected table has only 4 seats` only in staff UI. Do not share customer identities in public read models.
+- Maintained S1/Lab 7 MANUAL mode: FIFO among Ready parties; no arbitrary skip.
+- S2: oldest fitting Ready waiting group **for the Host-selected valid connected table set**; show `skipped 6-person group: selected table has only 4 seats` only in staff UI. Do not share customer identities in public read models.
 - Manual selection outside recommendation requires documented permission, reason and event. It cannot bypass graph, capacity, state or ownership constraints.
 - Capacity-efficiency vs fairness tension: ranked alternatives are suggestions; preserve reason and human confirmation. Do not misrepresent a heuristic as an optimum.
 - Do not accept special seating requests as executable logic unless independently specified and tested. Keep free-text notes private and length-limited.
@@ -143,7 +140,7 @@ The `seating_assignments` record moves `HELD → ACTIVE → CLOSED` or `HELD →
 ## 7. Example acceptance walkthrough — 10 guests, 2 tables
 
 1. Seed T4(6) ↔ T5(4) in Terrace. Seed nonconnected T7(8).
-2. Customer C1 joins party of 10 and gets a ticket; C1 cannot join again while active.
+2. Customer C1 joins party of 10, receives Not ready, then confirms Ready; C1 cannot join again while active.
 3. Host sees recommendation `T4+T5` and selects Call & Hold.
 4. Confirm **both** change AVAILABLE→HELD; another Host attempting either table receives conflict and no partial hold.
 5. Confirm Seat: C1 queue becomes COMPLETED; T4/T5 OCCUPIED; one ACTIVE group assignment with two membership records.

@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import type { Ticket } from '@/lib/tickets';
+import { ReadinessControl } from '@/components/readiness-control';
+import type { Ticket } from '@/lib/ticket-types';
 
 const statusMessages = {
   WAITING: 'Please stay nearby. The host will call your ticket number.',
@@ -7,7 +8,7 @@ const statusMessages = {
   COMPLETED: 'Your waitlist service has finished.',
 };
 
-export function TicketCard({ ticket, showDetails = false }: { ticket: Ticket; showDetails?: boolean }) {
+export function TicketCard({ ticket, showDetails = false, csrfToken }: { ticket: Ticket; showDetails?: boolean; csrfToken: string }) {
   const joined = new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium', timeStyle: 'short', timeZone: ticket.timezone,
   }).format(new Date(ticket.joinedAt));
@@ -22,6 +23,7 @@ export function TicketCard({ ticket, showDetails = false }: { ticket: Ticket; sh
       <dt className="font-medium">Joined</dt><dd><time dateTime={ticket.joinedAt}>{joined} ({ticket.timezone})</time></dd>
     </dl>
     <p className="mt-6 leading-relaxed">{statusMessages[ticket.status]}</p>
+    {ticket.status === 'WAITING' && <ReadinessControl entryId={ticket.id} isReady={ticket.isReady} csrfToken={csrfToken} />}
     {showDetails && <Link href={`/my-queue/${ticket.id}`} prefetch={false} className="mt-5 inline-block font-semibold text-wine underline">View ticket details</Link>}
   </article>;
 }

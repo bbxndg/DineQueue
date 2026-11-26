@@ -95,3 +95,14 @@ These feature contracts and corresponding AC/Test IDs must be created **before f
 | NFR-005,NFR-012 | F-07,F-15 | S2 | S2-AC-005 persisted group after restart | S2-T-032 | Planned |
 
 S2 and S3 IDs are the proposed contracts in `features/sprint2-restaurant-operations-contracts.md` and `testing/sprint2-operations-sts.md`. Final `PASS` requires actual test execution and evidence.
+
+
+## Lab 7 CR #44 — BR-003-L7-v1
+
+| Existing scope | Changed acceptance / verification | Evidence and remaining work |
+|---|---|---|
+| F-02/03; FR-003/005; BR-003 revised | New ticket Not ready, owner WAITING readiness updates; privacy, migration and persistence | `TestL7NewJoinStartsNotReady`, `TestL7ReadinessValidationPrivacyAndCSRF`, `TestL7ReadinessMigrationPreservesExistingTickets`, [results](labs/lab-07/readiness-results.md) |
+| F-04; FR-007; BR-003 revised, BR-005 preserved | Oldest ready WAITING, original order on return; one CALLED, serialized readiness/calling | `TestL7ReadinessOwnerLifecycleAndFIFO`, `TestL7ReadinessCallRaceBothCommitOrders`, existing Host concurrency regression |
+| F-03/04 automatic updates | Customer and Host polling lifecycle, stale responses, hidden tabs | Contract/STS agreed; implementation and execution deferred to `feat/lab7-ticket-polling` after readiness merges |
+
+Local worktree evidence is not CI, feature approval, release or deployment evidence.

@@ -1,0 +1,63 @@
+# date: 2026-11-26T20:33:56+07:00  HEAD: 33ebad5010da16ef9ed9069fe2c4f461243cc7f4  branch: feat/lab7-ticket-polling
+# worktree:  M apps/web/src/app/(main)/host/queue/page.tsx  M apps/web/src/app/my-queue/(list)/page.tsx  M apps/web/src/app/my-queue/[entryId]/page.tsx  M apps/web/src/components/host-board.tsx  M apps/web/src/components/readiness-control.tsx  M apps/web/src/components/refresh-ticket.tsx  M apps/web/src/components/ticket-card.tsx  M apps/web/src/lib/host.ts  M apps/web/src/lib/tickets.ts ?? apps/web/e2e/polling-fixture.ts ?? apps/web/e2e/polling-lifecycle.spec.ts ?? apps/web/e2e/polling.spec.ts ?? apps/web/src/components/live-refresh.tsx ?? apps/web/src/components/live-tickets.tsx ?? apps/web/src/lib/live-reads.ts ?? apps/web/src/lib/poll-coordinator.ts ?? apps/web/src/lib/ticket-types.ts ?? apps/web/src/lib/use-live-resource.ts ?? apps/web/tests/poll-coordinator.test.mjs ?? docs/labs/lab-07/evidence/polling-red-test.sha256 ?? docs/labs/lab-07/evidence/polling-red.txt
+# command: npm run test:e2e --workspace @dinequeue/web -- polling-lifecycle.spec.ts
+
+> @dinequeue/web@0.0.0 test:e2e
+> playwright test polling-lifecycle.spec.ts
+
+Running 7 tests using 1 worker
+
+  x  1 e2e\polling-lifecycle.spec.ts:11:1 › L7-T-13/15 schedules after settle, pauses while hidden, resumes once, stops on unmount (30.0s)
+  ok 2 e2e\polling-lifecycle.spec.ts:42:1 › L7-T-15 changing the selected Host queue stops polling the previous queue (20.7s)
+  x  3 e2e\polling-lifecycle.spec.ts:59:1 › L7-T-14 slow reads never overlap; a late pre-mutation snapshot cannot overwrite Call Next (16.9s)
+  ok 4 e2e\polling-lifecycle.spec.ts:90:1 › L7-T-14 Customer readiness write while a slow read is pending shows the committed value (16.8s)
+  ok 5 e2e\polling-lifecycle.spec.ts:111:1 › L7-T-16 network/server failure keeps the last state with a stale notice, then recovers (23.3s)
+  ok 6 e2e\polling-lifecycle.spec.ts:145:1 › L7-T-16 losing access clears protected data: detail 404, forbidden 403, session 401 (23.8s)
+  ok 7 e2e\polling-lifecycle.spec.ts:185:1 › L7-T-17 confirmation and focus survive polling; a new current ticket resets confirmation (23.8s)
+
+  1) e2e\polling-lifecycle.spec.ts:11:1 › L7-T-13/15 schedules after settle, pauses while hidden, resumes once, stops on unmount
+
+    Test timeout of 30000ms exceeded.
+
+    Error: page.waitForTimeout: Test ended.
+
+      35 |     await expect(page).toHaveURL(new RegExp(`/my-queue/${ticket.id}$`));
+      36 |     const afterUnmount = reads.length;
+    > 37 |     await page.waitForTimeout(POLL_WAIT * 2);
+         |                ^
+      38 |     expect(reads.length).toBe(afterUnmount);
+      39 |   });
+      40 | });
+        at D:\DineQueue\apps\web\e2e\polling-lifecycle.spec.ts:37:16
+        at withQueue (D:\DineQueue\apps\web\e2e\polling-fixture.ts:55:5)
+        at D:\DineQueue\apps\web\e2e\polling-lifecycle.spec.ts:12:3
+
+  2) e2e\polling-lifecycle.spec.ts:59:1 › L7-T-14 slow reads never overlap; a late pre-mutation snapshot cannot overwrite Call Next
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 2
+
+      84 |     await host.getByRole('button', { name: 'Refresh queue', exact: true }).click();
+      85 |     await expect(host.getByTestId('current-ticket')).toHaveText(ticket.ticketCode);
+    > 86 |     expect(maxInFlight).toBe(1);
+         |                         ^
+      87 |   });
+      88 | });
+      89 |
+        at D:\DineQueue\apps\web\e2e\polling-lifecycle.spec.ts:86:25
+        at withQueue (D:\DineQueue\apps\web\e2e\polling-fixture.ts:55:5)
+        at D:\DineQueue\apps\web\e2e\polling-lifecycle.spec.ts:60:3
+
+  2 failed
+    e2e\polling-lifecycle.spec.ts:11:1 › L7-T-13/15 schedules after settle, pauses while hidden, resumes once, stops on unmount
+    e2e\polling-lifecycle.spec.ts:59:1 › L7-T-14 slow reads never overlap; a late pre-mutation snapshot cannot overwrite Call Next
+  5 passed (2.6m)
+npm error Lifecycle script `test:e2e` failed with error:
+npm error code 1
+npm error path D:\DineQueue\apps\web
+npm error workspace @dinequeue/web@0.0.0
+npm error location D:\DineQueue\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c playwright test polling-lifecycle.spec.ts

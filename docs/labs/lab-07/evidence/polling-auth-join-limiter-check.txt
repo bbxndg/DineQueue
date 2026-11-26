@@ -1,0 +1,20 @@
+# date: 2026-11-26T20:57:29+07:00  HEAD: 33ebad5010da16ef9ed9069fe2c4f461243cc7f4  branch: feat/lab7-ticket-polling
+# worktree:  M apps/web/e2e/readiness.spec.ts  M apps/web/e2e/sprint1-review.spec.ts  M apps/web/e2e/ticket-states.spec.ts  M apps/web/src/app/(main)/host/queue/page.tsx  M apps/web/src/app/my-queue/(list)/page.tsx  M apps/web/src/app/my-queue/[entryId]/page.tsx  M apps/web/src/components/host-board.tsx  M apps/web/src/components/readiness-control.tsx  M apps/web/src/components/refresh-ticket.tsx  M apps/web/src/components/ticket-card.tsx  M apps/web/src/lib/host.ts  M apps/web/src/lib/tickets.ts ?? apps/web/e2e/polling-fixture.ts ?? apps/web/e2e/polling-lifecycle.spec.ts ?? apps/web/e2e/polling.spec.ts ?? apps/web/src/components/live-refresh.tsx ?? apps/web/src/components/live-tickets.tsx ?? apps/web/src/lib/live-reads.ts ?? apps/web/src/lib/poll-coordinator.ts ?? apps/web/src/lib/ticket-types.ts ?? apps/web/src/lib/use-live-resource.ts ?? apps/web/tests/poll-coordinator.test.mjs ?? docs/labs/lab-07/evidence/polling-red-test.sha256 ?? docs/labs/lab-07/evidence/polling-red.txt
+# command: npm run test:e2e --workspace @dinequeue/web -- auth.spec.ts join.spec.ts
+
+> @dinequeue/web@0.0.0 test:e2e
+> playwright test auth.spec.ts join.spec.ts
+
+Running 9 tests using 1 worker
+
+  ok 1 e2e\auth.spec.ts:10:1 › T-041 Customer login, refresh, role redirect, CSRF rejection and logout (1.6s)
+  ok 2 e2e\auth.spec.ts:32:1 › T-041 Host identity survives reload and signs out (821ms)
+  ok 3 e2e\auth.spec.ts:42:1 › T-041 Invalid credentials and invalid session recover to login (618ms)
+  ok 4 e2e\auth.spec.ts:62:3 › T-039 Login 429 feedback: attempt limit (329ms)
+  ok 5 e2e\auth.spec.ts:62:3 › T-039 Login 429 feedback: verification capacity (294ms)
+  ok 6 e2e\auth.spec.ts:62:3 › T-039 Login 429 feedback: missing header (302ms)
+  ok 7 e2e\auth.spec.ts:62:3 › T-039 Login 429 feedback: invalid header (293ms)
+  ok 8 e2e\join.spec.ts:5:1 › T-010 Customer joins the waitlist and sees a WAITING ticket (1.8s)
+  ok 9 e2e\join.spec.ts:44:1 › T-017 Host is redirected away from the join page (616ms)
+
+  9 passed (7.6s)

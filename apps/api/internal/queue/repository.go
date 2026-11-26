@@ -27,6 +27,7 @@ type entryRow struct {
 	ServiceDate    string
 	SequenceNumber int
 	PartySize      int
+	IsReady        bool
 	Status         string
 	JoinedAt       time.Time
 }
@@ -76,6 +77,7 @@ type entryDetail struct {
 	ServiceDate    string
 	SequenceNumber int
 	PartySize      int
+	IsReady        bool
 	Status         string
 	JoinedAt       time.Time
 	TicketPrefix   string
@@ -86,7 +88,7 @@ type entryDetail struct {
 
 // Explicit read projection: no customer/session/staff identity is loaded.
 const ticketProjection = `SELECT e.id, e.queue_id, e.service_date::text AS service_date,
-e.sequence_number, e.party_size, e.status, e.joined_at, q.ticket_prefix,
+e.sequence_number, e.party_size, e.is_ready, e.status, e.joined_at, q.ticket_prefix,
 q.name AS queue_name, r.name AS restaurant_name, r.timezone
 FROM queue_entries AS e JOIN service_queues AS q ON q.id = e.queue_id
 JOIN restaurants AS r ON r.id = q.restaurant_id`

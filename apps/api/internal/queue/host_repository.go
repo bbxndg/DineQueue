@@ -24,6 +24,7 @@ type hostEntryRow struct {
 	ServiceDate    string
 	SequenceNumber int
 	PartySize      int
+	IsReady        bool
 	Status         string
 	JoinedAt       time.Time
 	CalledAt       *time.Time
@@ -33,7 +34,7 @@ type hostEntryRow struct {
 
 // Host projection: no customer identity or staff actor IDs are loaded.
 const hostProjection = `SELECT e.id, e.queue_id, e.service_date::text AS service_date,
-e.sequence_number, e.party_size, e.status, e.joined_at, e.called_at, e.completed_at, q.ticket_prefix
+e.sequence_number, e.party_size, e.is_ready, e.status, e.joined_at, e.called_at, e.completed_at, q.ticket_prefix
 FROM queue_entries AS e JOIN service_queues AS q ON q.id = e.queue_id`
 
 func (r *Repository) assignedQueues(ctx context.Context, hostID string) ([]hostQueueRow, error) {
@@ -66,10 +67,19 @@ WHERE e.queue_id = ? AND e.status = ? ORDER BY e.joined_at, e.id`, queueID, stat
 	return rows, err
 }
 
+// hasWaitingEntries is used under the queue lock; it does not load/sort the board.
+func (r *Repository) hasWaitingEntries(ctx context.Context, queueID string) (bool, error) {
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(`SELECT EXISTS (
+        SELECT 1 FROM queue_entries WHERE queue_id = ? AND status = 'WAITING'
+    )`, queueID).Scan(&exists).Error
+	return exists, err
+}
+
 func (r *Repository) oldestWaitingForUpdate(ctx context.Context, queueID string) ([]hostEntryRow, error) {
 	var rows []hostEntryRow
 	err := r.db.WithContext(ctx).Raw(hostProjection+`
-WHERE e.queue_id = ? AND e.status = 'WAITING' ORDER BY e.joined_at, e.id LIMIT 1 FOR UPDATE OF e`, queueID).Scan(&rows).Error
+WHERE e.queue_id = ? AND e.status = 'WAITING' AND e.is_ready = true ORDER BY e.joined_at, e.id LIMIT 1 FOR UPDATE OF e`, queueID).Scan(&rows).Error
 	return rows, err
 }
 
@@ -84,7 +94,7 @@ WHERE e.queue_id = ? AND e.id = ? FOR UPDATE OF e`, queueID, entryID).Scan(&rows
 // markCalled is a conditional transition; callers must check one affected row.
 func (r *Repository) markCalled(ctx context.Context, entryID, hostID string, at time.Time) (int64, error) {
 	result := r.db.WithContext(ctx).Exec(`UPDATE queue_entries SET status = 'CALLED', called_at = ?, called_by = ?, version = version + 1
-WHERE id = ? AND status = 'WAITING'`, at, hostID, entryID)
+WHERE id = ? AND status = 'WAITING' AND is_ready = true`, at, hostID, entryID)
 	var pgError *pgconn.PgError
 	if errors.As(result.Error, &pgError) && pgError.Code == "23505" && pgError.ConstraintName == oneCalledIndex {
 		return 0, ErrCallInProgress

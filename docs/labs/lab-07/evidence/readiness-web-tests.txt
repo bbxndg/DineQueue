@@ -1,0 +1,30 @@
+
+> test
+> npm run test --workspace @dinequeue/web
+
+
+> @dinequeue/web@0.0.0 test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: local and container upstream origins are accepted
+ok 1 - local and container upstream origins are accepted
+  ---
+  duration_ms: 0.691648
+  type: 'test'
+  ...
+# Subtest: invalid upstream configuration fails without echoing credentials
+ok 2 - invalid upstream configuration fails without echoing credentials
+  ---
+  duration_ms: 0.53576
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 50.146029

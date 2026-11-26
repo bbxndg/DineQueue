@@ -1,0 +1,20 @@
+RED — original journey (exit 1)
+PASS ticket A-001 WAITING, party size 10
+PASS own-ticket privacy, Customer RBAC, missing CSRF and foreign Origin rejected
+FAIL EP3 journey: /api/v1/host/queues/10000000-0000-4000-8000-000000000001/call-next: unexpected HTTP status
+
+409 !== 200
+
+GREEN — updated journey (exit 0)
+PASS ticket A-001 WAITING, party size 10
+PASS own-ticket privacy, Customer RBAC, missing CSRF and foreign Origin rejected
+PASS unready party cannot be called; owner confirms Ready without losing queue identity
+PASS Host Call Next/Complete; Customer reads CALLED and COMPLETED
+PASS authenticated Next.js server-rendered Host page
+PASS logout revokes the session
+
+CREATE — updated persistence ticket (exit 0)
+PASS ticket A-002 WAITING, party size 10
+
+VERIFY — after actual API stop/start (exit 0)
+PASS persisted ticket A-002 WAITING after restart (fresh login)

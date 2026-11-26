@@ -1,0 +1,3 @@
+PASS real API stop/start with the same PostgreSQL database
+PASS existing session remains valid after process restart
+PASS ticket identity, joinedAt, party size, status and isReady survive unchanged

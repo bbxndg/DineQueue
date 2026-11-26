@@ -32,6 +32,7 @@ type Entry struct {
 	TicketCode  string    `json:"ticketCode"`
 	ServiceDate string    `json:"serviceDate"`
 	PartySize   int       `json:"partySize"`
+	IsReady     bool      `json:"isReady"`
 	Status      string    `json:"status"`
 	JoinedAt    time.Time `json:"joinedAt"`
 }
@@ -49,7 +50,7 @@ func ticketFromRow(row entryDetail) Ticket {
 		Entry: Entry{ID: row.ID, QueueID: row.QueueID,
 			TicketCode:  TicketCode(row.TicketPrefix, row.SequenceNumber),
 			ServiceDate: row.ServiceDate, PartySize: row.PartySize,
-			Status: row.Status, JoinedAt: row.JoinedAt.UTC()},
+			IsReady: row.IsReady, Status: row.Status, JoinedAt: row.JoinedAt.UTC()},
 		QueueName: row.QueueName, RestaurantName: row.RestaurantName, Timezone: row.Timezone,
 	}
 }
@@ -144,7 +145,7 @@ func (s *Service) Join(ctx context.Context, user auth.User, queueID string, part
 		if err := repository.insertEntry(ctx, row); err != nil {
 			return err
 		}
-		entry = Entry{ID: row.ID, QueueID: row.QueueID, TicketCode: TicketCode(queue.TicketPrefix, sequence), ServiceDate: serviceDate, PartySize: partySize, Status: row.Status, JoinedAt: joinedAt}
+		entry = Entry{ID: row.ID, QueueID: row.QueueID, TicketCode: TicketCode(queue.TicketPrefix, sequence), ServiceDate: serviceDate, PartySize: partySize, IsReady: row.IsReady, Status: row.Status, JoinedAt: joinedAt}
 		return nil
 	})
 	if err != nil {

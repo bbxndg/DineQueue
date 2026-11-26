@@ -27,6 +27,7 @@ func (h *HTTP) Register(router fiber.Router) {
 	meGroup := router.Group("/api/v1/me", deadline, h.auth.Authenticate, h.auth.RequireRole("CUSTOMER"))
 	meGroup.Get("/queue-entries/active", h.listActiveEntries)
 	meGroup.Get("/queue-entries/:entryId", h.getEntry)
+	meGroup.Patch("/queue-entries/:entryId/readiness", h.auth.CSRF, h.setReadiness)
 
 	h.registerHost(router)
 }

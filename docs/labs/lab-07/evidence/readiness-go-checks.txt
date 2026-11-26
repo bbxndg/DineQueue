@@ -1,0 +1,15 @@
+?   	dinequeue.local/api/cmd/api	[no test files]
+?   	dinequeue.local/api/cmd/db	[no test files]
+?   	dinequeue.local/api/db	[no test files]
+ok  	dinequeue.local/api/internal/auth	1.856s
+?   	dinequeue.local/api/internal/health	[no test files]
+ok  	dinequeue.local/api/internal/platform/config	1.023s
+ok  	dinequeue.local/api/internal/platform/postgres	1.026s
+ok  	dinequeue.local/api/internal/queue	1.029s
+ok  	dinequeue.local/api/internal/transport/http	1.024s
+# dinequeue.local/api/internal/queue
+internal/queue/readiness.go:76:17: r.ownedEntryForUpdate undefined (type *Repository has no field or method ownedEntryForUpdate)
+internal/queue/readiness.go:84:23: r.setReadiness undefined (type *Repository has no field or method setReadiness)
+# dinequeue.local/api/internal/queue
+# [dinequeue.local/api/internal/queue]
+vet: internal/queue/readiness.go:76:17: r.ownedEntryForUpdate undefined (type *Repository has no field or method ownedEntryForUpdate)

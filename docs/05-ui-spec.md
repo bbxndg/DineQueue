@@ -1,5 +1,7 @@
 # 05. UI/UX Specification
 
+> Lab 7 #44 adds owner readiness controls and Host readiness badges. [Contract](labs/lab-07/readiness-contract.md) versions these S1 views. Readiness currently uses explicit refresh; automatic polling remains a separate pending feature branch.
+
 **Purpose:** Specify observable screens and state for feature engineering. Visuals are a concept, **not an approved mandatory screen layout**. Customer is mobile-first; Host is desktop-first. The previous DineQueue mockup is a visual reference; this file is the normative functional UI draft.
 
 ## 1. UI principles

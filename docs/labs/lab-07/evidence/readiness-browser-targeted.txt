@@ -1,0 +1,17 @@
+
+> @dinequeue/web@0.0.0 test:e2e
+> playwright test sprint1-review.spec.ts ticket-states.spec.ts
+
+
+Running 6 tests using 1 worker
+
+(node:292880) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/sprint1-review.spec.ts:79:1 › Sprint 1 review: Complete confirmation cannot transfer to another Host ticket (885ms)
+  ✓  2 e2e/sprint1-review.spec.ts:106:1 › Sprint 1 review: Customer home follows WAITING CALLED and COMPLETED state (1.2s)
+  ✓  3 e2e/sprint1-review.spec.ts:129:1 › Sprint 1 review: Host retries a real read failure without navigating away (778ms)
+  ✓  4 e2e/sprint1-review.spec.ts:178:3 › Sprint 1 completion: labelled keyboard journey and layout at 360px (2.8s)
+  ✓  5 e2e/sprint1-review.spec.ts:178:3 › Sprint 1 completion: labelled keyboard journey and layout at 1280px (1.9s)
+  ✓  6 e2e/ticket-states.spec.ts:19:1 › F-03 stored status refresh, completed detail and real read-error retry (1.2s)
+
+  6 passed (9.6s)

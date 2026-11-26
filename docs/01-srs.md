@@ -1,5 +1,8 @@
 # 01. Software Requirements Specification (SRS)
 
+> Lab 7 #44 proposed addendum: [readiness-aware calling and automatic updates](labs/lab-07/readiness-contract.md).
+> This versions the S1 FIFO/manual-refresh behavior for this change only; contract review is recorded on PR #45; readiness local evidence and pending polling are tracked separately.
+
 **Document:** DQ-SRS-2.0 (current v2 baseline; unresolved rules pending team and instructor/TA resolution)
 **Source mapping:** CPE 334 master spec §§5, 6 theme 9, 7, 8.1.
 **Product:** DineQueue — walk-in restaurant waitlist and table management.

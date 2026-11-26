@@ -57,8 +57,8 @@ func grantedHost(t *testing.T, f fixture, queueID string) string {
 func waitingEntry(t *testing.T, f fixture, queueID string, sequence int, joinedAt time.Time) string {
 	t.Helper()
 	id := uuid.NewString()
-	if err := f.db.Exec(`INSERT INTO queue_entries(id,queue_id,customer_id,service_date,sequence_number,party_size,status,joined_at)
-VALUES (?,?,?,?,?,2,'WAITING',?)`, id, queueID, newUser(t, f, "CUSTOMER"), joinedAt.Format(time.DateOnly), sequence, joinedAt).Error; err != nil {
+	if err := f.db.Exec(`INSERT INTO queue_entries(id,queue_id,customer_id,service_date,sequence_number,party_size,status,joined_at,is_ready)
+VALUES (?,?,?,?,?,2,'WAITING',?,true)`, id, queueID, newUser(t, f, "CUSTOMER"), joinedAt.Format(time.DateOnly), sequence, joinedAt).Error; err != nil {
 		t.Fatal(err)
 	}
 	return id
@@ -86,12 +86,17 @@ func statusCount(t *testing.T, f fixture, status string) int64 {
 	return n
 }
 
+// Lab 7: legacy calling tests use already-ready parties; keep lifecycle/version assertions.
 func joinAs(t *testing.T, f fixture) reply {
 	t.Helper()
 	r := join(t, f, auth.DemoQueueID, `{"partySize":2}`, session(t, f, newUser(t, f, "CUSTOMER")), true)
 	if r.status != 201 {
 		t.Fatalf("fixture join %d %v", r.status, r.body)
 	}
+	if err := f.db.Exec("UPDATE queue_entries SET is_ready=true WHERE id=?", r.body["id"]).Error; err != nil {
+		t.Fatal(err)
+	}
+	r.body["isReady"] = true
 	return r
 }
 

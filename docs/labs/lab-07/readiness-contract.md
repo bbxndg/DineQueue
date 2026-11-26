@@ -3,7 +3,9 @@
 Version: DQ-L7-CR44-v0.1, 25 November 2026 (Asia/Bangkok).
 Issue: https://github.com/bbxndg/DineQueue/issues/44
 Status: **CONTRACT REVIEWED on PR #45; readiness implemented in the local worktree;
-polling NOT IMPLEMENTED**. Local evidence: [readiness results](readiness-results.md).
+polling implemented in the local worktree on feat/lab7-ticket-polling (uncommitted,
+not yet reviewed)**. Local evidence: [readiness results](readiness-results.md),
+[polling results](polling-results.md).
 Original contract commit: `323d8e7c1796466fd6d3cea46044c72cd4ac20d4`;
 review by softkoi: 26 Nov 2026 00:00:50 ICT (25 Nov 17:00:50 UTC).
 These implementation notes do not replace the original reviewed contract.

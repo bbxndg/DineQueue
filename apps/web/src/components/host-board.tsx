@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LiveStatus } from '@/components/live-refresh';
+import { readHostBoard, type HostBoardState } from '@/lib/live-reads';
+import { useLiveResource } from '@/lib/use-live-resource';
+import type { HostEntry } from '@/lib/ticket-types';
 
-type Entry = {
-  id: string; isReady: boolean; ticketCode: string; partySize: number; status: string;
-  joinedAt: string; calledAt: string | null;
-};
+type Entry = HostEntry;
 
 function errorMessage(status: number, code: string | undefined) {
   if (status === 401) return 'Your session has ended. Please sign in again.';
@@ -38,45 +39,71 @@ function CompleteAction({ entry, busy, pending, onComplete }: {
   </div>;
 }
 
-export function HostBoard({ queueId, timezone, csrfToken, current, waiting }: {
-  queueId: string; timezone: string; csrfToken: string; current: Entry | null; waiting: Entry[];
+export function HostBoard({ queueId, timezone, csrfToken, current: initialCurrent, waiting: initialWaiting, renderedAt }: {
+  queueId: string; timezone: string; csrfToken: string; current: Entry | null; waiting: Entry[]; renderedAt: string;
 }) {
   const router = useRouter();
+  // The parent keys this board by queue ID, so a queue change remounts it and
+  // the poller for the previous queue is stopped and its reads invalidated.
+  const read = useCallback((signal: AbortSignal) => readHostBoard(queueId, signal), [queueId]);
+  const live = useLiveResource<HostBoardState>({ current: initialCurrent, waiting: initialWaiting }, queueId, read);
+  const { current, waiting } = live.data;
   const [pending, setPending] = useState(false);
-  const [refreshing, startRefresh] = useTransition();
+  const [manual, setManual] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   // FIFO spans service dates, so show the date too: a leftover ticket from an
   // earlier day must not look like a recent one.
   const time = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone });
-  const busy = pending || refreshing;
+  // Background polls never disable controls; only writes and manual refresh do.
+  const busy = pending || manual;
+
+  useEffect(() => {
+    if (live.accessLost === 401) router.replace('/login');
+    else if (live.accessLost) router.replace('/');
+  }, [live.accessLost, router]);
 
   async function mutate(path: string, success: (entry: Entry) => string) {
     if (pending) return;
     setPending(true); setError(''); setNotice('');
     try {
-      const response = await fetch(`/api/v1/host/queues/${encodeURIComponent(queueId)}${path}`, {
-        method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': csrfToken },
+      // Reads are suspended/invalidated during the write and refetched after it,
+      // so a pre-mutation snapshot cannot overwrite the committed result.
+      await live.runMutation(async () => {
+        try {
+          const response = await fetch(`/api/v1/host/queues/${encodeURIComponent(queueId)}${path}`, {
+            method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': csrfToken },
+          });
+          const body = await response.json().catch(() => null);
+          // 401 uses the same access-loss path as polled reads: one redirect.
+          if (response.status === 401) live.reportAccessLost(401);
+          else if (!response.ok) setError(errorMessage(response.status, body?.error?.code));
+          else setNotice(success(body));
+        } catch { setError('Unable to connect. Please try again.'); }
       });
-      const body = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(errorMessage(response.status, body?.error?.code));
-        if (response.status === 401) router.replace('/login');
-      } else setNotice(success(body));
-      startRefresh(() => router.refresh());
-    } catch { setError('Unable to connect. Please try again.'); }
-    finally { setPending(false); }
+    } finally { setPending(false); }
   }
 
+  async function refreshQueue() {
+    setError(''); setNotice(''); setManual(true);
+    try { await live.refresh(); } finally { setManual(false); }
+  }
+
+  if (live.accessLost) return <p role="status" className="mt-8">{live.accessLost === 401
+    ? 'Your session has ended. Redirecting to sign in…' : 'This queue is no longer available to your account.'}</p>;
+
   return <div className="mt-8 grid min-w-0 gap-8" aria-busy={busy}>
-    <div className="flex flex-wrap items-center gap-4">
-      <button disabled={busy || current !== null || !waiting.some(entry => entry.isReady)}
-        onClick={() => mutate('/call-next', entry => `Ticket ${entry.ticketCode} called.`)}
-        className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">
-        {pending && current === null ? 'Working…' : 'Call next'}
-      </button>
-      <button disabled={busy} onClick={() => { setError(''); setNotice(''); startRefresh(() => router.refresh()); }}
-        className="font-semibold text-wine underline disabled:opacity-60">{refreshing ? 'Refreshing…' : 'Refresh queue'}</button>
+    <div className="grid gap-2">
+      <div className="flex flex-wrap items-center gap-4">
+        <button disabled={busy || current !== null || !waiting.some(entry => entry.isReady)}
+          onClick={() => mutate('/call-next', entry => `Ticket ${entry.ticketCode} called.`)}
+          className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">
+          {pending && current === null ? 'Working…' : 'Call next'}
+        </button>
+        <button disabled={busy} onClick={refreshQueue}
+          className="font-semibold text-wine underline disabled:opacity-60">{manual ? 'Refreshing…' : 'Refresh queue'}</button>
+      </div>
+      <LiveStatus updatedAt={live.updatedAt} renderedAt={renderedAt} failure={live.failure} />
     </div>
     {current === null && waiting.length > 0 && !waiting.some(entry => entry.isReady) &&
       <p className="text-sm">No waiting party is ready to be called. Not-ready parties keep their original queue order.</p>}

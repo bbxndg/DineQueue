@@ -1,12 +1,9 @@
 import 'server-only';
 import { notFound, redirect } from 'next/navigation';
 import { backendGet } from '@/lib/auth';
+import type { Ticket } from '@/lib/ticket-types';
 
-export type Ticket = {
-  id: string; queueId: string; ticketCode: string; serviceDate: string;
-  partySize: number; isReady: boolean; status: 'WAITING' | 'CALLED' | 'COMPLETED'; joinedAt: string;
-  queueName: string; restaurantName: string; timezone: string;
-};
+export type { Ticket };
 
 async function ticketGet(path: string) {
   const response = await backendGet(path);

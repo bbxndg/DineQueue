@@ -1,0 +1,122 @@
+# date: 2026-11-26T21:05:26+07:00 HEAD: 33ebad5010da16ef9ed9069fe2c4f461243cc7f4 + uncommitted worktree; node v22.23.4
+## npm test
+> test
+> npm run test --workspace @dinequeue/web
+> @dinequeue/web@0.0.0 test
+> node --test tests/*.test.mjs
+TAP version 13
+# Subtest: local and container upstream origins are accepted
+ok 1 - local and container upstream origins are accepted
+  ---
+  duration_ms: 1.221
+  type: 'test'
+  ...
+# Subtest: invalid upstream configuration fails without echoing credentials
+ok 2 - invalid upstream configuration fails without echoing credentials
+  ---
+  duration_ms: 0.5941
+  type: 'test'
+  ...
+# Subtest: reads every 5 s after the previous read settles, never overlapping
+ok 3 - reads every 5 s after the previous read settles, never overlapping
+  ---
+  duration_ms: 3.4047
+  type: 'test'
+  ...
+# Subtest: manual refresh shares the in-flight read and ignores a superseded response
+ok 4 - manual refresh shares the in-flight read and ignores a superseded response
+  ---
+  duration_ms: 0.9473
+  type: 'test'
+  ...
+# Subtest: a mutation invalidates the pre-write read and refreshes after commit
+ok 5 - a mutation invalidates the pre-write read and refreshes after commit
+  ---
+  duration_ms: 1.139
+  type: 'test'
+  ...
+# Subtest: a stale response that resolves after a mutation is never applied
+ok 6 - a stale response that resolves after a mutation is never applied
+  ---
+  duration_ms: 0.7578
+  type: 'test'
+  ...
+# Subtest: pauses while hidden and reads once immediately when visible again
+ok 7 - pauses while hidden and reads once immediately when visible again
+  ---
+  duration_ms: 1.4231
+  type: 'test'
+  ...
+# Subtest: stop clears timers and aborts the in-flight read
+ok 8 - stop clears timers and aborts the in-flight read
+  ---
+  duration_ms: 0.9396
+  type: 'test'
+  ...
+# Subtest: a stalled read times out, keeps polling and recovers
+ok 9 - a stalled read times out, keeps polling and recovers
+  ---
+  duration_ms: 1.4085
+  type: 'test'
+  ...
+# Subtest: network and server failures keep polling; access loss stops it
+ok 10 - network and server failures keep polling; access loss stops it
+  ---
+  duration_ms: 2.4266
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.1776
+exit=0
+## npm run lint
+> lint
+> npm run lint --workspace @dinequeue/web
+> @dinequeue/web@0.0.0 lint
+> eslint .
+exit=0
+## npm run typecheck
+> typecheck
+> npm run typecheck --workspace @dinequeue/web
+> @dinequeue/web@0.0.0 typecheck
+> tsc --noEmit
+exit=0
+## API_INTERNAL_URL=http://127.0.0.1:18087 npm run build
+> next build --webpack
+▲ Next.js 16.4.5 (webpack)
+✓ Running next.config.mjs took 32ms
+  Creating an optimized production build ...
+✓ Compiled successfully in 1800ms
+  Running TypeScript ...
+  Finished TypeScript in 1709ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/7) ...
+  Generating static pages using 9 workers (1/7)
+  Generating static pages using 9 workers (3/7)
+  Generating static pages using 9 workers (5/7)
+✓ Generating static pages using 9 workers (7/7) in 1556ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+Route (app)
+┌ ƒ /
+├ ƒ /host/queue
+├ ƒ /join
+├ ƒ /login
+├ ƒ /my-queue
+├ ƒ /my-queue/[entryId]
+└ ○ /_not-found
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+exit=0
+## git diff --check
+warning: in the working copy of 'apps/web/src/app/my-queue/(list)/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/app/my-queue/[entryId]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/components/refresh-ticket.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/components/ticket-card.tsx', LF will be replaced by CRLF the next time Git touches it
+diff-check clean

@@ -47,16 +47,19 @@ test('F-03 stored status refresh, completed detail and real read-error retry', a
     await expect(page.getByTestId('ticket-status')).toHaveText('CALLED');
     await expect(page.getByText('Your ticket has been called. Please go to the counter.', { exact: true })).toBeVisible();
 
-    // The active-list error must not masquerade as an empty list or a stale card.
+    // The active-list error must not masquerade as an empty list. Lab 7 (#44,
+    // reviewed contract): a failed refresh keeps the last successful state with
+    // an explicit stale notice instead of replacing the page with an error.
     fixtureSQL('ALTER TABLE queue_entries RENAME TO f03_temporarily_unavailable;');
     renamed = true;
     await page.getByRole('button', { name: 'Refresh status', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'We cannot load your ticket right now' })).toBeVisible();
+    await expect(page.getByTestId('live-stale')).toBeVisible();
     await expect(page.getByText('You do not have an active ticket.', { exact: true })).toHaveCount(0);
-    await expect(page.getByTestId('ticket-code')).toHaveCount(0);
+    await expect(page.getByTestId('ticket-code')).toHaveText(ticket.ticketCode);
     fixtureSQL('ALTER TABLE f03_temporarily_unavailable RENAME TO queue_entries;');
     renamed = false;
-    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh status', exact: true }).click();
+    await expect(page.getByTestId('live-stale')).toHaveCount(0);
     await expect(page).toHaveURL(/\/my-queue$/);
     await expect(page.getByTestId('ticket-code')).toHaveText(ticket.ticketCode);
     await expect(page.getByTestId('ticket-status')).toHaveText('CALLED');
@@ -72,11 +75,13 @@ test('F-03 stored status refresh, completed detail and real read-error retry', a
     fixtureSQL('ALTER TABLE queue_entries RENAME TO f03_temporarily_unavailable;');
     renamed = true;
     await page.getByRole('button', { name: 'Refresh status', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'We cannot load your ticket right now' })).toBeVisible();
+    await expect(page.getByTestId('live-stale')).toBeVisible();
     await expect(page.getByText('You do not have an active ticket.', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('ticket-status')).toHaveText('COMPLETED');
     fixtureSQL('ALTER TABLE f03_temporarily_unavailable RENAME TO queue_entries;');
     renamed = false;
-    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh status', exact: true }).click();
+    await expect(page.getByTestId('live-stale')).toHaveCount(0);
     await expect(page.getByTestId('ticket-code')).toHaveText(ticket.ticketCode);
     await expect(page.getByTestId('ticket-status')).toHaveText('COMPLETED');
   } finally {

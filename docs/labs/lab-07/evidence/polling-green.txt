@@ -1,0 +1,14 @@
+# date: 2026-11-26T20:33:24+07:00  HEAD: 33ebad5010da16ef9ed9069fe2c4f461243cc7f4  branch: feat/lab7-ticket-polling
+# worktree:  M apps/web/src/app/(main)/host/queue/page.tsx  M apps/web/src/app/my-queue/(list)/page.tsx  M apps/web/src/app/my-queue/[entryId]/page.tsx  M apps/web/src/components/host-board.tsx  M apps/web/src/components/readiness-control.tsx  M apps/web/src/components/refresh-ticket.tsx  M apps/web/src/components/ticket-card.tsx  M apps/web/src/lib/host.ts  M apps/web/src/lib/tickets.ts ?? apps/web/e2e/polling-fixture.ts ?? apps/web/e2e/polling-lifecycle.spec.ts ?? apps/web/e2e/polling.spec.ts ?? apps/web/src/components/live-refresh.tsx ?? apps/web/src/components/live-tickets.tsx ?? apps/web/src/lib/live-reads.ts ?? apps/web/src/lib/poll-coordinator.ts ?? apps/web/src/lib/ticket-types.ts ?? apps/web/src/lib/use-live-resource.ts ?? apps/web/tests/poll-coordinator.test.mjs ?? docs/labs/lab-07/evidence/polling-red-test.sha256 ?? docs/labs/lab-07/evidence/polling-red.txt
+# command: npm run test:e2e --workspace @dinequeue/web -- polling.spec.ts
+
+> @dinequeue/web@0.0.0 test:e2e
+> playwright test polling.spec.ts
+
+Running 3 tests using 1 worker
+
+  ok 1 e2e\polling.spec.ts:75:1 › L7-T-19a Host call becomes CALLED on Customer list and detail without refresh (6.9s)
+  ok 2 e2e\polling.spec.ts:93:1 › L7-T-19b Customer readiness and call state reach the Host board without refresh (11.6s)
+  ok 3 e2e\polling.spec.ts:110:1 › L7-T-19c Completion leaves the active list; owned detail stays readable (6.6s)
+
+  3 passed (26.0s)

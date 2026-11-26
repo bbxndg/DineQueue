@@ -1,0 +1,23 @@
+# SHA-256 of the uncommitted worktree sources verified by the final runs (base 33ebad5010da16ef9ed9069fe2c4f461243cc7f4)
+ea0ddb50b8554cd809d0e86a51d871f4d15646c36206c1c2f7cacdfcfe82a514 *apps/web/e2e/polling-fixture.ts
+966ee0a69595c91de66ad636ece6941ad4770a160e466656da6f2de773eec09d *apps/web/e2e/polling-lifecycle.spec.ts
+b75d32506b4214f4dc80b2e3a545cf3f82e24ee10687b58aca376e92898d1f05 *apps/web/e2e/polling.spec.ts
+5a7bed735f530d5f5b2a61f928e6d5caf56e65be732e1c435db43df351309bb9 *apps/web/e2e/readiness.spec.ts
+2e57bd1f87c5486703b7eaef7d7556fc576e77cce81877e3898b332558f28d86 *apps/web/e2e/sprint1-review.spec.ts
+c0f3fc5965c9f9f26493ee8b6560eecdee8404fd959498ba169561d2698e327b *apps/web/e2e/ticket-states.spec.ts
+998356bc908dd1196dc54f6f67694b0176cab8b4909d307ac46513f9ba66d584 *apps/web/src/app/(main)/host/queue/page.tsx
+a5352ef3f665a6c971bcf2a262bdb960db44e5cf6f56f5ea2f10956ccb38741a *apps/web/src/app/my-queue/(list)/page.tsx
+2dbcd7551b73d5a1b27a73001b8dcb19dbe32eec21374dc00f27942bbdeb80d6 *apps/web/src/app/my-queue/[entryId]/page.tsx
+d3090273c15059b9722b716eb4cb09a13a5395addc158e34912571461fe58eb1 *apps/web/src/components/host-board.tsx
+c15fd529814c53897007325ae41cae7e1ffc65beb810ac1726e186bdffa62ccf *apps/web/src/components/live-refresh.tsx
+efcf6d80561904dcd96ce8f9b85b49c2780f128b6bafd29342eaa4b851c002df *apps/web/src/components/live-tickets.tsx
+03966d6df64606077d4ff4a14ee21b7bf31241650aa5a2b9eb39fa85694e66bd *apps/web/src/components/readiness-control.tsx
+96f04037a7f36fced512628895c470767f7b93996a13c4e500ec94fb7dd8d040 *apps/web/src/components/refresh-ticket.tsx
+9552c24c73e1b97cb3536bdc0db55d45508116206dca45b649c06d4764541afc *apps/web/src/components/ticket-card.tsx
+08f233f15e87fbb001dfa1fc5bd6101db71aa11309719459ffd226c5e2399084 *apps/web/src/lib/host.ts
+f2cd4dcbc37735d0c0f135d938619d3e6aafefc31aceaeb0182a1c4ed31d71a2 *apps/web/src/lib/live-reads.ts
+b8ddf681152f3ed7ad332e502d5268e8ce67e8439e90d17bc6f61e31c47ea85b *apps/web/src/lib/poll-coordinator.ts
+12aa13950a306205d607fde6792d05f2242096a6f35e179c4f95250953ff7e99 *apps/web/src/lib/ticket-types.ts
+f3e2708ce99f05f1dc80321e32040073fe5890c88405d934599d608257f6494c *apps/web/src/lib/tickets.ts
+eaf49b2076e24b2bf00fec6d7117a8d93ad78a48622bf816bb3761b1cbfac86d *apps/web/src/lib/use-live-resource.ts
+72d7b39651fb4f32578266ddb9c1ee467f2b57e26810baf6df3d9f0f676fd108 *apps/web/tests/poll-coordinator.test.mjs

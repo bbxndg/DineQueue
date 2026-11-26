@@ -1,0 +1,285 @@
+# date: 2026-11-26T21:02:58+07:00 HEAD: 33ebad5010da16ef9ed9069fe2c4f461243cc7f4 (worktree has uncommitted web changes; apps/api unchanged)
+# image: golang:1.26.10-bookworm; command: go test -race ./... && go vet ./... && go test -tags=integration -race -count=1 -v ./...
+Unable to find image 'golang:1.26.10-bookworm' locally
+1.26.10-bookworm: Pulling from library/golang
+f64d732997a0: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+338554e9113f: Pulling fs layer
+69245854ad58: Pulling fs layer
+a5fbfa1b714d: Pulling fs layer
+d6c30932f8d3: Pulling fs layer
+6940a157f03f: Pulling fs layer
+4f4fb700ef54: Already exists
+6940a157f03f: Download complete
+c254e4d84588: Download complete
+69245854ad58: Download complete
+e01f48422aee: Download complete
+69245854ad58: Pull complete
+338554e9113f: Download complete
+338554e9113f: Pull complete
+a5fbfa1b714d: Download complete
+f64d732997a0: Download complete
+d6c30932f8d3: Download complete
+d6c30932f8d3: Pull complete
+a5fbfa1b714d: Pull complete
+f64d732997a0: Pull complete
+4f4fb700ef54: Pull complete
+6940a157f03f: Pull complete
+Digest: sha256:5de7c99eb78ca5e515a4c340235d0955ec5964a5071c492c15503d7c267da473
+Status: Downloaded newer image for golang:1.26.10-bookworm
+go version go1.26.10 linux/amd64
+go: downloading gorm.io/gorm v1.31.2
+go: downloading github.com/gofiber/fiber/v3 v3.6.1
+go: downloading github.com/google/uuid v1.6.0
+go: downloading golang.org/x/crypto v0.58.0
+go: downloading gorm.io/driver/postgres v1.6.3
+go: downloading github.com/jackc/pgx/v5 v5.12.0
+go: downloading github.com/jinzhu/now v1.1.5
+go: downloading golang.org/x/text v0.43.0
+go: downloading github.com/jinzhu/inflection v1.0.0
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading github.com/jackc/puddle/v2 v2.2.3
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading golang.org/x/sys v0.49.0
+go: downloading github.com/gofiber/schema v1.8.8
+go: downloading github.com/mattn/go-isatty v0.0.24
+go: downloading github.com/mattn/go-colorable v0.1.16
+go: downloading github.com/gofiber/utils/v2 v2.6.2
+go: downloading github.com/tinylib/msgp v1.6.5
+go: downloading github.com/valyala/bytebufferpool v1.0.0
+go: downloading github.com/valyala/fasthttp v1.75.0
+go: downloading golang.org/x/net v0.61.0
+go: downloading golang.org/x/sync v0.24.0
+go: downloading github.com/philhofer/fwd v1.2.0
+go: downloading github.com/molecule-man/go-brrr v1.3.0
+go: downloading github.com/klauspost/compress v1.20.3
+?   	dinequeue.local/api/cmd/api	[no test files]
+?   	dinequeue.local/api/cmd/db	[no test files]
+?   	dinequeue.local/api/db	[no test files]
+ok  	dinequeue.local/api/internal/auth	2.199s
+?   	dinequeue.local/api/internal/health	[no test files]
+ok  	dinequeue.local/api/internal/platform/config	1.032s
+ok  	dinequeue.local/api/internal/platform/postgres	1.034s
+ok  	dinequeue.local/api/internal/queue	1.054s
+ok  	dinequeue.local/api/internal/transport/http	1.054s
+VET_OK
+?   	dinequeue.local/api/cmd/api	[no test files]
+?   	dinequeue.local/api/cmd/db	[no test files]
+?   	dinequeue.local/api/db	[no test files]
+=== RUN   TestS1AuthFailureLogOmitsSensitiveData
+--- PASS: TestS1AuthFailureLogOmitsSensitiveData (1.96s)
+=== RUN   TestF01LoginMeLogoutAndRotation
+2026/11/26 14:04:26 session rejected: unauthenticated
+2026/11/26 14:04:26 session rejected: unauthenticated
+2026/11/26 14:04:26 session rejected: unauthenticated
+--- PASS: TestF01LoginMeLogoutAndRotation (1.93s)
+=== RUN   TestF01InvalidDisabledAndExpiredIdentity
+2026/11/26 14:04:28 authentication rejected: invalid credentials
+2026/11/26 14:04:28 authentication rejected: invalid credentials
+2026/11/26 14:04:29 session rejected: unauthenticated
+2026/11/26 14:04:29 authentication rejected: invalid credentials
+2026/11/26 14:04:29 session rejected: unauthenticated
+2026/11/26 14:04:29 session rejected: unauthenticated
+--- PASS: TestF01InvalidDisabledAndExpiredIdentity (2.43s)
+=== RUN   TestF01RoleQueueAndOwnershipGuards
+2026/11/26 14:04:31 session rejected: unauthenticated
+--- PASS: TestF01RoleQueueAndOwnershipGuards (2.52s)
+=== RUN   TestF01OriginCSRFAndValidation
+--- PASS: TestF01OriginCSRFAndValidation (1.75s)
+=== RUN   TestF01MigrateSeedIdempotencyAndConstraints
+--- PASS: TestF01MigrateSeedIdempotencyAndConstraints (3.58s)
+=== RUN   TestF01LoginRotationRollback
+--- PASS: TestF01LoginRotationRollback (1.96s)
+=== RUN   TestPasswordHashSaltAndVerification
+--- PASS: TestPasswordHashSaltAndVerification (0.97s)
+=== RUN   TestProvisionDemoRequiresExplicitDatabaseAndPreservesExistingAccess
+--- PASS: TestProvisionDemoRequiresExplicitDatabaseAndPreservesExistingAccess (3.45s)
+=== RUN   TestProvisionDemoFreshAccountsAndConflictRollback
+--- PASS: TestProvisionDemoFreshAccountsAndConflictRollback (4.07s)
+=== RUN   TestTokenAndCSRFAreBoundToSession
+--- PASS: TestTokenAndCSRFAreBoundToSession (0.00s)
+=== RUN   TestLoginLimiterIsBoundedAndExpires
+--- PASS: TestLoginLimiterIsBoundedAndExpires (0.02s)
+PASS
+ok  	dinequeue.local/api/internal/auth	25.749s
+?   	dinequeue.local/api/internal/health	[no test files]
+=== RUN   TestLoadValidConfig
+--- PASS: TestLoadValidConfig (0.00s)
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/postgres://local:secret@/dinequeue
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/https://local:secret@localhost/dinequeue
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/postgres://localhost/dinequeue
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/APP_ENV/
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/APP_ENV/prod
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/PORT/0
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/PORT/65536
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/PORT/abc
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/http://user:secret@localhost:3000
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/http://localhost:3000/path
+=== RUN   TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/*
+--- PASS: TestLoadRejectsInvalidConfigWithoutSecrets (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/ (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/postgres://local:secret@/dinequeue (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/https://local:secret@localhost/dinequeue (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/DATABASE_URL/postgres://localhost/dinequeue (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/APP_ENV/ (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/APP_ENV/prod (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/PORT/0 (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/PORT/65536 (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/PORT/abc (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/ (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/http://user:secret@localhost:3000 (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/http://localhost:3000/path (0.00s)
+    --- PASS: TestLoadRejectsInvalidConfigWithoutSecrets/APP_ORIGIN/* (0.00s)
+=== RUN   TestProductionRequiresHTTPSAndVerifiedDatabaseTLS
+--- PASS: TestProductionRequiresHTTPSAndVerifiedDatabaseTLS (0.00s)
+=== RUN   TestProductionCloudSQLSocketIsExplicitAndBoundToInstance
+--- PASS: TestProductionCloudSQLSocketIsExplicitAndBoundToInstance (0.01s)
+=== RUN   TestProductionTCPRejectsTransportOverrides
+--- PASS: TestProductionTCPRejectsTransportOverrides (0.00s)
+=== RUN   TestSidecarAPIPortOverridesIngressPort
+--- PASS: TestSidecarAPIPortOverridesIngressPort (0.00s)
+PASS
+ok  	dinequeue.local/api/internal/platform/config	1.034s
+=== RUN   TestPostgresReadiness
+--- PASS: TestPostgresReadiness (0.05s)
+=== RUN   TestOpenDoesNotCreateApplicationTables
+--- PASS: TestOpenDoesNotCreateApplicationTables (0.03s)
+=== RUN   TestGORMTransactionCommitAndRollback
+--- PASS: TestGORMTransactionCommitAndRollback (0.05s)
+=== RUN   TestOpenIsLazyWithBoundedPool
+--- PASS: TestOpenIsLazyWithBoundedPool (0.00s)
+=== RUN   TestOpenRejectsMalformedDSNWithoutSecrets
+--- PASS: TestOpenRejectsMalformedDSNWithoutSecrets (0.00s)
+PASS
+ok  	dinequeue.local/api/internal/platform/postgres	1.167s
+=== RUN   TestHostHandlersRequireIdentity
+--- PASS: TestHostHandlersRequireIdentity (0.00s)
+=== RUN   TestF04WaitingListIsFIFO
+--- PASS: TestF04WaitingListIsFIFO (1.72s)
+=== RUN   TestF04CallNextCallsOldestWaiting
+--- PASS: TestF04CallNextCallsOldestWaiting (1.57s)
+=== RUN   TestF04CallNextBusinessConflicts
+--- PASS: TestF04CallNextBusinessConflicts (1.68s)
+=== RUN   TestF04ConcurrentCallNextClaimsOnce
+--- PASS: TestF04ConcurrentCallNextClaimsOnce (1.68s)
+=== RUN   TestF04AccessControl
+2026/11/26 14:04:31 session rejected: unauthenticated
+2026/11/26 14:04:31 session rejected: unauthenticated
+2026/11/26 14:04:31 session rejected: unauthenticated
+2026/11/26 14:04:31 session rejected: unauthenticated
+--- PASS: TestF04AccessControl (1.58s)
+=== RUN   TestF04CompleteThenCallNext
+--- PASS: TestF04CompleteThenCallNext (1.82s)
+=== RUN   TestF04InvalidCompletion
+--- PASS: TestF04InvalidCompletion (1.76s)
+=== RUN   TestF04MalformedEntryDoesNotTakeQueueLock
+--- PASS: TestF04MalformedEntryDoesNotTakeQueueLock (1.42s)
+=== RUN   TestF04ConcurrentCompleteSucceedsOnce
+--- PASS: TestF04ConcurrentCompleteSucceedsOnce (1.56s)
+=== RUN   TestF03CustomerRoleRequired
+2026/11/26 14:04:39 session rejected: unauthenticated
+2026/11/26 14:04:39 session rejected: unauthenticated
+2026/11/26 14:04:39 session rejected: unauthenticated
+--- PASS: TestF03CustomerRoleRequired (1.45s)
+=== RUN   TestF03PersistedValuesLifecycleAndPrivacy
+2026/11/26 14:04:41 session rejected: unauthenticated
+--- PASS: TestF03PersistedValuesLifecycleAndPrivacy (1.52s)
+=== RUN   TestF03ActiveAcrossQueuesHasStableOrderAndNoCache
+--- PASS: TestF03ActiveAcrossQueuesHasStableOrderAndNoCache (1.47s)
+=== RUN   TestF02JoinCreatesWaitingTicket
+--- PASS: TestF02JoinCreatesWaitingTicket (1.43s)
+=== RUN   TestF02InvalidPartySizeCreatesNothing
+--- PASS: TestF02InvalidPartySizeCreatesNothing (1.54s)
+=== RUN   TestF02DuplicateSequentialJoinConflicts
+--- PASS: TestF02DuplicateSequentialJoinConflicts (1.52s)
+=== RUN   TestF02ConcurrentDuplicateJoinCreatesOne
+--- PASS: TestF02ConcurrentDuplicateJoinCreatesOne (1.46s)
+=== RUN   TestF02ConcurrentCustomersGetUniqueNumbers
+--- PASS: TestF02ConcurrentCustomersGetUniqueNumbers (1.52s)
+=== RUN   TestF02UnknownAndInactiveQueue
+--- PASS: TestF02UnknownAndInactiveQueue (1.34s)
+=== RUN   TestF02RoleSessionAndCSRFGates
+2026/11/26 14:04:52 session rejected: unauthenticated
+2026/11/26 14:04:52 session rejected: unauthenticated
+--- PASS: TestF02RoleSessionAndCSRFGates (1.33s)
+=== RUN   TestF02ServiceDateUsesRestaurantTimezone
+--- PASS: TestF02ServiceDateUsesRestaurantTimezone (1.33s)
+=== RUN   TestF03ActiveAndDetailEntry
+--- PASS: TestF03ActiveAndDetailEntry (1.38s)
+=== RUN   TestF03EmptyActiveList
+--- PASS: TestF03EmptyActiveList (1.27s)
+=== RUN   TestF03CrossUserPrivacy
+2026/11/26 14:04:57 session rejected: unauthenticated
+--- PASS: TestF03CrossUserPrivacy (1.29s)
+=== RUN   TestL7NewJoinStartsNotReady
+--- PASS: TestL7NewJoinStartsNotReady (1.28s)
+=== RUN   TestL7NoReadyPartiesCannotBeCalled
+--- PASS: TestL7NoReadyPartiesCannotBeCalled (1.30s)
+=== RUN   TestL7ReadinessOwnerLifecycleAndFIFO
+--- PASS: TestL7ReadinessOwnerLifecycleAndFIFO (1.49s)
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/guest
+2026/11/26 14:05:03 session rejected: unauthenticated
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/host
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/foreign
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/missing
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/malformed
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/csrf
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/null
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/number
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/unknown
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/duplicate
+=== RUN   TestL7ReadinessValidationPrivacyAndCSRF/empty
+--- PASS: TestL7ReadinessValidationPrivacyAndCSRF (1.46s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/guest (0.02s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/host (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/foreign (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/missing (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/malformed (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/csrf (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/null (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/number (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/unknown (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/duplicate (0.01s)
+    --- PASS: TestL7ReadinessValidationPrivacyAndCSRF/empty (0.01s)
+=== RUN   TestL7ReadinessInactiveQueueAndPersistence
+--- PASS: TestL7ReadinessInactiveQueueAndPersistence (1.43s)
+=== RUN   TestL7ReadinessMigrationPreservesExistingTickets
+--- PASS: TestL7ReadinessMigrationPreservesExistingTickets (1.34s)
+=== RUN   TestL7ReadinessCallRaceBothCommitOrders
+=== RUN   TestL7ReadinessCallRaceBothCommitOrders/not-ready-first
+=== RUN   TestL7ReadinessCallRaceBothCommitOrders/call-first
+--- PASS: TestL7ReadinessCallRaceBothCommitOrders (2.76s)
+    --- PASS: TestL7ReadinessCallRaceBothCommitOrders/not-ready-first (1.40s)
+    --- PASS: TestL7ReadinessCallRaceBothCommitOrders/call-first (1.37s)
+=== RUN   TestParseReadinessStrictBoolean
+--- PASS: TestParseReadinessStrictBoolean (0.00s)
+=== RUN   TestS1NoncanonicalQueueIDsReturnNotFound
+--- PASS: TestS1NoncanonicalQueueIDsReturnNotFound (1.29s)
+=== RUN   TestS1HostDrainsInactiveQueueInFIFOIncludingTiesAndPreviousDays
+--- PASS: TestS1HostDrainsInactiveQueueInFIFOIncludingTiesAndPreviousDays (1.38s)
+=== RUN   TestS1ConcurrentCompleteAndCallNextPreserveLifecycle
+--- PASS: TestS1ConcurrentCompleteAndCallNextPreserveLifecycle (1.41s)
+=== RUN   TestS1HostTransitionSQLFailureRollsBack
+--- PASS: TestS1HostTransitionSQLFailureRollsBack (1.46s)
+=== RUN   TestParsePartySize
+--- PASS: TestParsePartySize (0.00s)
+=== RUN   TestTicketCode
+--- PASS: TestTicketCode (0.00s)
+PASS
+ok  	dinequeue.local/api/internal/queue	52.393s
+=== RUN   TestPanicReturnsGenericError
+--- PASS: TestPanicReturnsGenericError (0.00s)
+=== RUN   TestLivenessDoesNotRequireDatabase
+--- PASS: TestLivenessDoesNotRequireDatabase (0.00s)
+=== RUN   TestReadinessReportsDatabaseStateWithoutLeakingErrors
+--- PASS: TestReadinessReportsDatabaseStateWithoutLeakingErrors (0.00s)
+=== RUN   TestUnknownRouteHasGenericJSONError
+--- PASS: TestUnknownRouteHasGenericJSONError (0.00s)
+=== RUN   TestMethodNotAllowedPreservesClientErrorStatus
+--- PASS: TestMethodNotAllowedPreservesClientErrorStatus (0.00s)
+PASS
+ok  	dinequeue.local/api/internal/transport/http	1.036s

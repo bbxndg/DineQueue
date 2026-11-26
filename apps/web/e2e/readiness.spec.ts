@@ -30,6 +30,8 @@ test('L7 readiness: skip unavailable party, restore original FIFO, lock readines
     await a.getByRole('button', { name: 'Mark not ready', exact: true }).click();
     await expect(a.getByTestId('ticket-readiness')).toHaveText('Not ready');
     await b.getByRole('link', { name: 'View ticket details' }).click();
+    // Act on the detail view, not the list control that is still being replaced.
+    await expect(b.getByRole('heading', { name: 'Ticket details' })).toBeVisible();
     await b.getByRole('button', { name: 'Mark ready', exact: true }).click();
     await expect(b.getByTestId('ticket-readiness')).toHaveText('Ready to be called');
     await host.getByRole('button', { name: 'Refresh queue', exact: true }).click();

@@ -30,7 +30,7 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
         <h2 className="mt-6 text-2xl font-semibold">{queue.name} · {queue.restaurantName}</h2>
         {!queue.isActive && <p className="mt-2 text-sm">This queue is closed to new joins. Existing tickets can still be handled.</p>}
         <HostBoard key={queue.id} queueId={queue.id} timezone={queue.timezone} csrfToken={session.csrfToken}
-          current={board.current} waiting={board.waiting} />
+          current={board.current} waiting={board.waiting} renderedAt={new Date().toISOString()} />
       </>}
     </section>
   </main>;

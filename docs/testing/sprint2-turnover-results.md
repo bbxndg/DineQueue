@@ -49,3 +49,9 @@ The browser spec was written after the API was GREEN, so it has no recorded RED 
 | Regression | Full browser run includes cancellation/no-show, seating, matching, floor, Lab 7 polling/readiness and S1 specs; expiry is covered by the Go seating tests |
 
 Not covered: S2-T-032 restart for CLOSED/CLEANING groups (no API restart was performed in this run), deployed acceptance, Cloud SQL activation, and teammate review.
+
+## Review follow-up (PR #63 review by bbxndg, 27 November 2026)
+
+- `turnover.go`: a DIRTY/CLEANING group that no longer owns every member claim now fails with an internal error (HTTP 500) instead of 409 INVALID_TRANSITION, and changes nothing. New test `TestF09LostClaimIsInternalError` (start-cleaning and finish-cleaning; service and HTTP). It failed first with INVALID_TRANSITION, then passed after the change.
+- `enable-seating`: returns an `ActivationResult` and the CLI logs `database, queue name (ID), mode before -> after`. With `APP_ENV=production` it refuses unless `--i-understand-production` is given (the flag is rejected for other commands). New test `TestF16EnableSeatingReportsChangeAndGuardsProduction`. The production path is verified at function level only: a local `APP_ENV=production` CLI run is not possible because production config requires Cloud SQL settings.
+- Rerun (uncommitted at the time): Go `-race` unit + vet + all integration PASS (106 top-level / 75 subtests); the real CLI on a throwaway `dq_f6cli_test` again refused the three unsafe cases, then logged `mode MANUAL -> SEATING` and on rerun `SEATING -> SEATING`, with tickets/readiness/password hashes unchanged. Web code did not change, so lint/build/browser were not rerun after this follow-up.

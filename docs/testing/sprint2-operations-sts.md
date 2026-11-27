@@ -1,6 +1,6 @@
 # Sprint 2 software test specification
 
-Version DQ-S2-STS-2.1, 27 November 2026. Related [contract](../features/sprint2-restaurant-operations-contracts.md), [interfaces](../features/sprint2-ui-api-data.md) and [traceability](sprint2-traceability.md). All cases below are PLANNED / NOT RUN. No actual test file, result or acceptance is implied by a reserved ID.
+Version DQ-S2-STS-2.1, 27 November 2026. Related [contract](../features/sprint2-restaurant-operations-contracts.md), [interfaces](../features/sprint2-ui-api-data.md) and [traceability](sprint2-traceability.md). Cases are planned specifications; local inventory execution for #50 is recorded in [floor results](sprint2-floor-results.md). Uncovered portions and later lifecycle cases remain NOT RUN. A reserved ID alone does not establish a passing test.
 
 ## 1 Test data and isolation
 
@@ -95,7 +95,7 @@ These are target locations, not existing test files or results. Feature authors 
 
 | Area | Planned location | Important IDs |
 |---|---|---|
-| Floor and provision | `apps/api/internal/floor/*_test.go`, integration-tagged DB cases | 001,002,033,034,042,052 |
+| Floor and provision | Actual #50: `apps/api/internal/queue/floor*_integration_test.go`, `apps/api/db/floor_migration_integration_test.go`; see [results](sprint2-floor-results.md) for partial coverage | 001,002,033,034,042,052 |
 | Pure matching and preview | `apps/api/internal/matching/*_test.go` and integration cases | 003–008,018,019,035–038,051 |
 | Allocation/turnover | `apps/api/internal/seating/*_test.go`, integration-tagged races/rollback | 009–017,022–027,031,032,041,043–048,053–055 |
 | Customer cancellation | `apps/api/internal/queue/*_test.go` | 020,021,039,040,057,058 |

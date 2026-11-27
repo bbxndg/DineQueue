@@ -62,3 +62,10 @@ The browser spec was written after the API was GREEN, so it has no recorded RED 
 | H12 | Browser: real API process restart on the same database; same history rows and owned detail. `TestS3HistoryRouteDoesNotBreakOwnedReads` plus the 44 existing browser cases cover ownership, join, readiness and active polling regressions |
 
 Not covered: hosted CI, teammate review, deployed smoke of a released SHA, and a Cloud SQL plan check.
+
+## Review follow-up (PR #68 review by bbxndg, 27 November 2026)
+
+- `history.go` `limit`: canonical decimal only. A leading zero (`05`, `050`, `00`) is now 400 VALIDATION_ERROR, so every accepted form is `1`–`50`. Added to `TestParseHistoryQuery` and the H06 integration list. RED: both tests failed first (`limit=05` accepted with 200), then passed.
+- `ticket-history.tsx`: a polite `role="status"` live region announces each successful Load more ("Loaded N more tickets." plus "You have reached the end of your history." at the end). The initial load is not announced and focus does not move. Rows are de-duplicated from a ref instead of inside a state updater. H08 now asserts the region is empty after the first page and announces after Load more. RED: H08 failed first (element not found) on a correctly built pre-fix web, then passed.
+- One discarded attempt: the first browser RED run used a `.next` build made by root `npm run build` without `API_INTERNAL_URL`, so requests reached another local service. It is not counted; the web was rebuilt with the test API URL before the RED and GREEN runs.
+- Rerun on the working tree over `e8bff69` (uncommitted at the time): Go `-race` unit + `vet` + `vet -tags=integration` + all integration PASS (116 top-level / 75 subtests); web lint, typecheck and 16 unit tests PASS; production build with the test API URL PASS; full Playwright suite after DB reset, API restart and limiter wait **49/49 PASS** (7.0 min, 23:51–23:58 ICT).

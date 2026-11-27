@@ -102,7 +102,8 @@ func parseHistoryQuery(pairs [][2]string) (historyQuery, error) {
 		seen[key] = true
 		switch key {
 		case "limit":
-			if value == "" || len(value) > 2 || strings.Trim(value, "0123456789") != "" {
+			// Canonical decimal only: no sign, no leading zero (review #68).
+			if value == "" || len(value) > 2 || value[0] == '0' || strings.Trim(value, "0123456789") != "" {
 				return q, ErrValidation
 			}
 			n, err := strconv.Atoi(value)

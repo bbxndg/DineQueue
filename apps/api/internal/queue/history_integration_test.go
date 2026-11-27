@@ -354,7 +354,7 @@ func TestS3HistoryRejectsInvalidQueries(t *testing.T) {
 	}
 	good := "2026-11-20T10:00:00.123456Z"
 	cases := []string{
-		"?limit=0", "?limit=51", "?limit=1.5", "?limit=abc", "?limit=", "?limit=-1", "?limit=+5", "?limit=05x",
+		"?limit=0", "?limit=51", "?limit=05", "?limit=050", "?limit=00", "?limit=1.5", "?limit=abc", "?limit=", "?limit=-1", "?limit=+5", "?limit=05x",
 		"?limit=10&limit=20", "?cursor=a&cursor=b", "?foo=1", "?LIMIT=10",
 		"?cursor=", "?cursor=***", "?cursor=" + strings.Repeat("A", 513),
 		"?cursor=" + rawCursor(t, `not json`),

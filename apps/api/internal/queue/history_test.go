@@ -42,7 +42,7 @@ func TestParseHistoryQuery(t *testing.T) {
 		t.Fatalf("valid %+v %v", q, err)
 	}
 	for _, bad := range [][][2]string{
-		{{"limit", "0"}}, {{"limit", "51"}}, {{"limit", "1.0"}}, {{"limit", " 5"}}, {{"limit", "١"}},
+		{{"limit", "0"}}, {{"limit", "51"}}, {{"limit", "05"}}, {{"limit", "050"}}, {{"limit", "00"}}, {{"limit", "1.0"}}, {{"limit", " 5"}}, {{"limit", "١"}},
 		{{"limit", "5"}, {"limit", "5"}}, {{"cursor", good}, {"cursor", good}}, {{"ownerId", "x"}}, {{"", ""}},
 		{{"cursor", ""}}, {{"cursor", strings.Repeat("A", 513)}},
 	} {

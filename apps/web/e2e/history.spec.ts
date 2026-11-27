@@ -59,8 +59,13 @@ test('H08 navigation, Load more without duplicates, owned legacy detail and back
     await expect(page).toHaveURL(/\/my-queue\/history$/);
     await expect(page.getByRole('heading', { name: 'Ticket history' })).toBeVisible();
     await expect(items(page)).toHaveCount(20);
+    // Review #68: the initial load is not announced; Load more is, politely.
+    const announce = page.getByTestId('history-announcement');
+    await expect(announce).toHaveAttribute('role', 'status');
+    await expect(announce).toHaveText('');
     await page.getByRole('button', { name: 'Load more', exact: true }).click();
     await expect(items(page)).toHaveCount(23);
+    await expect(announce).toHaveText('Loaded 3 more tickets. You have reached the end of your history.');
     await expect(page.getByText('End of your ticket history.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Load more' })).toHaveCount(0);
     expect(await page.getByTestId('history-code').allTextContents()).toEqual(expected);

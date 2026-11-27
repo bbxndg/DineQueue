@@ -24,8 +24,12 @@ export function TicketHistory() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
+  // Polite announcement for Load more only (review #68); the initial load is not announced.
+  const [announcement, setAnnouncement] = useState('');
   const generation = useRef(0);
   const inFlight = useRef<AbortController | null>(null);
+  // Mirror of the rendered rows so a response can be de-duplicated outside a state updater.
+  const loaded = useRef<Ticket[]>([]);
 
   const load = useCallback(async (from: string | null) => {
     if (inFlight.current) return; // no duplicate page requests
@@ -33,6 +37,7 @@ export function TicketHistory() {
     const controller = new AbortController();
     inFlight.current = controller;
     setPhase(from ? 'loading-more' : 'loading');
+    setAnnouncement('');
     try {
       const result = await readHistoryPage(from, controller.signal);
       if (gen !== generation.current) return;
@@ -40,23 +45,29 @@ export function TicketHistory() {
         if (result.status === 401) {
           // Clear protected data before leaving.
           generation.current++;
-          setTickets([]); setCursor(null); setPhase('signed-out');
+          loaded.current = []; setTickets([]); setCursor(null); setPhase('signed-out');
           router.replace('/login');
           return;
         }
         if (result.status === 403) {
           generation.current++;
-          setTickets([]); setCursor(null); setPhase('forbidden');
+          loaded.current = []; setTickets([]); setCursor(null); setPhase('forbidden');
           return;
         }
         setPhase(from ? 'more-error' : 'initial-error');
         return;
       }
-      setTickets(previous => {
-        const seen = new Set(previous.map(t => t.id));
-        return [...(from ? previous : []), ...result.page.tickets.filter(t => !from || !seen.has(t.id))];
-      });
-      setCursor(result.page.nextCursor);
+      const page = result.page;
+      const previous = from ? loaded.current : [];
+      const seen = new Set(previous.map(t => t.id));
+      const added = page.tickets.filter(t => !seen.has(t.id));
+      loaded.current = [...previous, ...added];
+      setTickets(loaded.current);
+      setCursor(page.nextCursor);
+      if (from) {
+        const count = `Loaded ${added.length} more ${added.length === 1 ? 'ticket' : 'tickets'}.`;
+        setAnnouncement(page.nextCursor ? count : `${count} You have reached the end of your history.`);
+      }
       setPhase('ready');
     } catch {
       if (gen === generation.current && !controller.signal.aborted) setPhase(from ? 'more-error' : 'initial-error');
@@ -88,6 +99,7 @@ export function TicketHistory() {
 
   return <div className="mt-8 grid gap-4">
     <p className="text-sm">Completed means your waitlist turn finished. It does not show whether your meal has ended.</p>
+    <p role="status" aria-live="polite" data-testid="history-announcement" className="sr-only">{announcement}</p>
     <ul aria-label="Past tickets" className="grid gap-4">
       {tickets.map(ticket => <HistoryItem key={ticket.id} ticket={ticket} />)}
     </ul>

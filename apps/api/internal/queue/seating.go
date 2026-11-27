@@ -207,12 +207,38 @@ func (r *Repository) seatingResult(ctx context.Context, q, id string) (SeatingRe
 	err = r.db.Raw("SELECT id,code,capacity,status,position_x,position_y,version FROM dining_tables WHERE id IN ? ORDER BY id", a.TableIDs).Scan(&out.Tables).Error
 	return out, err
 }
-func (r *Repository) event(q, entry, assignment string, actor *string, action, from, to string, metadata any, at time.Time) error {
+// event appends an audit row; assignment is nil only for CUSTOMER_CANCEL (0006 CHECK).
+func (r *Repository) event(q, entry string, assignment, actor *string, action, from, to string, metadata any, at time.Time) error {
 	data, err := json.Marshal(metadata)
 	if err != nil {
 		return err
 	}
 	return r.db.Exec("INSERT INTO operation_events(id,queue_id,entry_id,assignment_id,actor_id,action,from_state,to_state,metadata,occurred_at) VALUES(?,?,?,?,?,?,?,?,?::jsonb,?)", uuid.NewString(), q, entry, assignment, actor, action, from, to, string(data), at).Error
+}
+
+// releaseHold is the single release coordinator shared by server expiry (#52) and
+// Host no-show (#53). The caller already holds floor -> queue -> entry -> member
+// locks and has verified a HELD assignment. The whole group changes together:
+// ticket CALLED->NO_SHOW, every member HELD->AVAILABLE, every claim released,
+// assignment HELD->RELEASED, plus one event. A nil actor means system expiry.
+func (r *Repository) releaseHold(q string, a Assignment, actor *string, reason string, at time.Time) error {
+	action := map[string]string{"HOLD_EXPIRED": "EXPIRE_HOLD", "CUSTOMER_ABSENT": "NO_SHOW"}[reason]
+	if action == "" || (reason == "CUSTOMER_ABSENT") != (actor != nil) {
+		return ErrValidation
+	}
+	if err := checked(r.db.Exec("UPDATE queue_entries SET status='NO_SHOW',no_show_at=?,no_show_by=?,no_show_reason=?,version=version+1 WHERE id=? AND queue_id=? AND status='CALLED'", at, actor, reason, a.EntryID, q), 1); err != nil {
+		return err
+	}
+	if err := checked(r.db.Exec("UPDATE dining_tables SET status='AVAILABLE',version=version+1,updated_at=? WHERE id IN ? AND status='HELD'", at, a.TableIDs), int64(len(a.TableIDs))); err != nil {
+		return err
+	}
+	if err := checked(r.db.Exec("UPDATE seating_assignment_tables SET released_at=? WHERE assignment_id=? AND released_at IS NULL", at, a.ID), int64(len(a.TableIDs))); err != nil {
+		return err
+	}
+	if err := checked(r.db.Exec("UPDATE seating_assignments SET status='RELEASED',released_at=?,release_reason=?,version=version+1 WHERE id=? AND status='HELD'", at, reason, a.ID), 1); err != nil {
+		return err
+	}
+	return r.event(q, a.EntryID, &a.ID, actor, action, "HELD", "RELEASED", map[string]any{"tableIds": a.TableIDs, "reasonCode": reason}, at)
 }
 
 // Expiry is an independent committed operation. Callers recheck successful replay
@@ -247,19 +273,7 @@ func (s *Service) expire(ctx context.Context, u auth.User, q string) (ExpiryResu
 			if at.Before(a.HoldExpiresAt) {
 				continue
 			}
-			if err := checked(tx.Exec("UPDATE queue_entries SET status='NO_SHOW',no_show_at=?,no_show_reason='HOLD_EXPIRED',version=version+1 WHERE id=? AND status='CALLED'", at, a.EntryID), 1); err != nil {
-				return err
-			}
-			if err := checked(tx.Exec("UPDATE dining_tables SET status='AVAILABLE',version=version+1,updated_at=? WHERE id IN ? AND status='HELD'", at, a.TableIDs), int64(len(a.TableIDs))); err != nil {
-				return err
-			}
-			if err := checked(tx.Exec("UPDATE seating_assignment_tables SET released_at=? WHERE assignment_id=? AND released_at IS NULL", at, id), int64(len(a.TableIDs))); err != nil {
-				return err
-			}
-			if err := checked(tx.Exec("UPDATE seating_assignments SET status='RELEASED',released_at=?,release_reason='HOLD_EXPIRED',version=version+1 WHERE id=? AND status='HELD'", at, id), 1); err != nil {
-				return err
-			}
-			if err := r.event(q, a.EntryID, id, nil, "EXPIRE_HOLD", "HELD", "RELEASED", map[string]any{"tableIds": a.TableIDs, "reasonCode": "HOLD_EXPIRED"}, at); err != nil {
+			if err := r.releaseHold(q, a, nil, "HOLD_EXPIRED", at); err != nil {
 				return err
 			}
 			out.ExpiredAssignments = append(out.ExpiredAssignments, id)
@@ -407,7 +421,7 @@ func (s *Service) CallHold(ctx context.Context, u auth.User, q string, request C
 		if n != 1 {
 			return matchError("QUEUE_ORDER_CHANGED")
 		}
-		if err := r.event(q, request.EntryID, id, &u.ID, "CALL_HOLD", "WAITING", "HELD", map[string]any{"tableIds": request.TableIDs, "selectionReason": request.SelectionReason, "skipped": p.Skipped}, at); err != nil {
+		if err := r.event(q, request.EntryID, &id, &u.ID, "CALL_HOLD", "WAITING", "HELD", map[string]any{"tableIds": request.TableIDs, "selectionReason": request.SelectionReason, "skipped": p.Skipped}, at); err != nil {
 			return err
 		}
 		out, err = r.seatingResult(ctx, q, id)
@@ -488,7 +502,7 @@ func (s *Service) Seat(ctx context.Context, u auth.User, q, id string, request A
 		if err := checked(tx.Exec("UPDATE seating_assignments SET status='ACTIVE',seated_at=?,version=version+1 WHERE id=? AND status='HELD' AND version=?", at, id, request.ExpectedVersion), 1); err != nil {
 			return err
 		}
-		if err := r.event(q, a.EntryID, id, &u.ID, "SEAT", "HELD", "ACTIVE", map[string]any{"tableIds": a.TableIDs}, at); err != nil {
+		if err := r.event(q, a.EntryID, &id, &u.ID, "SEAT", "HELD", "ACTIVE", map[string]any{"tableIds": a.TableIDs}, at); err != nil {
 			return err
 		}
 		out, err = r.seatingResult(ctx, q, id)

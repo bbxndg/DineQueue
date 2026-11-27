@@ -14,16 +14,16 @@ Every row is Sprint 2. Test IDs refer to planned cases in the STS, where levels,
 | S2-AC-004 | FR-012/013/027; BR-010/018/019 | F-07/F-15, #52 | S2-T-009,010,015 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-005 | FR-008/028; BR-013/019/020/021 | F-07/F-15, #52 | S2-T-011,012,031,045 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-006 | FR-013/034; BR-005/018/019; NFR-002/011/012 | F-07/F-15, #52 | S2-T-013,014,015,046 | NOT IMPLEMENTED / NOT RUN |
-| S2-AC-007 | FR-016/029; BR-022 | F-09/F-16, #54 | S2-T-016,017,047 | NOT IMPLEMENTED / NOT RUN |
+| S2-AC-007 | FR-016/029; BR-022 | F-09/F-16, #54 | S2-T-016,017,047 | Implemented locally (uncommitted, unreviewed); local tests in [turnover results](sprint2-turnover-results.md) |
 | S2-AC-008 | FR-007/030; BR-003-L7-v1/011/017/023 | F-14, #51/#52 | S2-T-018,019,036,037,038 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-009 | FR-010/014; BR-001/007/012 | F-08, #53 | S2-T-020,021,039,040 | Implemented locally (uncommitted, unreviewed); local API/DB/browser tests in [cancel/no-show results](sprint2-cancel-no-show-results.md) |
 | S2-AC-010 | FR-015; BR-012/018/021 | F-08, #53 | S2-T-022,023,031,041 | Implemented locally (uncommitted, unreviewed); local tests in [cancel/no-show results](sprint2-cancel-no-show-results.md) |
-| S2-AC-011 | FR-016/026/029; BR-022; NFR-005 | F-09/F-16, #54 | S2-T-024,025,032 | NOT IMPLEMENTED / NOT RUN |
-| S2-AC-012 | FR-029/034; BR-018/019/022 | F-09/F-16, #54 | S2-T-026,027,048 | NOT IMPLEMENTED / NOT RUN |
+| S2-AC-011 | FR-016/026/029; BR-022; NFR-005 | F-09/F-16, #54 | S2-T-024,025,032 | Implemented locally (uncommitted, unreviewed); local tests in [turnover results](sprint2-turnover-results.md); S2-T-032 restart for CLOSED/CLEANING NOT RUN |
+| S2-AC-012 | FR-029/034; BR-018/019/022 | F-09/F-16, #54 | S2-T-026,027,048 | Implemented locally (uncommitted, unreviewed); local tests in [turnover results](sprint2-turnover-results.md) |
 | S2-AC-013 | FR-024/035; NFR-006/014 | F-06/F-16, #50 | S2-T-049,050 | Floor Map/List, keyboard, responsive and read-recovery tests recorded; preview/write-conflict portions pending |
 | S2-AC-014 | FR-007/030; BR-011/017/023 | F-14, #51 | S2-T-036,038,051 | NOT IMPLEMENTED / NOT RUN |
-| S2-AC-015 | FR-008/009/011; BR-001/002/004/008/009/013; NFR-005 | F-07/F-15, #50/#52/#54 | S2-T-042,043,044,052 | 0004 migration preservation and guarded provisioning tested; activation/SEATING guards pending #52/#54 |
-| S2-AC-016 | FR-013/034; BR-019/020; NFR-012 | F-07/F-15/F-09, #52/#54 | S2-T-053,054 | NOT IMPLEMENTED / NOT RUN |
+| S2-AC-015 | FR-008/009/011; BR-001/002/004/008/009/013; NFR-005 | F-07/F-15, #50/#52/#54 | S2-T-042,043,044,052 | 0004 migration preservation and guarded provisioning tested; `enable-seating` refusal/preservation tested locally in [turnover results](sprint2-turnover-results.md); no deployed activation |
+| S2-AC-016 | FR-013/034; BR-019/020; NFR-012 | F-07/F-15/F-09, #52/#54 | S2-T-053,054 | Seating replay/conflict in [seating results](sprint2-seating-results.md); turnover replay/conflict in [turnover results](sprint2-turnover-results.md) |
 | S2-AC-017 | FR-015/027/028; BR-012/021 | F-07/F-08/F-15, #52/#53 | S2-T-012,031,045,055 | Expiry tests in [seating results](sprint2-seating-results.md); shared release with no-show in [cancel/no-show results](sprint2-cancel-no-show-results.md). S2-T-055 NOT RUN |
 | S2-AC-018 | FR-005/010/014/015; BR-001/003-L7-v1/007/012; L7-AC-01–13 regression | F-03/F-08/F-04, #53 | S2-T-039,040,056,057 | Local browser subset and full 43-case regression in [cancel/no-show results](sprint2-cancel-no-show-results.md); not deployed |
 | S2-AC-019 | FR-001/002/009/011/020/034; BR-001–009; NFR-001–006/008/009/012/015 | Cross-feature delivery/security, #50–#54 | S2-T-028,029,033,046,047,058,059,060 | NOT IMPLEMENTED / NOT RUN |

@@ -264,3 +264,11 @@ Status: **PROPOSED; implemented locally on `feat5/sprint2-cancellation-no-show`,
 - Customer Cancel takes an empty body (non-empty → 400 VALIDATION_ERROR) and no idempotency key; a repeat is 409 INVALID_TRANSITION. It locks queue→entry and never the floor.
 - Host No-show `expectedVersion` is the HELD assignment version. Request keys use the operation name `no-show`, hashed with the entry path. An entry without a HELD assignment (WAITING, seated/COMPLETED, manual CALLED) returns 409 INVALID_TRANSITION; a MANUAL queue returns SEATING_NOT_ENABLED; an already-expired hold returns HOLD_EXPIRED after the independent system cleanup.
 - Expiry and no-show share one repository coordinator (`releaseHold`); only reason (HOLD_EXPIRED/CUSTOMER_ABSENT), actor (system/Host) and event action (EXPIRE_HOLD/NO_SHOW) differ.
+
+## DEC-040 — F-09/F-16 turnover and activation details (#54), 27 November 2026 — pending team review
+
+Status: **PROPOSED; implemented locally on `feat6/sprint2-checkout-cleaning`, uncommitted and not reviewed**.
+
+- No new migration: 0005's turnover phase, timestamps, `release_reason=CLEANED` and the live-claim index are sufficient.
+- Checkout, Start Cleaning and Finish Cleaning share one service path. `expectedVersion` is the assignment version; request-key operation names are `checkout`, `start-cleaning`, `finish-cleaning`, hashed with the assignment path. Events are `CHECKOUT` (ACTIVE→DIRTY), `START_CLEANING` (DIRTY→CLEANING) and `FINISH_CLEANING` (CLEANING→CLEANED). Any other state, including a CLEANED historical group, returns 409 INVALID_TRANSITION.
+- `db enable-seating` requires the exact `current_database()` name (no `_demo/_uat/_test` suffix restriction, because activation is ultimately meant for a real queue after authorization). It needs a floor-state row plus at least one table in an active zone, and no CALLED ticket. A rerun on a SEATING queue is a no-op. There is no deactivation command. The CLI prints only the three fixed refusal messages; other errors stay generic.

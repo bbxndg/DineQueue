@@ -42,7 +42,7 @@ class PrepareEnvironmentTests(unittest.TestCase):
         browser = values(Path(exported['DINEQUEUE_BROWSER_ENV']))
         go = values(Path(exported['DINEQUEUE_GO_ENV']))
         self.assertNotIn(canary, result.stdout + result.stderr + repr(app) + repr(browser) + repr(go))
-        self.assertIn('@127.0.0.1:35432/dinequeue_ci?', go['TEST_DATABASE_URL'])
+        self.assertIn('@127.0.0.1:35432/dinequeue_ci_test?', go['TEST_DATABASE_URL'])
         self.assertIn('@db:5432/dinequeue_browser?', app['DATABASE_URL'])
         for key in ['POSTGRES_PASSWORD', 'DATABASE_URL', 'SEED_HOST_PASSWORD']:
             self.assertNotIn(app[key], result.stdout + result.stderr)

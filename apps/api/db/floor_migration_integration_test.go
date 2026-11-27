@@ -126,7 +126,7 @@ func TestFloorMigrationPreservesLegacyRows(t *testing.T) {
 	}
 	var versions int64
 	database.Table("schema_migrations").Count(&versions)
-	if versions != 6 {
+	if versions != 7 {
 		t.Fatalf("versions %d", versions)
 	}
 	var terminalFields int64

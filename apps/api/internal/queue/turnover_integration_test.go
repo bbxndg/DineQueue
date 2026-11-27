@@ -433,3 +433,35 @@ func TestF09ConcurrentIdenticalCheckoutReplay(t *testing.T) {
 		t.Fatalf("events %d", n)
 	}
 }
+
+// Review #63: a DIRTY/CLEANING group that lost a member claim is corrupted data,
+// so the step fails as an internal error (not 409) and changes nothing.
+func TestF09LostClaimIsInternalError(t *testing.T) {
+	for _, stage := range []string{"start-cleaning", "finish-cleaning"} {
+		t.Run(stage, func(t *testing.T) {
+			f, r, seated := seatedFixture(t)
+			a := mustStep(t, f, "checkout", seated.Assignment).Assignment
+			from := "DIRTY"
+			if stage == "finish-cleaning" {
+				a = mustStep(t, f, "start-cleaning", a).Assignment
+				from = "CLEANING"
+			}
+			if err := f.db.Exec("UPDATE seating_assignment_tables SET released_at=now() WHERE assignment_id=? AND table_id=?", a.ID, r.TableIDs[0]).Error; err != nil {
+				t.Fatal(err)
+			}
+			events := countSQL(t, f, "SELECT count(*) FROM operation_events")
+			_, err := steps(f)[stage](context.Background(), hostUser, auth.DemoQueueID, a.ID, ActionVersion{ExpectedVersion: a.Version, IdempotencyKey: uuid.NewString()})
+			if err != errTurnoverClaimInvariant {
+				t.Fatalf("lost claim: %v", err)
+			}
+			if tableStates(t, f, r.TableIDs, from) != 2 || countSQL(t, f, "SELECT count(*) FROM operation_events") != events {
+				t.Fatal("corrupted group changed state")
+			}
+			// HTTP surfaces it as a server error, never INVALID_TRANSITION.
+			res := requestSeating(t, f, "/seating-assignments/"+a.ID+"/"+stage, session(t, f, host), fmt.Sprintf(`{"expectedVersion":%d,"idempotencyKey":%q}`, a.Version, uuid.NewString()), true)
+			if res.status != 500 || errorCode(res) == "INVALID_TRANSITION" {
+				t.Fatalf("HTTP %d %v", res.status, res.body)
+			}
+		})
+	}
+}

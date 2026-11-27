@@ -101,13 +101,15 @@ func (s *Service) turnover(ctx context.Context, u auth.User, q, id, name string,
 		if a.Version != request.ExpectedVersion {
 			return matchError("STALE_PREVIEW")
 		}
-		// This group must still own every member claim.
+		// A DIRTY/CLEANING group must still own every member claim (claims are only
+		// released by finish-cleaning or no-show/expiry). A mismatch means corrupted
+		// data, so fail as an internal error rather than telling the Host to retry.
 		var claims int64
 		if err := tx.Raw("SELECT count(*) FROM seating_assignment_tables WHERE assignment_id=? AND released_at IS NULL", id).Scan(&claims).Error; err != nil {
 			return err
 		}
 		if claims != int64(len(a.TableIDs)) {
-			return ErrInvalidTransition
+			return errTurnoverClaimInvariant
 		}
 		at := s.now().UTC().Truncate(time.Microsecond)
 		for _, previous := range []*time.Time{a.SeatedAt, a.ClosedAt, a.CleaningStartedAt} {
@@ -168,6 +170,11 @@ var (
 	ErrActivationFloor        = errors.New("seating activation requires a configured floor with an active zone and tables")
 	ErrActivationLegacyCalled = errors.New("seating activation refused: complete the legacy CALLED ticket first")
 	ErrActivationConfirmation = errors.New("seating activation requires the exact current database name")
+	// ErrActivationProductionConsent: APP_ENV=production needs --i-understand-production.
+	ErrActivationProductionConsent = errors.New("seating activation in production requires --i-understand-production")
+	// errTurnoverClaimInvariant: a DIRTY/CLEANING group lost a member claim. That is
+	// corrupted data, not a client state error, so it surfaces as a 500.
+	errTurnoverClaimInvariant = errors.New("queue: turnover group no longer owns every member claim")
 	activationDatabaseName    = regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`)
 )
 
@@ -176,13 +183,19 @@ var (
 // configured floor and no legacy CALLED ticket, and changes only the queue's
 // operations_mode under floor -> queue locks. WAITING tickets, readiness,
 // history, counters and credentials are untouched; no assignment is fabricated.
-// Re-running on an already SEATING queue is a no-op.
-func EnableSeating(ctx context.Context, database *gorm.DB, queueID, confirmedDatabase string) error {
+// Re-running on an already SEATING queue is a no-op. In production it also needs
+// explicit operator consent, and it reports the queue and mode before/after so the
+// operator sees exactly what changed (no secrets).
+func EnableSeating(ctx context.Context, database *gorm.DB, queueID, confirmedDatabase string, options ActivationOptions) (ActivationResult, error) {
+	out := ActivationResult{QueueID: strings.ToLower(queueID), Database: confirmedDatabase}
 	if !canonicalID(queueID) || !activationDatabaseName.MatchString(confirmedDatabase) {
-		return ErrActivationConfirmation
+		return out, ErrActivationConfirmation
 	}
-	queueID = strings.ToLower(queueID)
-	return database.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if options.Environment == "production" && !options.ConfirmProduction {
+		return out, ErrActivationProductionConsent
+	}
+	queueID = out.QueueID
+	err := database.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var actual string
 		if err := tx.Raw("SELECT current_database()").Scan(&actual).Error; err != nil {
 			return err
@@ -207,13 +220,15 @@ func EnableSeating(ctx context.Context, database *gorm.DB, queueID, confirmedDat
 		var locked struct {
 			RestaurantID   string
 			OperationsMode string
+			Name           string
 		}
-		if err := tx.Raw("SELECT restaurant_id,operations_mode FROM service_queues WHERE id=? FOR UPDATE", queueID).Scan(&locked).Error; err != nil {
+		if err := tx.Raw("SELECT restaurant_id,operations_mode,name FROM service_queues WHERE id=? FOR UPDATE", queueID).Scan(&locked).Error; err != nil {
 			return err
 		}
 		if locked.RestaurantID != restaurants[0] {
 			return ErrActivationFloor
 		}
+		out.QueueName, out.ModeBefore, out.ModeAfter = locked.Name, locked.OperationsMode, locked.OperationsMode
 		if locked.OperationsMode == "SEATING" {
 			return nil
 		}
@@ -231,6 +246,26 @@ func EnableSeating(ctx context.Context, database *gorm.DB, queueID, confirmedDat
 		if called != 0 {
 			return ErrActivationLegacyCalled
 		}
-		return checked(tx.Exec("UPDATE service_queues SET operations_mode='SEATING' WHERE id=? AND operations_mode='MANUAL'", queueID), 1)
+		if err := checked(tx.Exec("UPDATE service_queues SET operations_mode='SEATING' WHERE id=? AND operations_mode='MANUAL'", queueID), 1); err != nil {
+			return err
+		}
+		out.ModeAfter = "SEATING"
+		return nil
 	})
+	if err != nil {
+		out.ModeAfter = out.ModeBefore
+	}
+	return out, err
+}
+
+// ActivationOptions carries the operator's environment and explicit consent.
+type ActivationOptions struct {
+	Environment       string
+	ConfirmProduction bool
+}
+
+// ActivationResult reports what activation changed; it contains no secrets.
+type ActivationResult struct {
+	QueueID, QueueName, Database string
+	ModeBefore, ModeAfter        string
 }

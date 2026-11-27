@@ -60,19 +60,19 @@ func TestF16EnableSeatingRefusesUnsafeActivation(t *testing.T) {
 		t.Fatal(err)
 	}
 	// No configured floor yet.
-	if err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName); err != ErrActivationFloor {
+	if _, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{}); err != ErrActivationFloor {
 		t.Fatalf("no floor: %v", err)
 	}
 	provisionTestFloor(t, f)
 	for _, bad := range []string{"", "wrong_test", dbName + "x", "DQ_GO_TEST"} {
-		if err := EnableSeating(ctx, f.db, auth.DemoQueueID, bad); err == nil {
+		if _, err := EnableSeating(ctx, f.db, auth.DemoQueueID, bad, ActivationOptions{}); err == nil {
 			t.Fatalf("confirmation %q accepted", bad)
 		}
 	}
-	if err := EnableSeating(ctx, f.db, "not-a-uuid", dbName); err == nil {
+	if _, err := EnableSeating(ctx, f.db, "not-a-uuid", dbName, ActivationOptions{}); err == nil {
 		t.Fatal("malformed queue accepted")
 	}
-	if err := EnableSeating(ctx, f.db, uuid.NewString(), dbName); err != ErrNotFound {
+	if _, err := EnableSeating(ctx, f.db, uuid.NewString(), dbName, ActivationOptions{}); err != ErrNotFound {
 		t.Fatalf("unknown queue %v", err)
 	}
 	// Legacy CALLED ticket blocks activation; nothing changes.
@@ -82,7 +82,7 @@ func TestF16EnableSeatingRefusesUnsafeActivation(t *testing.T) {
 		t.Fatalf("call %d", res.status)
 	}
 	before := entrySnapshot(t, f)
-	if err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName); err != ErrActivationLegacyCalled {
+	if _, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{}); err != ErrActivationLegacyCalled {
 		t.Fatalf("legacy CALLED: %v", err)
 	}
 	if mode(t, f, auth.DemoQueueID) != "MANUAL" || !reflect.DeepEqual(before, entrySnapshot(t, f)) {
@@ -95,7 +95,7 @@ func TestF16EnableSeatingRefusesUnsafeActivation(t *testing.T) {
 	if res := hostCall(t, f, "POST", hostPath(auth.DemoQueueID, "/entries/"+called.body["id"].(string)+"/complete"), session(t, f, host), true); res.status != 200 {
 		t.Fatalf("complete %d %v", res.status, res.body)
 	}
-	if err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName); err != ErrActivationFloor {
+	if _, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{}); err != ErrActivationFloor {
 		t.Fatalf("inactive floor: %v", err)
 	}
 	if mode(t, f, auth.DemoQueueID) != "MANUAL" {
@@ -126,14 +126,14 @@ func TestF16EnableSeatingPreservesLegacyData(t *testing.T) {
 	var counters int64
 	f.db.Raw("SELECT coalesce(sum(last_number),0) FROM queue_day_counters").Scan(&counters)
 
-	if err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName); err != nil {
+	if _, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if mode(t, f, auth.DemoQueueID) != "SEATING" {
 		t.Fatal("not activated")
 	}
 	// Rerun is an idempotent no-op.
-	if err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName); err != nil {
+	if _, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{}); err != nil {
 		t.Fatalf("rerun %v", err)
 	}
 	if !reflect.DeepEqual(before, entrySnapshot(t, f)) || !reflect.DeepEqual(beforeHashes, hashes(t, f)) {
@@ -154,5 +154,33 @@ func TestF16EnableSeatingPreservesLegacyData(t *testing.T) {
 	// Other queues are untouched.
 	if n := countSQL(t, f, "SELECT count(*) FROM service_queues WHERE id<>? AND operations_mode<>'MANUAL'", auth.DemoQueueID); n != 0 {
 		t.Fatal("other queue activated")
+	}
+}
+
+// Review #63: activation reports what changed and production needs explicit consent.
+func TestF16EnableSeatingReportsChangeAndGuardsProduction(t *testing.T) {
+	ctx := context.Background()
+	f := setup(t)
+	dbName := provisionTestFloor(t, f)
+	if _, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{Environment: "production"}); err != ErrActivationProductionConsent {
+		t.Fatalf("production without consent: %v", err)
+	}
+	if mode(t, f, auth.DemoQueueID) != "MANUAL" {
+		t.Fatal("refused production activation changed mode")
+	}
+	var name string
+	if err := f.db.Raw("SELECT name FROM service_queues WHERE id=?", auth.DemoQueueID).Scan(&name).Error; err != nil {
+		t.Fatal(err)
+	}
+	got, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{Environment: "production", ConfirmProduction: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.QueueID != auth.DemoQueueID || got.QueueName != name || got.ModeBefore != "MANUAL" || got.ModeAfter != "SEATING" || got.Database != dbName {
+		t.Fatalf("activation report %+v", got)
+	}
+	again, err := EnableSeating(ctx, f.db, auth.DemoQueueID, dbName, ActivationOptions{Environment: "test"})
+	if err != nil || again.ModeBefore != "SEATING" || again.ModeAfter != "SEATING" {
+		t.Fatalf("rerun report %+v %v", again, err)
 	}
 }

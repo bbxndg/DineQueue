@@ -60,3 +60,7 @@ The module paths above are planned locations. Use the actual selected files in t
 For each feature issue record ACs achieved, exact source/test files, executed command/name, tested SHA/date, actual pass/fail/skip result, reviewer/PR and accepted main tag. A feature is not complete because its contract row exists or an unrelated test passes.
 
 For the integrated candidate, identify the Sprint 2 acceptance tag independently of later S3 progress, its CI run and deployed version. Keep failures/skips and uncovered requirements visible. Deliverable 2 Part D requires the complete current baseline traceability, combining this S2 matrix with S1, lab changes and S3 records; this file alone is not the final full-project submission.
+
+## Matching increment (#51)
+
+Read-only graph/ranking, scoped preview and floor preview UI are implemented locally. Actual commands and partial STS coverage are recorded in [matching results](sprint2-matching-results.md). Mutation races, holds, auditing and deployed acceptance remain pending later increments.

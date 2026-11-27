@@ -49,8 +49,8 @@ All AC for the four parent features F-01..F-04 pass, including legacy F-05 compl
 **Goal:** Finish all baseline scope, usability, reporting and release readiness.
 
 - F-11/F-18 Service history, operational counts, capacity utilization, wait and turnover durations, reconciliation tests.
-- F-12 Public minimal display and F-17 private waitlist status/optional guarded ETA (if retained; record deferrals).
-- F-13/F-19 Floor configuration where feasible, error handling, permission boundary tests, full regression suite, UAT fixes, accessibility, restart and deployment checks.
+- F-12 Public minimal display with explicit enablement; F-17 private live status, meaningful MANUAL Ready position and explicitly unavailable numerical ETA under BR-024.
+- F-19 Host floor setup with a separate restaurant configuration grant and explicit seating activation, proposed under DEC-042. F-13 covers error handling, permissions, regression, UAT retests, accessibility, persistence and release. Retain these scopes until any change is explicitly reviewed.
 - By 29 Nov: **contracts + actual implemented progress + explicit remaining-work list**, not empty placeholder screens.
 - 13 Dec: verified final product, one concise final PDF evidence report, repository/release link, deployed URL and video <=10 minutes with both students.
 
@@ -91,3 +91,7 @@ Online reservations, actual POS/payment, SMS, restaurant ordering, predictive ML
 - Worst-case example: A 10-person party can be seated by T4(6)+T5(4) only if physically connected, same zone, both AVAILABLE, no overlapping hold, no conflicting assignment. The **single 8-seat table** is correctly rejected.
 - Sprint 3 path: measured dashboard, private queue status, secure operations audit, UX/accessibility, comprehensive regression.
 - Critical combined-table failure: any locked table status/edge/permission change aborts the full transaction; no partial table group reservation.
+
+### Sprint 3 contract checkpoint
+
+The [Sprint 3 contracts](../features/sprint3-contracts.md), [interfaces/data](../features/sprint3-ui-api-data.md), [STS](../testing/sprint3-sts.md) and [dated remaining-work table](../testing/sprint3-traceability.md) define #55. Customer Ticket History (#56) is the planned Deliverable 2 working increment after contract review; implementation and actual tests remain pending. Target reviewed contracts/history progress on 28–29 November and floor/report working slices by 30 November. Use 1–11 December for bounded completion and retests around examinations; target final delivery 13 December, with no main workflow first scheduled for the last two days.

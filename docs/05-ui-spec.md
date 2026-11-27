@@ -127,3 +127,9 @@ These are design expectations only; design handoff should use the previously gen
 Detailed states, routes, dialogs, accessible floor fallback, semantics of each action, typography/color tokens, privacy review and conflict scenarios are in `docs/ui/operations-interaction-spec.md`. Minimum S2 Host workspace: queue rail → selected party detail → live floor surface, with side drawer `Match Options` and explicit confirmation. `Call & Hold` is **not** equivalent to `Seat`; `Checkout` is **not** equivalent to `Mark Available`. Customer ticket status persists across refresh and uses server state.
 
 **Prior mockups:** illustrative only. Where earlier design depicts only one table per assignment or permits immediate AVAILABLE after checkout, this v2 spec supersedes it. Visual sample values are never proof of live API data.
+
+## Sprint 3 proposed screens (#55)
+
+[The S3 UI/API/data contract](features/sprint3-ui-api-data.md) refines P-07/P-08 and adds Customer `/my-queue/history`, owned position/estimate text, and configuration-granted `/host/floor/setup?restaurantId=...`. P-08 becomes `/public/now-serving/{slug}` with explicit enablement and ticket-code/status-only responses. F-12 remains in the proposed retained scope; there is no approved deferral.
+
+Floor setup uses accessible typed forms/lists and an explicit connection picker; no automatic adjacency or mandatory drag-and-drop. Save Layout and Enable Seating are separate confirmations. Every protected screen handles loading/empty/retry/expiry/denial, preserves safe stale data only with a notice, and ignores superseded requests. The contract specifies conflict reconciliation and exact permissions. New screens remain planned until actual implementation and browser evidence are recorded.

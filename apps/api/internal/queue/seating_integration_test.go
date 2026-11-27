@@ -240,8 +240,13 @@ func TestSeatingConcurrentSharedTableClaims(t *testing.T) {
 	close(start)
 	wins := 0
 	for i := 0; i < 20; i++ {
-		if err := <-results; err == nil {
+		err := <-results
+		switch err {
+		case nil:
 			wins++
+		case ErrCallInProgress, matchError("TABLE_NOT_AVAILABLE"), matchError("STALE_PREVIEW"):
+		default:
+			t.Errorf("unexpected losing-request error: %v", err)
 		}
 	}
 	if wins != 1 {

@@ -1,5 +1,7 @@
 # DineQueue v2 — Restaurant Waitlist, Floor & Seating Operations
 
+> Sprint 2 planning, 27 Nov 2026: [review draft for #49](docs/features/sprint2-restaurant-operations-contracts.md), [UI/API/data](docs/features/sprint2-ui-api-data.md), [STS](docs/testing/sprint2-operations-sts.md) and [traceability](docs/testing/sprint2-traceability.md). This versions the older S2 sketches and preserves the implemented Lab 7 baseline. S2 implementation and tests remain pending.
+
 > **Engineering Package v2.0 — Current project baseline, clarified 6 November 2026.**
 > **F-01..F-04 are implemented in the Sprint 1 integration baseline**, including Host board, FIFO Call Next and manual Complete;
 > local checks are recorded separately below. No instructor approval, product acceptance,
@@ -80,7 +82,7 @@ Official Fiber v3 docs currently say Go 1.26+ is required. Framework selection i
 
 ## Primary engineering acceptance scenario
 
-1. Customer signs in and joins party of 10, receives A-001 WAITING (valid despite no single 10-seat table).
+1. Customer signs in and joins party of 10, receives A-001 WAITING and Not ready (valid despite no single 10-seat table), then confirms Ready.
 2. Host sees T4(6) and T5(4) connected in Terrace; T7(8) alone is not eligible.
 3. Host previews match, calls and **holds both** T4/T5; queue CALLED.
 4. Second Host tries an overlapping table group and is rejected without a partial allocation.

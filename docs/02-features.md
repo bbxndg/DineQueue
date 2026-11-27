@@ -22,7 +22,7 @@ historical references and is not counted as a separate feature. Scope and AC/tes
 | F-13 | Quality/usability hardening, regression | NFR-006,007,009 | 3 | P0 | All flows | Final verified release |
 | F-L5 | Container + CI/CD + GCP | FR-020, NFR-008 | Lab 5 | Mandatory | Sprint1 release | Deployed repeatable workflow |
 | F-L6 | Independent UAT, fixes and re-test | FR-021 | Lab 6 | Mandatory | Lab5 release | Evidence of 4 cases + 1 accepted fixed defect |
-| F-L7 | Change impact + regression + metrics | FR-022 | Lab 7 | Mandatory | Implemented workflow | TA-approved change safely released |
+| F-L7 | Change impact + regression + metrics | FR-022 | Lab 7 | Mandatory | Implemented workflow | Reviewed maintenance change safely released (Lab 7 TA approval waived by the 25 Nov announcement) |
 
 
 ### Retained legacy feature mapping
@@ -54,3 +54,10 @@ F-06..F-19 or remove the original F-05 history.
 3. Table management is DineQueue's differentiation but must **not prevent** the 8 Nov Sprint 1 release.
 4. Maintain `F-xx`, `FR-xxx`, `BR-xxx`, `AC-xxx`, `T-xxx` as stable IDs even when wording changes; record revisions.
 5. Add a Feature-Level SDS / AC / STS *before* implementing each Sprint 2/3 feature.
+
+
+## Sprint 2 implementation grouping and current status
+
+The [DQ-S2-CONTRACT-2.1 review draft](features/sprint2-restaurant-operations-contracts.md) groups the seven retained S2 IDs into five implementation issues: #50 F-06/F-16 inventory, #51 F-14 matching, #52 F-07/F-15 call/hold/seat, #53 F-08 cancellation/no-show, and #54 F-09/F-16 turnover. Issue #49 is engineering documentation, not a product feature. All seven S2 feature IDs remain required; a lower historical priority label does not authorize dropping them.
+
+Implementation and verification for this S2 increment are pending. See [nineteen ACs and their actual-status columns](testing/sprint2-traceability.md). F-10 and remaining S3 baseline allocations must be resolved in #55; #56 is the selected Customer-history progress issue, not a replacement for all S3 contracts. Both students will assign feature ownership before implementation; no owner has been invented in this draft.

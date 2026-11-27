@@ -13,6 +13,7 @@ import (
 func (h *HTTP) registerHost(router fiber.Router) {
 	group := router.Group("/api/v1/host/queues", deadline, h.auth.Authenticate, h.auth.RequireRole("HOST"))
 	group.Get("/", h.hostQueues)
+	group.Get("/:queueId/floor", h.auth.RequireQueue("queueId"), h.floor)
 	group.Get("/:queueId/entries", h.auth.RequireQueue("queueId"), h.waitingEntries)
 	group.Get("/:queueId/current", h.auth.RequireQueue("queueId"), h.currentEntry)
 	group.Post("/:queueId/call-next", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.callNext)

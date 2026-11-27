@@ -4,11 +4,11 @@ Version DQ-S2-TRACE-2.1, 27 November 2026. [Contract](../features/sprint2-restau
 
 ## 1 Acceptance implementation and execution status
 
-Every row is Sprint 2. Test IDs refer to planned cases in the STS, where levels, inputs and expected results are specified. Actual file/test, tested SHA, result and evidence must be added after implementation; they are currently not available. A target module is not an actual test-file citation.
+Every row is Sprint 2. Test IDs refer to planned cases in the STS, where levels, inputs and expected results are specified. Actual inventory implementation and local evidence are recorded in [floor results](sprint2-floor-results.md); later-feature verification remains pending. A target module is not an actual test-file citation.
 
 | AC | Requirement and rule | Feature / Issue | Planned STS | Implementation / verification |
 |---|---|---|---|---|
-| S2-AC-001 | FR-002/012/024/035; BR-006/025; NFR-003 | F-06/F-16, #50 | S2-T-001,002,033,034 | NOT IMPLEMENTED / NOT RUN |
+| S2-AC-001 | FR-002/012/024/035; BR-006/025; NFR-003 | F-06/F-16, #50 | S2-T-001,002,033,034 | Inventory implemented; local GET/scope tests recorded. Assignment/lifecycle portions pending #52 |
 | S2-AC-002 | FR-025/026; BR-010/015/016/025 | F-14/F-15, #51/#52 | S2-T-003,004,005,030 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-003 | FR-023/026/030; BR-008/015/017 | F-14/F-15, #51 | S2-T-006,007,008,035 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-004 | FR-012/013/027; BR-010/018/019 | F-07/F-15, #52 | S2-T-009,010,015 | NOT IMPLEMENTED / NOT RUN |
@@ -20,9 +20,9 @@ Every row is Sprint 2. Test IDs refer to planned cases in the STS, where levels,
 | S2-AC-010 | FR-015; BR-012/018/021 | F-08, #53 | S2-T-022,023,031,041 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-011 | FR-016/026/029; BR-022; NFR-005 | F-09/F-16, #54 | S2-T-024,025,032 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-012 | FR-029/034; BR-018/019/022 | F-09/F-16, #54 | S2-T-026,027,048 | NOT IMPLEMENTED / NOT RUN |
-| S2-AC-013 | FR-024/035; NFR-006/014 | F-06/F-16, #50 | S2-T-049,050 | NOT IMPLEMENTED / NOT RUN |
+| S2-AC-013 | FR-024/035; NFR-006/014 | F-06/F-16, #50 | S2-T-049,050 | Floor Map/List, keyboard, responsive and read-recovery tests recorded; preview/write-conflict portions pending |
 | S2-AC-014 | FR-007/030; BR-011/017/023 | F-14, #51 | S2-T-036,038,051 | NOT IMPLEMENTED / NOT RUN |
-| S2-AC-015 | FR-008/009/011; BR-001/002/004/008/009/013; NFR-005 | F-07/F-15, #50/#52/#54 | S2-T-042,043,044,052 | NOT IMPLEMENTED / NOT RUN |
+| S2-AC-015 | FR-008/009/011; BR-001/002/004/008/009/013; NFR-005 | F-07/F-15, #50/#52/#54 | S2-T-042,043,044,052 | 0004 migration preservation and guarded provisioning tested; activation/SEATING guards pending #52/#54 |
 | S2-AC-016 | FR-013/034; BR-019/020; NFR-012 | F-07/F-15/F-09, #52/#54 | S2-T-053,054 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-017 | FR-015/027/028; BR-012/021 | F-07/F-08/F-15, #52/#53 | S2-T-012,031,045,055 | NOT IMPLEMENTED / NOT RUN |
 | S2-AC-018 | FR-005/010/014/015; BR-001/003-L7-v1/007/012; L7-AC-01–13 regression | F-03/F-08/F-04, #53 | S2-T-039,040,056,057 | NOT IMPLEMENTED / NOT RUN |
@@ -34,7 +34,7 @@ Requirement references identify regression responsibilities, not a claim that al
 
 | Responsibility | Planned modules / interface | Layer requiring no new behavior |
 |---|---|---|
-| F-06/F-16 inventory and scoped reads | `internal/floor`, floor/zone/table/edge migrations, `/host/queues/{id}/floor`, Host floor components | Login/session store, party issuance, deployment topology |
+| F-06/F-16 inventory and scoped reads | Actual #50 adapter: `internal/queue/floor*.go`, floor/zone/table/edge migrations, `/host/queues/{id}/floor`, Host floor components | Login/session store, party issuance, deployment topology |
 | F-14 deterministic preview | `internal/matching`, read snapshot adapter and matching drawer | No new migration or lease write; no client-supplied capacity/role authority |
 | F-07/F-15 transactional seating | `internal/seating` service/repositories; guarded queue adapter; assignments/members/events/request results; call/seat/expire routes | Existing authentication mechanism and MANUAL queue behavior |
 | F-08 owner cancellation and Host no-show | Queue owner-scoped service and UI; common seating release coordinator | No duplicate expiry/assignment implementation; no credential change |

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireSession } from '@/lib/auth';
 import { activeTickets } from '@/lib/tickets';
@@ -11,6 +12,7 @@ export default async function MyQueuePage() {
   return <MyTicketShell csrfToken={session.csrfToken}>
     <h1 className="text-3xl font-semibold sm:text-4xl">My Ticket</h1>
     <p className="mt-4">Your waitlist status updates on this page automatically.</p>
+    <Link href="/my-queue/history" prefetch={false} className="mt-3 inline-block min-h-11 py-2 font-semibold text-wine underline">Ticket history</Link>
     <LiveMyQueue initial={tickets} csrfToken={session.csrfToken} renderedAt={new Date().toISOString()} />
   </MyTicketShell>;
 }

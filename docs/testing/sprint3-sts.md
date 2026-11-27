@@ -1,6 +1,6 @@
 # Sprint 3 software test specification
 
-DQ-S3-1.0 proposed for [#55](https://github.com/bbxndg/DineQueue/issues/55), 27 November 2026 ICT. All cases below are **NOT RUN**. Read the [feature contracts](../features/sprint3-contracts.md) and [UI/API/data definitions](../features/sprint3-ui-api-data.md) before implementation. Existing run records remain historical evidence for their original SHAs, not results for these cases.
+DQ-S3-1.0 proposed for [#55](https://github.com/bbxndg/DineQueue/issues/55), 27 November 2026 ICT. All cases below are **NOT RUN**. Read the [feature contracts](../features/sprint3-contracts.md) and [UI/API/data definitions](../features/sprint3-ui-api-data.md) before implementation. Existing run records remain historical evidence for their original SHAs, not results for these cases. Exception: H01–H12 (#56) were executed locally on uncommitted changes over `a70055c`; see [history results](sprint3-history-results.md). They are not results for a committed or deployed SHA.
 
 ## Setup, levels and evidence
 

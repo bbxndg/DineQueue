@@ -2,7 +2,7 @@
 
 > Sprint 2 planning, 27 Nov 2026: [review draft for #49](docs/features/sprint2-restaurant-operations-contracts.md), [UI/API/data](docs/features/sprint2-ui-api-data.md), [STS](docs/testing/sprint2-operations-sts.md) and [traceability](docs/testing/sprint2-traceability.md). This versions the older S2 sketches and preserves the implemented Lab 7 baseline. Inventory progress is recorded below; the remaining S2 operations and their tests are pending.
 
-> Floor inventory for [#50](https://github.com/bbxndg/DineQueue/issues/50) is now implemented in the current worktree: scoped Host floor API, Map/List view and guarded fixtures. See [local verification and setup](docs/testing/sprint2-floor-results.md). Matching, holds, seating and turnover remain pending.
+> Floor inventory for [#50](https://github.com/bbxndg/DineQueue/issues/50) is now implemented in the current worktree: scoped Host floor API, Map/List view and guarded fixtures. See [local verification and setup](docs/testing/sprint2-floor-results.md). Read-only table matching is implemented in the current worktree; see [matching verification](docs/testing/sprint2-matching-results.md). Holds, seating and turnover remain pending.
 
 > **Engineering Package v2.0 — Current project baseline, clarified 6 November 2026.**
 > **F-01..F-04 are implemented in the Sprint 1 integration baseline**, including Host board, FIFO Call Next and manual Complete;

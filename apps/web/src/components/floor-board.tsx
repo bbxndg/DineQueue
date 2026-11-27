@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { MatchingPreview } from '@/components/matching-preview';
 import { LiveStatus } from '@/components/live-refresh';
 import { readFloor, tableStates, type FloorSnapshot, type FloorTable } from '@/lib/floor';
 import { useLiveResource } from '@/lib/use-live-resource';
@@ -62,7 +63,7 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
         </div>
         <h2 className="text-2xl font-semibold">{zone.name}</h2>
         {!zone.isActive && <p>This zone is inactive. Its tables cannot be selected.</p>}
-        <p className="text-sm">Select up to 3 available tables in this zone. Selection only inspects the inventory; it does not hold tables or confirm a match.</p>
+        <p className="text-sm">Select up to 3 available tables in this zone. The preview finds the oldest ready party that fits your selected connected tables.</p>
         {view === 'map' && <div className="relative h-72 rounded-2xl border border-wine/20 bg-white" aria-label={`${zone.name} table map`}>
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             {zone.connections.map(edge => {
@@ -97,6 +98,7 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
           {chosen.length > 0 && <button className="min-h-11 font-semibold text-wine underline" onClick={() => { setSelected([]); setNotice(''); }}>Clear selection</button>}
           {selectionChanged && <p role="status">Inventory changed. Unavailable tables were removed from the selection.</p>}
           {notice && <p role="status">{notice}</p>}
+          <MatchingPreview queueId={queueId} floor={floor} tables={chosen} stale={Boolean(live.failure) || selectionChanged} />
         </div>
       </>}
       <p className="text-sm">Table states: {tableStates.map(label).join(' · ')}.</p>

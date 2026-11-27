@@ -19,7 +19,7 @@ The user selected table-set-first matching and five-minute expiry to NO_SHOW on 
 | [#49](https://github.com/bbxndg/DineQueue/issues/49) | Engineering documents, not a product feature | `docs/sprint2-engineering-contract` | Baseline above | Both students review contracts; feature ownership is not assigned yet |
 | [#50](https://github.com/bbxndg/DineQueue/issues/50) | F-06/F-16 floor inventory | `feat/sprint2-floor-inventory` | Reviewed #49 | Owner and reviewer to be agreed before starting |
 | [#51](https://github.com/bbxndg/DineQueue/issues/51) | F-14 matching | `feat3/sprint2-table-matching` | #50 merged | Owner and reviewer to be agreed before starting |
-| [#52](https://github.com/bbxndg/DineQueue/issues/52) | F-07/F-15 call, hold and seat | `feat/sprint2-call-hold-seating` | #50 and #51 merged | Owns shared assignment, event, idempotency and expiry services |
+| [#52](https://github.com/bbxndg/DineQueue/issues/52) | F-07/F-15 call, hold and seat | `feat4/sprint2-call-hold-seating` | #50 and #51 merged | Owns shared assignment, event, idempotency and expiry services |
 | [#53](https://github.com/bbxndg/DineQueue/issues/53) | F-08 cancellation and no-show | `feat/sprint2-cancel-no-show` | #52 merged | Reuses the shared release service; no duplicate expiry implementation |
 | [#54](https://github.com/bbxndg/DineQueue/issues/54) | F-09/F-16 checkout and cleaning | `feat/sprint2-checkout-cleaning` | #52 merged; integrate #53 before acceptance | Owns turnover transitions and guarded activation tooling |
 
@@ -144,3 +144,7 @@ For Deliverable 2 embed complete contracts/AC/STS/DoD and current system documen
 ## Matching implementation boundary (#51)
 
 `internal/matching` provides pure connected-set ranking. `internal/queue/matching.go` supplies the scoped repeatable-read preview and floor selection displays it through the existing floor refresh lifecycle. The preview is advisory and has no write side effects. See [local matching verification](../testing/sprint2-matching-results.md); allocation confirmation and transactional revalidation remain #52.
+
+## Call/Hold/Seat implementation boundary (#52)
+
+Migration 0005 and `internal/queue/seating*.go` implement atomic group Call/Hold/Seat, successful action replay and shared whole-group expiry. Floor DTOs now include only the authorized queue's outstanding assignments. The UI confirms the selected group and seating, shows the hold deadline and offers explicit expiry recovery. See [local verification](../testing/sprint2-seating-results.md). The schema prepares later terminal/turnover states; #53/#54 own their endpoints and activation. No production queue is enabled automatically.

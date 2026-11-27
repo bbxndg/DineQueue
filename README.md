@@ -2,7 +2,7 @@
 
 > Sprint 2 planning, 27 Nov 2026: [review draft for #49](docs/features/sprint2-restaurant-operations-contracts.md), [UI/API/data](docs/features/sprint2-ui-api-data.md), [STS](docs/testing/sprint2-operations-sts.md) and [traceability](docs/testing/sprint2-traceability.md). This versions the older S2 sketches and preserves the implemented Lab 7 baseline. Inventory progress is recorded below; the remaining S2 operations and their tests are pending.
 
-> Floor inventory for [#50](https://github.com/bbxndg/DineQueue/issues/50) is now implemented in the current worktree: scoped Host floor API, Map/List view and guarded fixtures. See [local verification and setup](docs/testing/sprint2-floor-results.md). Read-only table matching is implemented in the current worktree; see [matching verification](docs/testing/sprint2-matching-results.md). Holds, seating and turnover remain pending.
+> Floor inventory for [#50](https://github.com/bbxndg/DineQueue/issues/50) is now implemented in the current worktree: scoped Host floor API, Map/List view and guarded fixtures. See [local verification and setup](docs/testing/sprint2-floor-results.md). Read-only table matching is implemented in the current worktree; see [matching verification](docs/testing/sprint2-matching-results.md). Call/Hold/Seat and server expiry are implemented in the current worktree; see [seating verification](docs/testing/sprint2-seating-results.md). Cancellation, explicit Host no-show, turnover and production activation remain pending.
 
 > **Engineering Package v2.0 — Current project baseline, clarified 6 November 2026.**
 > **F-01..F-04 are implemented in the Sprint 1 integration baseline**, including Host board, FIFO Call Next and manual Complete;
@@ -15,7 +15,7 @@
 - Party size: **1–16**; a physical table seats **1–8**.
 - Sprint 1: **4 parent features, F-01..F-04**, two core roles (`CUSTOMER`, `HOST`), manual waitlist completion. F-04 Host Queue Operations includes Complete (legacy F-05).
 - Sprint 2 design: approved connected sets of **1–3 tables**, atomic hold/call/seat,
-  no-show, whole-group checkout and cleaning. These workflows are not implemented.
+  no-show, whole-group checkout and cleaning. Floor inventory, advisory matching, Call/Hold/Seat and hold expiry are implemented locally; cancellation, explicit Host no-show, turnover and production activation remain pending.
 - Present source: repository foundation + F-01 login/logout/me, secure sessions,
   F-02 join/ticket issuance, F-03 own-ticket reads/privacy and F-04 Host board,
   FIFO Call Next and manual completion (legacy F-05).

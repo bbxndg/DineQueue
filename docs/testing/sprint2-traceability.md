@@ -64,3 +64,7 @@ For the integrated candidate, identify the Sprint 2 acceptance tag independently
 ## Matching increment (#51)
 
 Read-only graph/ranking, scoped preview and floor preview UI are implemented locally. Actual commands and partial STS coverage are recorded in [matching results](sprint2-matching-results.md). Mutation races, holds, auditing and deployed acceptance remain pending later increments.
+
+## Call/Hold/Seat increment (#52)
+
+Atomic group lifecycle, idempotent successful actions, whole-group expiry and SEATING guards are implemented in `apps/api/internal/queue/seating*.go` with migration 0005 and Host floor controls. [Seating verification](sprint2-seating-results.md) maps actual tests to STS cases and records their limits. Host no-show, cancellation, turnover and production activation remain later work.

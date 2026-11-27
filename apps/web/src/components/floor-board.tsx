@@ -57,7 +57,7 @@ export function FloorBoard({ queueId, initial, renderedAt, csrfToken }: { queueI
         if ([401, 403].includes(response.status)) { live.reportAccessLost(response.status as 401 | 403); return; }
         if (!response.ok) {
           let code = ''; try { code = (await response.json()).error?.code ?? ''; } catch { /* Generic error remains usable. */ }
-          setActionMessage(code === 'HOLD_EXPIRED' ? 'The hold expired. Refresh the floor to see released tables.' : 'The action could not be completed. Refresh and confirm the latest selection.');
+          setActionMessage(code === 'HOLD_EXPIRED' ? 'The hold expired. Refresh the floor to see released tables.' : code === 'INVALID_TRANSITION' ? 'This party was already seated or released. Refresh the floor.' : 'The action could not be completed. Refresh and confirm the latest selection.');
         } else { setSelected([]); setActionMessage('Seating updated.'); }
       });
     } catch { setActionMessage('Connection failed. Refresh the floor before trying again.'); }

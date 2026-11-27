@@ -20,8 +20,8 @@ const directory = mkdtempSync(join(resolve(root), 'dinequeue-ep4-'));
 const password = randomBytes(24).toString('hex');
 const seed = randomBytes(24).toString('hex');
 const goURL = `postgres://dinequeue_ci:ci-service-only@127.0.0.1:${port}/dinequeue_ci_test?sslmode=disable`;
-const appURL = `postgres://dinequeue_browser:${password}@db:5432/dinequeue_browser?sslmode=disable`;
-const fixtureURL = `postgres://dinequeue_browser:${password}@127.0.0.1:${dbPort}/dinequeue_browser?sslmode=disable`;
+const appURL = `postgres://dinequeue_browser:${password}@db:5432/dinequeue_browser_test?sslmode=disable`;
+const fixtureURL = `postgres://dinequeue_browser:${password}@127.0.0.1:${dbPort}/dinequeue_browser_test?sslmode=disable`;
 if (process.env.GITHUB_ACTIONS === 'true') {
   for (const value of [password, seed, 'ci-service-only', goURL, appURL, fixtureURL]) {
     console.log(`::add-mask::${value}`);
@@ -33,7 +33,7 @@ const save = (name, text) => {
   return path;
 };
 const compose = save('compose.env', [
-  'POSTGRES_USER=dinequeue_browser', 'POSTGRES_DB=dinequeue_browser',
+  'POSTGRES_USER=dinequeue_browser', 'POSTGRES_DB=dinequeue_browser_test',
   `POSTGRES_PASSWORD=${password}`, `DATABASE_URL=${appURL}`,
   'PORT=8080', 'WEB_PORT=3000', `WEB_HOST_PORT=${webPort}`, `API_HOST_PORT=${apiPort}`,
   ...['SEED_CUSTOMER_PASSWORD', 'SEED_CUSTOMER2_PASSWORD', 'SEED_HOST_PASSWORD', 'SEED_OTHER_HOST_PASSWORD'].map(key => `${key}=${seed}`),

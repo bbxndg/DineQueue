@@ -203,7 +203,7 @@ func (r *Repository) seatingResult(ctx context.Context, q, id string) (SeatingRe
 	if err != nil {
 		return SeatingResult{}, err
 	}
-	rows, err := r.entriesByStatus(ctx, q, map[string]string{"HELD": "CALLED", "ACTIVE": "COMPLETED", "RELEASED": "NO_SHOW"}[a.Status])
+	rows, err := r.entriesByStatus(ctx, q, map[string]string{"HELD": "CALLED", "ACTIVE": "COMPLETED", "CLOSED": "COMPLETED", "RELEASED": "NO_SHOW"}[a.Status])
 	if err != nil {
 		return SeatingResult{}, err
 	}

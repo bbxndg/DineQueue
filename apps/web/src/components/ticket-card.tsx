@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { ReadinessControl } from '@/components/readiness-control';
+import { CancelTicketControl } from '@/components/cancel-ticket-control';
 import type { Ticket } from '@/lib/ticket-types';
 
 const statusMessages = {
   WAITING: 'Please stay nearby. The host will call your ticket number.',
   CALLED: 'Your ticket has been called. Please go to the counter.',
+  NO_SHOW: 'Your party was not seated after being called, and the held tables were released. You can join the queue again.',
+  CANCELLED: 'This ticket has been cancelled. You can join the queue again.',
   COMPLETED: 'Your waitlist service has finished.',
 };
 
@@ -24,6 +27,8 @@ export function TicketCard({ ticket, showDetails = false, csrfToken }: { ticket:
     </dl>
     <p className="mt-6 leading-relaxed">{statusMessages[ticket.status]}</p>
     {ticket.status === 'WAITING' && <ReadinessControl entryId={ticket.id} isReady={ticket.isReady} csrfToken={csrfToken} />}
+    {ticket.status === 'WAITING' && <CancelTicketControl key={ticket.id} entryId={ticket.id} ticketCode={ticket.ticketCode} csrfToken={csrfToken} />}
+    {(ticket.status === 'CANCELLED' || ticket.status === 'NO_SHOW') && <Link href="/join" prefetch={false} className="mt-5 inline-block rounded-lg bg-wine px-5 py-3 font-semibold text-white">Join again</Link>}
     {showDetails && <Link href={`/my-queue/${ticket.id}`} prefetch={false} className="mt-5 inline-block font-semibold text-wine underline">View ticket details</Link>}
   </article>;
 }

@@ -13,14 +13,26 @@ import (
 func (h *HTTP) registerHost(router fiber.Router) {
 	group := router.Group("/api/v1/host/queues", deadline, h.auth.Authenticate, h.auth.RequireRole("HOST"))
 	group.Get("/", h.hostQueues)
+	group.Get("/:queueId/matching", h.auth.RequireQueue("queueId"), h.matching)
+	group.Get("/:queueId/floor", h.auth.RequireQueue("queueId"), h.floor)
 	group.Get("/:queueId/entries", h.auth.RequireQueue("queueId"), h.waitingEntries)
 	group.Get("/:queueId/current", h.auth.RequireQueue("queueId"), h.currentEntry)
+	group.Post("/:queueId/match-and-call", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.callHold)
+	group.Post("/:queueId/seating-assignments/:assignmentId/seat", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.seat)
+	group.Post("/:queueId/seating-assignments/:assignmentId/checkout", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.turnoverHandler("checkout"))
+	group.Post("/:queueId/seating-assignments/:assignmentId/start-cleaning", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.turnoverHandler("start-cleaning"))
+	group.Post("/:queueId/seating-assignments/:assignmentId/finish-cleaning", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.turnoverHandler("finish-cleaning"))
+	group.Post("/:queueId/expire-holds", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.expireHolds)
+	group.Post("/:queueId/entries/:entryId/no-show", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.noShow)
 	group.Post("/:queueId/call-next", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.callNext)
 	group.Post("/:queueId/entries/:entryId/complete", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.complete)
 }
 
 func hostError(c fiber.Ctx, err error) error {
+	var me matchError
 	switch {
+	case errors.As(err, &me):
+		return failure(c, 409, string(me), "This queue requires the seating workflow.")
 	case errors.Is(err, auth.ErrForbidden):
 		return failure(c, 403, "FORBIDDEN", "Access denied.")
 	case errors.Is(err, ErrNotFound):

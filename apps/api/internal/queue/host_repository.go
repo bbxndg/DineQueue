@@ -11,6 +11,7 @@ import (
 const oneCalledIndex = "uq_one_called_per_queue"
 
 type hostQueueRow struct {
+	OperationsMode string
 	ID             string
 	Name           string
 	RestaurantName string
@@ -19,6 +20,7 @@ type hostQueueRow struct {
 }
 
 type hostEntryRow struct {
+	Version        int64
 	ID             string
 	QueueID        string
 	ServiceDate    string
@@ -39,7 +41,7 @@ FROM queue_entries AS e JOIN service_queues AS q ON q.id = e.queue_id`
 
 func (r *Repository) assignedQueues(ctx context.Context, hostID string) ([]hostQueueRow, error) {
 	var rows []hostQueueRow
-	err := r.db.WithContext(ctx).Raw(`SELECT q.id, q.name, r.name AS restaurant_name, r.timezone, q.is_active
+	err := r.db.WithContext(ctx).Raw(`SELECT q.operations_mode, q.id, q.name, r.name AS restaurant_name, r.timezone, q.is_active
 FROM operator_queue_permissions AS p JOIN service_queues AS q ON q.id = p.queue_id
 JOIN restaurants AS r ON r.id = q.restaurant_id
 WHERE p.user_id = ? ORDER BY r.name, q.name, q.id`, hostID).Scan(&rows).Error

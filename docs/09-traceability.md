@@ -44,13 +44,13 @@ remain historical evidence. No later commit/merge, CI run or release is implied.
 
 ## Sprint 2–3 and labs planned traceability
 
-These feature contracts and corresponding AC/Test IDs must be created **before feature implementation**; placeholders below are not complete tests.
+The [complete S2 review matrix](testing/sprint2-traceability.md) maps S2-AC-001–019 to S2-T-001–060, requirements, features and current implementation/execution status. It supersedes the older S2 summary below where wording differs. All new S2 cases remain NOT RUN; S3/lab rows retain their separate evidence responsibilities.
 
 | Requirement / rule | Feature | Sprint / assessment | Planned verification | Current status |
 |---|---|---|---|---|
 | FR-012 / BR-010 | F-06,F-07 | S2 | capacity, connected group, hold/seat lifecycle, UI assignment | Draft S2 contract linked; tests NOT RUN |
 | FR-013 / BR-010 | F-07 | S2 | two Hosts attempt overlapping combined tables concurrently | Draft S2 contract linked; tests NOT RUN |
-| BR-011 | F-07 | S2 | oldest eligible party vs too-large earlier party; explain skipped reason | Draft S2 contract; TA policy PENDING |
+| BR-011 | F-07 | S2 | oldest eligible party vs too-large earlier party; explain skipped reason | User selected table-set-first Ready policy on 27 Nov; teammate contract review pending |
 | BR-013 | F-07 | S2 | complete without table assignment rejected | Draft S2 contract linked; tests NOT RUN |
 | FR-014 / BR-012 | F-08 | S2 | owner cancels WAITING; unauthorized/state negatives | Draft S2 contract linked; tests NOT RUN |
 | FR-015 / BR-012 | F-08 | S2 | Host NO_SHOW only from CALLED | Draft S2 contract linked; tests NOT RUN |
@@ -81,7 +81,7 @@ These feature contracts and corresponding AC/Test IDs must be created **before f
 | FR-028, BR-020 | F-07,F-15 | S2 | S2-AC-005 seat transaction marks all OCCUPIED | S2-T-011,012 | Planned |
 | FR-034, NFR-011,012 | F-07,F-15 | S2 | S2-AC-006 concurrent overlapping holds result one winner, no partial writes | S2-T-013,014,015 | Planned |
 | FR-029, BR-022 | F-09,F-16 | S2 | S2-AC-007 checkout/cleaning applies to all group members | S2-T-016,017 | Planned |
-| FR-030, BR-011,023 | F-14 | S2 | S2-AC-008 recommendation and audited override are explainable | S2-T-018,019 | Planned |
+| FR-030, BR-011,023 | F-14 | S2 | S2-AC-008 selected-set Ready FIFO and audited alternate-set choice are explainable | S2-T-018,019 | Planned |
 | FR-031, BR-024 | F-17 | S3 | S3-AC-001 visible own ticket; no guaranteed ETA | S3-T-001,002 | Planned |
 | FR-032, BR-014 | F-11,F-18 | S3 | S3-AC-002 metrics reconcile with seeded events | S3-T-003,004 | Planned |
 | FR-033 | F-19 | S3 | S3-AC-003 manager edit rejects invalid connectivity | S3-T-005,006 | Planned |
@@ -106,3 +106,8 @@ S2 and S3 IDs are the proposed contracts in `features/sprint2-restaurant-operati
 | F-03/04 automatic updates | Customer and Host polling lifecycle, stale responses, hidden tabs | Contract/STS agreed; implementation and execution deferred to `feat/lab7-ticket-polling` after readiness merges |
 
 Local worktree evidence is not CI, feature approval, release or deployment evidence.
+
+
+## Sprint 2 review handoff for issue 49
+
+Read [the versioned contract](features/sprint2-restaurant-operations-contracts.md), [typed UI/API/data definitions](features/sprint2-ui-api-data.md), [60 planned STS cases](testing/sprint2-operations-sts.md) and [full S2 traceability/status matrix](testing/sprint2-traceability.md) together. These preserve old IDs and add explicit readiness, expiry, MANUAL/SEATING compatibility, group-turnover and actual-evidence obligations. No actual test file/run is substituted by a proposed module path. The complete current S1/S2/S3 matrix and real candidate results are still required for Deliverable 2.

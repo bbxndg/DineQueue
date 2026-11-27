@@ -1,9 +1,9 @@
 # 01. Software Requirements Specification (SRS)
 
-> Lab 7 #44 proposed addendum: [readiness-aware calling and automatic updates](labs/lab-07/readiness-contract.md).
-> This versions the S1 FIFO/manual-refresh behavior for this change only; contract review is recorded on PR #45; readiness local evidence and pending polling are tracked separately.
+> Sprint 2 review draft for [#49](https://github.com/bbxndg/DineQueue/issues/49): [feature contract](features/sprint2-restaurant-operations-contracts.md), [UI/API/data](features/sprint2-ui-api-data.md), [STS](testing/sprint2-operations-sts.md) and [traceability](testing/sprint2-traceability.md).
+> The source baseline b4d1606 includes Lab 7 readiness/polling. Its [reviewed change contract](labs/lab-07/readiness-contract.md) remains the maintenance history; the S2 rules below are not implementation or a new test result.
 
-**Document:** DQ-SRS-2.0 (current v2 baseline; unresolved rules pending team and instructor/TA resolution)
+**Document:** DQ-SRS-2.1 (Sprint 2 review draft; decision/review status is recorded in DEC-034–038)
 **Source mapping:** CPE 334 master spec §§5, 6 theme 9, 7, 8.1.
 **Product:** DineQueue — walk-in restaurant waitlist and table management.
 
@@ -42,7 +42,7 @@ Sprint 2: dining table inventory, host table status, party-to-table assignment, 
 ### 3.3 Assumptions requiring confirmation
 
 - Pilot uses one restaurant, one walk-in service queue, and a single operating timezone `Asia/Bangkok`.
-- For Sprint 1, ordering is strict FIFO by server-recorded `joined_at` and id tie-breaker.
+- For the maintained Sprint 1 baseline, ordering is FIFO among Ready WAITING parties by original server-recorded `joined_at` and id; the pre-Lab 7 strict-WAITING rule remains in version history.
 - `COMPLETED` means **waitlist service successfully completed / party seated**, NOT meal/payment completion.
 - Ticket numbering is scoped per (service queue, local business date), starts at `A-001`, resets next local business date. Ticket identifiers remain permanently unique through internal UUID IDs.
 - A customer may hold at most one active entry per queue (`WAITING`, `CALLED` in Sprint 1; extend if more active states added).
@@ -65,7 +65,7 @@ Sprint 2: dining table inventory, host table status, party-to-table assignment, 
 | FR-009 | Must | System rejects duplicate active tickets, invalid party sizes, invalid/out-of-order transitions and attempts that bypass queue ordering. | S1 |
 | FR-010 | Must | Protected customer ticket details are inaccessible to any other customer/anonymous user. | S1 |
 | FR-011 | Must | Data persists across API restart and supports repeatable setup/migrations/seeding. | S1 |
-| FR-012 | Must | Host can view an interactive floor plan with table capacities/status/positions and seat an eligible CALLED party at one available table or an approved connected combination. | S2 |
+| FR-012 | Must | Host can view the floor and select a valid available table set, call/hold the oldest fitting Ready party, then seat that CALLED party from its HELD assignment. | S2 |
 | FR-013 | Must | Allocation/hold/occupancy of **every table** in an assignment is exclusive and recorded as one atomic transaction. | S2 |
 | FR-014 | Must | Customer can cancel own eligible waiting entry; canceled ticket loses active status. | S2 |
 | FR-015 | Must | Host can mark called entry NO_SHOW, with controlled permissions. | S2 |
@@ -75,7 +75,7 @@ Sprint 2: dining table inventory, host table status, party-to-table assignment, 
 | FR-019 | Should | Public display can show current ticket number and limited non-private status without any user details. | S3 |
 | FR-020 | Must | Deployed app uses documented configuration, guarded CI and repeatable delivery/release procedures. | Lab5+ |
 | FR-021 | Must | Team records independent UAT, defects, fixes and re-test evidence. | Lab6 |
-| FR-022 | Must | Team implements one TA-approved change with impact analysis and regression tests. | Lab7 |
+| FR-022 | Must | Team implements a reviewed maintenance change with impact analysis and regression; the instructor announcement of 25 Nov removes TA approval for Lab 7 change requests. | Lab7 |
 
 
 ### Extended requirements for Restaurant Operations (v2 design revision)
@@ -91,7 +91,7 @@ These IDs are **additional proposals** expanding Topic 9; they are not prescribe
 | FR-027 | Must | Host confirms a suggested set; system creates an exclusive short-lived hold and calls the selected customer atomically. | S2 |
 | FR-028 | Must | Host seats the CALLED party, converting the hold into an ACTIVE seating assignment and all its tables to OCCUPIED in one transaction. | S2 |
 | FR-029 | Must | Host closes the seating session, marks all member tables DIRTY, records cleaning and returns each table to AVAILABLE only after confirmation. | S2 |
-| FR-030 | Should | Host sees why the matching algorithm recommended a table set, and can apply a permissioned override with an explicit reason/audit record. | S2/S3 |
+| FR-030 | Should | Host sees why a table set is recommended and may select another valid set with an audited selection reason; the oldest fitting Ready party for the final set cannot be overridden. | S2/S3 |
 | FR-031 | Must | Customer-facing status shows current ticket, own position where meaningful, and accurate non-private waitlist updates; approximate wait estimates must be clearly labelled or withheld when data is insufficient. | S3 |
 | FR-032 | Must | Operations dashboard calculates wait time, seating turnaround, occupancy, no-show/cancellation counts using persisted timestamps and selected filters. | S3 |
 | FR-033 | Should | Manager configures table capacities, zones, combinability edges and layout safely; seed-only management is acceptable until S3. | S3 |
@@ -104,17 +104,17 @@ These IDs are **additional proposals** expanding Topic 9; they are not prescribe
 |---|---|---|
 | BR-001 | One active queue entry per (customer, service queue); concurrent attempts may create only one. Conflict: `ACTIVE_QUEUE_EXISTS`. | S1 |
 | BR-002 | Unique ticket number per (queue, local service date) allocated atomically; concurrent joins cannot duplicate a sequence. | S1 |
-| BR-003 | First eligible `WAITING` ticket is the oldest by `(joined_at ASC, id ASC)` in that queue; manual skip disallowed in S1. | S1 |
+| BR-003 | Maintained S1 uses BR-003-L7-v1: the oldest `WAITING AND is_ready=true` by `(joined_at ASC, id ASC)`; returning Ready preserves original order and cannot displace CALLED. | S1 |
 | BR-004 | Valid Sprint 1 transitions: `WAITING -> CALLED -> COMPLETED` only. `WAITING -> COMPLETED` rejected. | S1 |
 | BR-005 | No new `Call Next` while the same service queue already has a `CALLED` ticket; rejection `CALL_IN_PROGRESS`. | S1 |
 | BR-006 | Only authorized Host can call/complete tickets in the assigned queue. Customers cannot do staff transitions. | S1 |
 | BR-007 | Customers can read only their own tickets; use non-revealing `404` for inaccessible foreign tickets. | S1 |
-| BR-008 | Party size is integer in inclusive range [1,16] (REVISED proposal; per-table capacity is independently capped at 8, multi-table seating in Sprint 2). | S1 |
+| BR-008 | BR-008-S2-v1 retains the implemented integer boundary [1,16]; physical table capacity remains 1–8. Join is allowed without a current fitting table; S2 does not revise this boundary again. | S1 |
 | BR-009 | Ticket dates/numbers come from the backend in restaurant-local timezone; never trust a supplied sequence/status. | S1 |
-| BR-010 | Seating requires a `CALLED` ticket and one or more physically combinable, connected, AVAILABLE tables from the same restaurant/zone whose summed usable capacity is >= party size; assignments/holds are exclusive and transactional. | S2 |
-| BR-011 | In S2, for a selected single/connected table set, recommend the oldest WAITING party who fits (joined_at,id). Skipping an earlier party is allowed only under an explicit capacity/availability policy; surface reason and log operator override. This revises S1 strict FIFO and needs TA/team confirmation. | S2 |
+| BR-010 | BR-010-S2-v1: Call & Hold requires 1–3 distinct AVAILABLE, active approved connected tables in one restaurant/zone with enough capacity for the selected eligible party. Seat requires that same CALLED party and its unexpired HELD group; all changes are atomic. | S2 |
+| BR-011 | BR-011-S2-v1: Host selects the table set first; choose the oldest Ready WAITING party who fits by (joined_at,id). Earlier Not-ready or oversized parties retain order and receive a Host-visible skip reason, even if another free set elsewhere could fit them. User selected this policy on 27 Nov; teammate contract review remains pending. | S2 |
 | BR-012 | Only WAITING may be customer-canceled; only CALLED may be marked NO_SHOW; terminal statuses cannot be reactivated. | S2 |
-| BR-013 | In S2, `COMPLETED` means seated and requires an ACTIVE seating assignment and OCCUPIED table set, committed atomically. Sprint 1 `COMPLETED` is manual waitlist service completion only (contract-versioned change). | S2 |
+| BR-013 | BR-013-S2-v1: in explicitly activated SEATING queues, completion requires the Seat transaction with an ACTIVE assignment and all members OCCUPIED. MANUAL queues retain Lab 7 manual completion; historical completed rows without assignments remain valid. COMPLETED never means meal completion. | S2 |
 | BR-014 | Wait duration = called_at - joined_at; completed counts are based on queue records, not simulated meal/payment events. | S3 |
 
 
@@ -128,9 +128,9 @@ These IDs are **additional proposals** expanding Topic 9; they are not prescribe
 | BR-018 | Only AVAILABLE tables may be HELD; HELD tables cannot be used by any other ticket. An unexpired HELD set belongs to exactly one CALLED entry. | S2 |
 | BR-019 | CALL+HOLD and SEAT transitions atomically mutate the queue entry, seating assignment, and **all** involved table rows/mappings. One failed check rolls back the entire operation. | S2 |
 | BR-020 | Completing service after S2 seating enables requires ACTIVE assignment; seats must reflect OCCUPIED; a repeated seating request is rejected, never silently duplicated. | S2 |
-| BR-021 | No-show or explicit hold expiry releases all held tables transactionally and records who/when/why. Define 5-minute configurable hold as proposal; do not use frontend timers as authority. | S2 |
-| BR-022 | After seated party departs, all member tables become DIRTY; only authorized staff may set CLEANING then AVAILABLE. Partial release of a combined group is forbidden unless a separate reviewed business rule is approved. | S2 |
-| BR-023 | Manual overrides must not bypass safety invariants; actor, reason, original suggestion and final selection are auditable. | S2/S3 |
+| BR-021 | BR-021-S2-v1: a hold expires at server time >= its five-minute deadline. Cleanup atomically records NO_SHOW/HOLD_EXPIRED and releases every member; never seat an expired hold. Cleanup timing and its separate transaction are defined in the S2 contract; browser countdowns are not authoritative. | S2 |
+| BR-022 | BR-022-S2-v1: whole-group checkout sets every member DIRTY; authorized staff confirm whole-group CLEANING then AVAILABLE. Keep claims until cleaning finishes; old assignment actions cannot affect a later group. | S2 |
+| BR-023 | BR-023-S2-v1: alternate valid table-set selection records actor, selection reason, original suggestion and final set. No arbitrary party-order override; all topology/capacity/state/readiness/scope rules still apply. | S2/S3 |
 | BR-024 | ETA must not imply a guaranteed seating time. Use measured historical durations and show 'Estimate unavailable' without adequate data. | S3 |
 | BR-025 | Floor-plan positions are display metadata; server validates explicit table connections, capacity, role and state regardless of client-supplied coordinates. | S2 |
 
@@ -169,7 +169,7 @@ Acceptance requires demonstrable working UI → API → persistent DB, meaningfu
 ## 8. Open issues and stakeholder questions
 
 - Does TA approve `COMPLETED = party seated` semantics, given the stakeholder's wording 'serving/completing'?
-- Does the restaurant need strict FIFO even when table capacity would force a delay, or may the first fitting party be selected?
+- Selected-set-first oldest fitting Ready policy was chosen by the user on 27 Nov (DEC-035); teammate engineering-contract review is still required.
 - Does the business date reset at midnight or restaurant opening hour?
 - Are host permissions assigned per queue or per restaurant? (Proposed: per queue.)
 - v2 uses party size up to 16 independently of the largest single table; confirm restaurant/TA acceptance of that operating limit.

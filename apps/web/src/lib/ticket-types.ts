@@ -3,11 +3,11 @@
 
 export type Ticket = {
   id: string; queueId: string; ticketCode: string; serviceDate: string;
-  partySize: number; isReady: boolean; status: 'WAITING' | 'CALLED' | 'COMPLETED'; joinedAt: string;
+  partySize: number; isReady: boolean; status: 'WAITING' | 'CALLED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'; joinedAt: string;
   queueName: string; restaurantName: string; timezone: string;
 };
 
 export type HostEntry = {
   id: string; queueId: string; ticketCode: string; serviceDate: string; partySize: number;
-  isReady: boolean; status: 'WAITING' | 'CALLED' | 'COMPLETED'; joinedAt: string; calledAt: string | null; completedAt: string | null;
+  isReady: boolean; status: 'WAITING' | 'CALLED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'; joinedAt: string; calledAt: string | null; completedAt: string | null;
 };

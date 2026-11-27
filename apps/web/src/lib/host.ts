@@ -5,7 +5,7 @@ import { reconcileBoard } from '@/lib/live-reads';
 import type { HostEntry } from '@/lib/ticket-types';
 
 export type { HostEntry };
-export type HostQueue = { id: string; name: string; restaurantName: string; timezone: string; isActive: boolean };
+export type HostQueue = { operationsMode: 'MANUAL' | 'SEATING'; id: string; name: string; restaurantName: string; timezone: string; isActive: boolean };
 
 async function hostGet<T>(path: string): Promise<T> {
   const response = await backendGet(path);

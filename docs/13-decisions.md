@@ -218,3 +218,58 @@ Status: **Contract reviewed on PR #45; readiness local verification recorded; po
   Accepted Lab 6 baseline evidence is still to be confirmed separately.
 - Actual readiness implementation/checks are recorded in `labs/lab-07/readiness-results.md`.
   Feature PR review, integrated release and deployment remain pending.
+
+
+## DEC-034 — Sprint 2 contract baseline and integration process, 27 November 2026
+
+Status: **PROPOSED engineering contract; teammate review NOT RECORDED**. Related issue [#49](https://github.com/bbxndg/DineQueue/issues/49); source main b4d160675695328c2a73d098a185c4be05022e02. User authorized the documentation branch and five implementation groups, not unreviewed application changes or passing-test claims.
+
+The version 2.1 [contract](features/sprint2-restaurant-operations-contracts.md), [interfaces](features/sprint2-ui-api-data.md), [STS](testing/sprint2-operations-sts.md) and [traceability](testing/sprint2-traceability.md) supersede conflicting older S2 sketches. Keep original IDs and version BR-008/010/011/013 explicitly. Review and commit this design before RED/implementation. Feature branches start from updated sprint2-staging after dependencies merge. F-06..09/F-14..16 all remain in Sprint 2; separate S3 issues #55/#56 remain necessary for Deliverable 2.
+
+## DEC-035 — Selected table set and readiness-aware FIFO, 27 November 2026
+
+Status: **USER SELECTED; teammate engineering review pending; no TA approval claimed**. The user explicitly chose Host-selected table-set-first matching over global-floor oldest-feasible matching.
+
+For the final valid set choose the oldest Ready WAITING party that fits, ordered by original joined_at/id. Earlier Not-ready or oversized parties keep their original position; a larger free table elsewhere does not forbid the capacity skip for the selected set. No arbitrary party override. Rank table suggestions by count, unused seats and stable IDs; a valid alternative set is audited and requires recomputing/reconfirming its selected party. Versions: BR-011-S2-v1 and BR-023-S2-v1; STS 018/019/036–038.
+
+This resolves the team's selection default in DEC-009/020 for this draft, without inventing stakeholder/TA sign-off. It preserves Lab 7 readiness, original order and CALLED non-preemption.
+
+## DEC-036 — Five-minute hold expiry and full release, 27 November 2026
+
+Status: **USER SELECTED terminal outcome; processing mechanism proposed for review**. The user selected NO_SHOW and release of the whole set at expiry, rather than returning the ticket to WAITING.
+
+At server time >= the stored deadline, Seat is forbidden. The common release coordinator records NO_SHOW/HOLD_EXPIRED, HELD→RELEASED and every member AVAILABLE atomically. Explicit expire-holds and pre-mutation housekeeping use this service; reads never write. Housekeeping is its own audited transaction and survives a later requested action's rejection. Do not promise execution at an exact wall-clock instant on idle Cloud Run; the next cleanup invocation completes the persisted transition. No new scheduled/cloud resource is required by this design. Version BR-021-S2-v1; STS 012/031/045/055.
+
+## DEC-037 — Legacy queue compatibility and additive activation, 27 November 2026
+
+Status: **PROPOSED for teammate review**. Preserve MANUAL default on existing queues and historical completed tickets without fabricated seating records. SEATING is explicitly activated after all lifecycle handlers integrate, with valid floor data and no legacy CALLED ticket. Readiness, counters and historical IDs/times survive migration/provisioning.
+
+MANUAL retains existing Call Next/Complete tests. SEATING rejects bare legacy call/complete and requires selected-set call/hold/Seat; no bypass through old endpoints. Own cancellation/new terminal detail behavior is added through the reviewed S2 routes. Version BR-013-S2-v1; STS 042–044/052/058. Old application binaries that do not understand the new lifecycle are not a safe rollback after activation; preserve data and use a reviewed compatible version/forward fix.
+
+## DEC-038 — Shared resource claims turnover and ownership, 27 November 2026
+
+Status: **PROPOSED technical protocol; feature ownership explicitly deferred by the user**.
+
+Queue-scoped Host routes reuse existing grants. Seating transactions lock restaurant floor-state before queue/entry/sorted tables/assignment, so two queues cannot claim overlapping tables. Existing readiness/cancel keep queue→entry and never acquire a later floor lock. Persist scoped request-key results with successful mutations.
+
+Keep membership claims through CLOSED/DIRTY and CLOSED/CLEANING, releasing on finish-cleaning; an explicit CLEANED turnover phase stops an old group changing a later allocation. This replaces the older release-at-checkout sketch while preserving its historical design in Git. The interface contract defines the additive schema, strict DTOs, provisioning/activation and error semantics; STS 014/046–048/053–054 test these invariants.
+
+Benjamin Garforth (bbxndg) and Kawinpop Churari (softkoi) will assign an implementation owner and independent reviewer before each feature starts. The user's response was to decide the split later; this draft does not assign work on their behalf. Record actual review PR/SHA/date before freezing this protocol; none is recorded yet.
+
+## DEC-039 — F-08 cancellation/no-show details (#53), 27 November 2026 — pending team review
+
+Status: **PROPOSED; implemented locally on `feat5/sprint2-cancellation-no-show`, uncommitted and not reviewed**.
+
+- New migration `0006_cancel_event_without_assignment.sql` makes `operation_events.assignment_id` nullable only for a `CUSTOMER_CANCEL` WAITING→CANCELLED row with an actor (CHECK). Reason: S2-T-020 requires one owner event, a never-held ticket has no assignment, and 0005 declared `assignment_id NOT NULL`. 0001–0005 are unchanged. Alternative if rejected: record no event for cancellation and revise S2-T-020.
+- Customer Cancel takes an empty body (non-empty → 400 VALIDATION_ERROR) and no idempotency key; a repeat is 409 INVALID_TRANSITION. It locks queue→entry and never the floor.
+- Host No-show `expectedVersion` is the HELD assignment version. Request keys use the operation name `no-show`, hashed with the entry path. An entry without a HELD assignment (WAITING, seated/COMPLETED, manual CALLED) returns 409 INVALID_TRANSITION; a MANUAL queue returns SEATING_NOT_ENABLED; an already-expired hold returns HOLD_EXPIRED after the independent system cleanup.
+- Expiry and no-show share one repository coordinator (`releaseHold`); only reason (HOLD_EXPIRED/CUSTOMER_ABSENT), actor (system/Host) and event action (EXPIRE_HOLD/NO_SHOW) differ.
+
+## DEC-040 — F-09/F-16 turnover and activation details (#54), 27 November 2026 — pending team review
+
+Status: **PROPOSED; implemented locally on `feat6/sprint2-checkout-cleaning`, uncommitted and not reviewed**.
+
+- No new migration: 0005's turnover phase, timestamps, `release_reason=CLEANED` and the live-claim index are sufficient.
+- Checkout, Start Cleaning and Finish Cleaning share one service path. `expectedVersion` is the assignment version; request-key operation names are `checkout`, `start-cleaning`, `finish-cleaning`, hashed with the assignment path. Events are `CHECKOUT` (ACTIVE→DIRTY), `START_CLEANING` (DIRTY→CLEANING) and `FINISH_CLEANING` (CLEANING→CLEANED). Any other state, including a CLEANED historical group, returns 409 INVALID_TRANSITION.
+- `db enable-seating` requires the exact `current_database()` name (no `_demo/_uat/_test` suffix restriction, because activation is ultimately meant for a real queue after authorization). It needs a floor-state row plus at least one table in an active zone, and no CALLED ticket. A rerun on a SEATING queue is a no-op. There is no deactivation command. With `APP_ENV=production` it also requires `--i-understand-production` (review on PR #63). On success the CLI logs the database, queue name/ID and mode before → after; it prints only the fixed refusal messages, and other errors stay generic.
+- A DIRTY/CLEANING group whose claims no longer match its members is treated as corrupted data and fails as an internal error (HTTP 500), not 409 (review on PR #63).

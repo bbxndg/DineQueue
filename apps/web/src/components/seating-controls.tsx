@@ -23,7 +23,20 @@ export function CallHoldControl({ preview, floor, disabled, mutate }: { preview:
 function HeldAssignment({ assignment: a, floor, disabled, mutate }: { assignment: Assignment; floor: FloorSnapshot; disabled: boolean; mutate: SeatingMutation }) {
  const [confirming, setConfirming] = useState(false);
  const [now, setNow] = useState(() => Date.parse(floor.serverNow));
- useEffect(() => { const started = Date.now(); const server = Date.parse(floor.serverNow);const timer = setInterval(() => setNow(server + Date.now() - started), 1000);return () => clearInterval(timer); }, [floor.serverNow]);
+ useEffect(() => {
+   if (a.status !== 'HELD') return;
+   const started = Date.now(); const server = Date.parse(floor.serverNow);
+   let timer: ReturnType<typeof setInterval> | undefined;
+   const tick = () => setNow(server + Date.now() - started);
+   const visibility = () => {
+     clearInterval(timer); timer = undefined;
+     if (document.visibilityState === 'visible') { tick(); timer = setInterval(tick, 1000); }
+   };
+   // Initialize through the same external visibility event path.
+   const initial = setTimeout(visibility, 0);
+   document.addEventListener('visibilitychange', visibility);
+   return () => { clearTimeout(initial); clearInterval(timer); document.removeEventListener('visibilitychange', visibility); };
+ }, [floor.serverNow, a.status]);
  const expired = now >= Date.parse(a.holdExpiresAt);
  const names = a.tableIds.map(id => floor.zones.flatMap(z => z.tables).find(t => t.id === id)?.code).join(' + ');
  return <article className="grid gap-3 rounded-xl border border-wine/30 p-4">

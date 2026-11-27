@@ -30,9 +30,20 @@ test('S2 seating: ten-person connected hold, confirmation, seat and owned persis
   await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect((await customer.page.request.get(`/api/v1/me/queue-entries/${ticket.id}`)).status()).toBe(200);
   await page.getByRole('button', { name: 'Call & Hold', exact: true }).click();
+  const attempts: { idempotencyKey: string }[] = [];
+  await page.route(`**/api/v1/host/queues/${queue}/match-and-call`, async route => {
+    attempts.push(route.request().postDataJSON());
+    if (attempts.length === 1) await route.fulfill({ status: 503, json: { error: { code: 'UNAVAILABLE' } } });
+    else await route.continue();
+  });
   await page.getByRole('button', { name: 'Confirm Call & Hold', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'The action could not be completed' })).toBeVisible();
+  await page.getByRole('button', { name: 'Call & Hold', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm Call & Hold', exact: true }).click();
+
   const assignments = page.getByRole('region', { name: 'Current seating assignments' });
   await expect(assignments).toContainText('T4 + T5 · Held');
+  expect(attempts).toHaveLength(2); expect(attempts[1]).toEqual(attempts[0]);
   await restartTestAPI(page);await page.reload();await expect(assignments).toContainText('T4 + T5 · Held');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Seat', exact: true }).click();

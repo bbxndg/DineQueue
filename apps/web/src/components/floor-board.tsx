@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SeatingAssignments } from '@/components/seating-controls';
 import { MatchingPreview } from '@/components/matching-preview';
@@ -19,6 +19,7 @@ export function FloorBoard({ queueId, initial, renderedAt, csrfToken }: { queueI
   const [selected, setSelected] = useState<{ id: string; version: number }[]>([]);
   const [notice, setNotice] = useState('');
   const [manual, setManual] = useState(false);
+  const uncertain = useRef<{ fingerprint: string; body: object } | null>(null);
   const [writing, setWriting] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   useEffect(() => {
@@ -44,10 +45,15 @@ export function FloorBoard({ queueId, initial, renderedAt, csrfToken }: { queueI
   }
   async function mutate(path: string, body: object) {
     if (writing || live.failure) return;
+    const { idempotencyKey, ...intent } = body as Record<string, unknown>;
+    const fingerprint = JSON.stringify([queueId, path, intent]);
+    const requestBody = uncertain.current?.fingerprint === fingerprint ? uncertain.current.body : { ...intent, idempotencyKey };
+    uncertain.current = { fingerprint, body: requestBody };
     setWriting(true); setActionMessage('');
     try {
       await live.runMutation(async () => {
-        const response = await fetch(`/api/v1/host/queues/${encodeURIComponent(queueId)}${path}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }, body: JSON.stringify(body) });
+        const response = await fetch(`/api/v1/host/queues/${encodeURIComponent(queueId)}${path}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }, body: JSON.stringify(requestBody) });
+        if (response.status < 500) uncertain.current = null;
         if ([401, 403].includes(response.status)) { live.reportAccessLost(response.status as 401 | 403); return; }
         if (!response.ok) {
           let code = ''; try { code = (await response.json()).error?.code ?? ''; } catch { /* Generic error remains usable. */ }

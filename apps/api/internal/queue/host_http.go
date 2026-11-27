@@ -17,12 +17,18 @@ func (h *HTTP) registerHost(router fiber.Router) {
 	group.Get("/:queueId/floor", h.auth.RequireQueue("queueId"), h.floor)
 	group.Get("/:queueId/entries", h.auth.RequireQueue("queueId"), h.waitingEntries)
 	group.Get("/:queueId/current", h.auth.RequireQueue("queueId"), h.currentEntry)
+	group.Post("/:queueId/match-and-call", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.callHold)
+	group.Post("/:queueId/seating-assignments/:assignmentId/seat", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.seat)
+	group.Post("/:queueId/expire-holds", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.expireHolds)
 	group.Post("/:queueId/call-next", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.callNext)
 	group.Post("/:queueId/entries/:entryId/complete", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.complete)
 }
 
 func hostError(c fiber.Ctx, err error) error {
+	var me matchError
 	switch {
+	case errors.As(err, &me):
+		return failure(c, 409, string(me), "This queue requires the seating workflow.")
 	case errors.Is(err, auth.ErrForbidden):
 		return failure(c, 403, "FORBIDDEN", "Access denied.")
 	case errors.Is(err, ErrNotFound):

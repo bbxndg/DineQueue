@@ -33,7 +33,7 @@ export default async function FloorPage({ searchParams }: { searchParams: Promis
     </nav>
     {!queue || denied ? <p role="alert" className="mt-6">{requested ? 'This queue is not available to your account.' : 'No queue is assigned to your account.'}</p> : <>
       <p className="mt-4 text-lg">{queue.restaurantName} · {queue.name}</p>
-      <FloorBoard key={queue.id} queueId={queue.id} initial={initial} renderedAt={new Date().toISOString()} />
+      <FloorBoard csrfToken={session.csrfToken} key={queue.id} queueId={queue.id} initial={initial} renderedAt={new Date().toISOString()} />
     </>}
   </main>;
 }

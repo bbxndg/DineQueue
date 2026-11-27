@@ -3,7 +3,8 @@ import type { ReadOutcome } from '@/lib/poll-coordinator';
 export const tableStates = ['AVAILABLE', 'HELD', 'OCCUPIED', 'DIRTY', 'CLEANING', 'OUT_OF_SERVICE'] as const;
 export type FloorTable = { id: string; code: string; capacity: number; status: typeof tableStates[number]; positionX: number; positionY: number; version: number };
 export type FloorZone = { id: string; name: string; isActive: boolean; tables: FloorTable[]; connections: { tableIds: [string, string] }[] };
-export type FloorSnapshot = { queueId: string; restaurantId: string; operationsMode: 'MANUAL' | 'SEATING'; layoutVersion: number; serverNow: string; holdTtlSeconds: number; zones: FloorZone[]; assignments: unknown[] };
+export type Assignment = { id: string; queueId: string; entryId: string; status: 'HELD' | 'ACTIVE' | 'CLOSED' | 'RELEASED'; version: number; tableIds: string[]; holdExpiresAt: string };
+export type FloorSnapshot = { queueId: string; restaurantId: string; operationsMode: 'MANUAL' | 'SEATING'; layoutVersion: number; serverNow: string; holdTtlSeconds: number; zones: FloorZone[]; assignments: Assignment[] };
 
 const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const positive = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
@@ -36,6 +37,13 @@ export function parseFloor(value: unknown, queueId: string): FloorSnapshot {
       if (typeof a !== 'string' || typeof b !== 'string' || a >= b || !tableIds.has(a) || !tableIds.has(b) || edges.has(`${a}:${b}`)) return invalid();
       edges.add(`${a}:${b}`);
     }
+  }
+  for (const assignment of value.assignments) {
+    if (!record(assignment) || typeof assignment.id !== 'string' || assignment.queueId !== queueId
+      || typeof assignment.entryId !== 'string' || !['HELD', 'ACTIVE', 'CLOSED', 'RELEASED'].includes(String(assignment.status))
+      || !positive(assignment.version) || !Array.isArray(assignment.tableIds) || assignment.tableIds.length < 1 || assignment.tableIds.length > 3
+      || new Set(assignment.tableIds).size !== assignment.tableIds.length || assignment.tableIds.some(id => typeof id !== 'string' || !ids.has(id))
+      || typeof assignment.holdExpiresAt !== 'string' || !Number.isFinite(Date.parse(assignment.holdExpiresAt))) return invalid();
   }
   return value as FloorSnapshot;
 }

@@ -30,7 +30,7 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
         <h2 className="mt-6 text-2xl font-semibold">{queue.name} · {queue.restaurantName}</h2>
         <Link href={`/host/floor?queueId=${encodeURIComponent(queue.id)}`} prefetch={false} className="mt-3 inline-block min-h-11 py-2 font-semibold text-wine underline">View restaurant floor</Link>
         {!queue.isActive && <p className="mt-2 text-sm">This queue is closed to new joins. Existing tickets can still be handled.</p>}
-        <HostBoard key={queue.id} queueId={queue.id} timezone={queue.timezone} csrfToken={session.csrfToken}
+        <HostBoard operationsMode={queue.operationsMode} key={queue.id} queueId={queue.id} timezone={queue.timezone} csrfToken={session.csrfToken}
           current={board.current} waiting={board.waiting} renderedAt={new Date().toISOString()} />
       </>}
     </section>

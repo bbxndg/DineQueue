@@ -5,6 +5,8 @@ import type { Ticket } from '@/lib/ticket-types';
 const statusMessages = {
   WAITING: 'Please stay nearby. The host will call your ticket number.',
   CALLED: 'Your ticket has been called. Please go to the counter.',
+  NO_SHOW: 'Your party was not seated before the hold ended. You can join the queue again.',
+  CANCELLED: 'This ticket has been cancelled.',
   COMPLETED: 'Your waitlist service has finished.',
 };
 

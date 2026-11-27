@@ -19,6 +19,7 @@ type hostQueueRow struct {
 }
 
 type hostEntryRow struct {
+	Version        int64
 	ID             string
 	QueueID        string
 	ServiceDate    string

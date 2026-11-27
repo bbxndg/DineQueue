@@ -273,3 +273,29 @@ Status: **PROPOSED; implemented locally on `feat6/sprint2-checkout-cleaning`, un
 - Checkout, Start Cleaning and Finish Cleaning share one service path. `expectedVersion` is the assignment version; request-key operation names are `checkout`, `start-cleaning`, `finish-cleaning`, hashed with the assignment path. Events are `CHECKOUT` (ACTIVE→DIRTY), `START_CLEANING` (DIRTY→CLEANING) and `FINISH_CLEANING` (CLEANING→CLEANED). Any other state, including a CLEANED historical group, returns 409 INVALID_TRANSITION.
 - `db enable-seating` requires the exact `current_database()` name (no `_demo/_uat/_test` suffix restriction, because activation is ultimately meant for a real queue after authorization). It needs a floor-state row plus at least one table in an active zone, and no CALLED ticket. A rerun on a SEATING queue is a no-op. There is no deactivation command. With `APP_ENV=production` it also requires `--i-understand-production` (review on PR #63). On success the CLI logs the database, queue name/ID and mode before → after; it prints only the fixed refusal messages, and other errors stay generic.
 - A DIRTY/CLEANING group whose claims no longer match its members is treated as corrupted data and fails as an internal error (HTTP 500), not 409 (review on PR #63).
+
+## DEC-041 — Sprint 3 retained scope and Customer history (#55/#56)
+
+27 November 2026, **PROPOSED for teammate review; not an implementation or acceptance record**.
+
+Retain F-10..F-13 and F-17..F-19 in the completion plan. #56 owner-scoped terminal history is the first Deliverable 2 increment. Customer history extends F-11/F-03 explicitly; FR-018 remains staff history and is not silently relabelled as a pre-existing Customer-list requirement. Use COMPLETED/CANCELLED/NO_SHOW, original timestamps, joined_at/UUID keyset order and same restaurant-local service date. Numeric ETA is withheld under BR-024; F-17 adds a meaningful MANUAL Ready position, while SEATING position is null because eligibility depends on selected tables. S1/Lab7/S2 lifecycle rules remain unchanged.
+
+## DEC-042 — Host configuration permission and safe web floor setup
+
+27 November 2026, **PROPOSED; review required before configuration code**.
+
+Replace FR-033's optional Manager actor with HOST plus an explicit restaurant configuration grant. Ordinary queue grants do not confer this right; the operator provisions the grant and the Host cannot self-grant. Saving configuration and enabling SEATING are separate protected actions. Preserve historical IDs/membership and busy-state guards, serialize with the existing floor lock, and reject stale edits atomically. Typed forms/list are sufficient; drag-and-drop is not required. Persist configuration audit/forward-effective snapshots for trustworthy metric coverage. Existing CLI setup is retained but does not satisfy the web setup AC.
+
+## DEC-043 — Measured operations reporting and historical coverage
+
+27 November 2026, **PROPOSED; review formula fixtures before report implementation**.
+
+Report ticket outcomes by stored service date; event history and assignment milestones use their labelled event-time interval. Distinguish waitlist completion from dining checkout and count groups once regardless of table members. Means/rates include sample counts and exclusions; absent evidence gives null. Utilization requires a complete forward-effective in-service-table denominator; do not reconstruct unavailable historical capacity or assign a shared floor denominator to a queue. An unknown denominator returns null with a reason. NFR-013 applies to public privacy, not report arithmetic.
+
+## DEC-044 — Public display and examination-aware completion
+
+27 November 2026, **PROPOSED; no approved scope deferral recorded**.
+
+F-12 stays in the proposed scope with explicit disabled-by-default queue slug settings. Public responses allow only ticket code/status; enablement requires configuration plus queue grants and CSRF. #55 review and #56 progress target 28–29 November; floor/report first slices target 30 November, with bounded completion during the 1–11 December examination period and final delivery 13 December. Both issue assignees jointly own the plan until the team records individual authors/reviewers. No reviewer approval or work allocation is fabricated.
+
+The [contracts](features/sprint3-contracts.md), [interfaces/data](features/sprint3-ui-api-data.md), [STS](testing/sprint3-sts.md) and [remaining-work plan](testing/sprint3-traceability.md) contain the proposed details. Record actual review PR, reviewed SHA, reviewer, date and accepted/revised policy before freezing these decisions.

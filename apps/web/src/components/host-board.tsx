@@ -39,8 +39,8 @@ function CompleteAction({ entry, busy, pending, onComplete }: {
   </div>;
 }
 
-export function HostBoard({ queueId, timezone, csrfToken, current: initialCurrent, waiting: initialWaiting, renderedAt }: {
-  queueId: string; timezone: string; csrfToken: string; current: Entry | null; waiting: Entry[]; renderedAt: string;
+export function HostBoard({ queueId, timezone, csrfToken, operationsMode = 'MANUAL', current: initialCurrent, waiting: initialWaiting, renderedAt }: {
+  operationsMode?: 'MANUAL' | 'SEATING'; queueId: string; timezone: string; csrfToken: string; current: Entry | null; waiting: Entry[]; renderedAt: string;
 }) {
   const router = useRouter();
   // The parent keys this board by queue ID, so a queue change remounts it and
@@ -95,7 +95,7 @@ export function HostBoard({ queueId, timezone, csrfToken, current: initialCurren
   return <div className="mt-8 grid min-w-0 gap-8" aria-busy={busy}>
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center gap-4">
-        <button disabled={busy || current !== null || !waiting.some(entry => entry.isReady)}
+        <button disabled={operationsMode === 'SEATING' || busy || current !== null || !waiting.some(entry => entry.isReady)}
           onClick={() => mutate('/call-next', entry => `Ticket ${entry.ticketCode} called.`)}
           className="rounded-lg bg-wine px-5 py-3 font-semibold text-white disabled:opacity-60">
           {pending && current === null ? 'Working…' : 'Call next'}
@@ -119,8 +119,8 @@ export function HostBoard({ queueId, timezone, csrfToken, current: initialCurren
           <div><dt className="inline font-medium">Joined: </dt><dd className="inline"><time data-testid="current-joined-at" dateTime={current.joinedAt}>{time.format(new Date(current.joinedAt))} ({timezone})</time></dd></div>
           {current.calledAt && <div><dt className="inline font-medium">Called: </dt><dd className="inline"><time data-testid="current-called-at" dateTime={current.calledAt}>{time.format(new Date(current.calledAt))} ({timezone})</time></dd></div>}
         </dl>
-        <CompleteAction key={current.id} entry={current} busy={busy} pending={pending}
-          onComplete={id => mutate(`/entries/${encodeURIComponent(id)}/complete`, entry => `Ticket ${entry.ticketCode} completed.`)} />
+        {operationsMode === 'MANUAL' && <CompleteAction key={current.id} entry={current} busy={busy} pending={pending}
+          onComplete={id => mutate(`/entries/${encodeURIComponent(id)}/complete`, entry => `Ticket ${entry.ticketCode} completed.`)} />}
       </>}
     </section>
 

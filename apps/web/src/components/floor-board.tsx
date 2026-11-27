@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { SeatingAssignments } from '@/components/seating-controls';
 import { MatchingPreview } from '@/components/matching-preview';
 import { LiveStatus } from '@/components/live-refresh';
 import { readFloor, tableStates, type FloorSnapshot, type FloorTable } from '@/lib/floor';
@@ -9,7 +10,7 @@ import { useLiveResource } from '@/lib/use-live-resource';
 
 const label = (status: string) => status.toLowerCase().replaceAll('_', ' ');
 
-export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; initial: FloorSnapshot | null; renderedAt: string }) {
+export function FloorBoard({ queueId, initial, renderedAt, csrfToken }: { queueId: string; initial: FloorSnapshot | null; renderedAt: string; csrfToken: string }) {
   const router = useRouter();
   const read = useCallback((signal: AbortSignal) => readFloor(queueId, signal), [queueId]);
   const live = useLiveResource<FloorSnapshot | null>(initial, queueId, read);
@@ -18,6 +19,9 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
   const [selected, setSelected] = useState<{ id: string; version: number }[]>([]);
   const [notice, setNotice] = useState('');
   const [manual, setManual] = useState(false);
+  const uncertain = useRef<{ fingerprint: string; body: object } | null>(null);
+  const [writing, setWriting] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
   useEffect(() => {
     if (live.accessLost === 401) router.replace('/login');
   }, [live.accessLost, router]);
@@ -39,6 +43,26 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
     setManual(true);
     try { await live.refresh(); } finally { setManual(false); }
   }
+  async function mutate(path: string, body: object) {
+    if (writing || live.failure) return;
+    const { idempotencyKey, ...intent } = body as Record<string, unknown>;
+    const fingerprint = JSON.stringify([queueId, path, intent]);
+    const requestBody = uncertain.current?.fingerprint === fingerprint ? uncertain.current.body : { ...intent, idempotencyKey };
+    uncertain.current = { fingerprint, body: requestBody };
+    setWriting(true); setActionMessage('');
+    try {
+      await live.runMutation(async () => {
+        const response = await fetch(`/api/v1/host/queues/${encodeURIComponent(queueId)}${path}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }, body: JSON.stringify(requestBody) });
+        if (response.status < 500) uncertain.current = null;
+        if ([401, 403].includes(response.status)) { live.reportAccessLost(response.status as 401 | 403); return; }
+        if (!response.ok) {
+          let code = ''; try { code = (await response.json()).error?.code ?? ''; } catch { /* Generic error remains usable. */ }
+          setActionMessage(code === 'HOLD_EXPIRED' ? 'The hold expired. Refresh the floor to see released tables.' : 'The action could not be completed. Refresh and confirm the latest selection.');
+        } else { setSelected([]); setActionMessage('Seating updated.'); }
+      });
+    } catch { setActionMessage('Connection failed. Refresh the floor before trying again.'); }
+    finally { setWriting(false); }
+  }
   if (live.accessLost) return <p role="alert" className="mt-8">{live.accessLost === 401
     ? 'Your session has ended. Redirecting to sign in…' : 'This floor is no longer available to your account.'}</p>;
 
@@ -48,6 +72,8 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
       <LiveStatus updatedAt={live.updatedAt} renderedAt={renderedAt} failure={live.failure} />
     </div>
     {!floor ? <p role="status">{live.failure ? 'Floor could not be loaded. Retry using Refresh floor.' : 'Loading floor…'}</p> : <>
+      <p role="status">{actionMessage}</p>
+      {floor.operationsMode === 'SEATING' && <SeatingAssignments floor={floor} disabled={writing || Boolean(live.failure)} mutate={mutate} />}
       <p>Mode: <strong>{floor.operationsMode}</strong> · Layout version {floor.layoutVersion}</p>
       {floor.operationsMode === 'MANUAL' && <p className="text-sm">Continue calling and completing tickets on the queue board. Table allocation is not enabled.</p>}
       {floor.zones.length === 0 ? <p role="status">No floor is configured for this restaurant. Ask the team to provision its approved layout.</p> : zone && <>
@@ -73,7 +99,7 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
             })}
           </svg>
           {zone.tables.map(table => <button key={table.id} aria-label={`${table.code}, ${table.capacity} seats, ${label(table.status)}`} aria-pressed={chosen.some(t => t.id === table.id)}
-            disabled={!zone.isActive || table.status !== 'AVAILABLE'} onClick={() => select(table)}
+            disabled={writing || !zone.isActive || table.status !== 'AVAILABLE'} onClick={() => select(table)}
             style={{ left: `clamp(48px, ${table.positionX}%, calc(100% - 48px))`, top: `clamp(54px, ${table.positionY}%, calc(100% - 54px))` }}
             className="absolute grid min-h-24 w-24 -translate-x-1/2 -translate-y-1/2 content-center rounded-xl border border-wine/40 bg-paper p-2 text-sm shadow-sm aria-pressed:bg-wine aria-pressed:text-white disabled:bg-gray-100 disabled:text-gray-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-wine">
             <strong className="text-lg">{table.code}</strong><span>{table.capacity} seats</span><span className="capitalize">{label(table.status)}</span>
@@ -83,7 +109,7 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
           {zone.tables.map(table => <li key={table.id} className="rounded-xl border border-wine/20 bg-white p-4">
             <h3 className="font-semibold">{table.code} · {table.capacity} seats</h3>
             <p className="capitalize">{label(table.status)}</p><p className="text-sm">Version {table.version}</p>
-            <button aria-pressed={chosen.some(t => t.id === table.id)} disabled={!zone.isActive || table.status !== 'AVAILABLE'} onClick={() => select(table)} className="mt-2 min-h-11 rounded-lg border border-wine px-4 text-wine aria-pressed:bg-wine aria-pressed:text-white disabled:opacity-50">{chosen.some(t => t.id === table.id) ? 'Deselect' : 'Select'} {table.code}</button>
+            <button aria-pressed={chosen.some(t => t.id === table.id)} disabled={writing || !zone.isActive || table.status !== 'AVAILABLE'} onClick={() => select(table)} className="mt-2 min-h-11 rounded-lg border border-wine px-4 text-wine aria-pressed:bg-wine aria-pressed:text-white disabled:opacity-50">{chosen.some(t => t.id === table.id) ? 'Deselect' : 'Select'} {table.code}</button>
           </li>)}
         </ul>}
         {zone.tables.length === 0 && <p>No tables configured in this zone.</p>}
@@ -98,7 +124,7 @@ export function FloorBoard({ queueId, initial, renderedAt }: { queueId: string; 
           {chosen.length > 0 && <button className="min-h-11 font-semibold text-wine underline" onClick={() => { setSelected([]); setNotice(''); }}>Clear selection</button>}
           {selectionChanged && <p role="status">Inventory changed. Unavailable tables were removed from the selection.</p>}
           {notice && <p role="status">{notice}</p>}
-          <MatchingPreview queueId={queueId} floor={floor} tables={chosen} stale={Boolean(live.failure) || selectionChanged} />
+          <MatchingPreview queueId={queueId} floor={floor} tables={chosen} stale={Boolean(live.failure) || selectionChanged} disabled={writing} mutate={mutate} />
         </div>
       </>}
       <p className="text-sm">Table states: {tableStates.map(label).join(' · ')}.</p>

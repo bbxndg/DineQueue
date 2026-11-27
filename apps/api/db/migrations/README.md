@@ -2,7 +2,7 @@
 
 `0001_auth.sql` creates F-01 users, hashed sessions, restaurant/service queue and
 operator grants. `0002_queue_entries.sql` (F-02) adds daily ticket counters, queue
-entries and their CHECK/partial unique indexes. Seating tables belong to Sprint 2.
+entries and their CHECK/partial unique indexes. `0003_customer_readiness.sql` adds Lab 7 readiness. `0004_floor_inventory.sql` adds the floor and MANUAL policy defaults. `0005_seating_lifecycle.sql` adds group assignments/memberships, action records/events and additive terminal lifecycle fields. Existing queues remain MANUAL.
 
 Add reviewed, versioned PostgreSQL SQL migrations when extending the S1 domain
 schema. GORM persistence models must follow that schema; application startup must not

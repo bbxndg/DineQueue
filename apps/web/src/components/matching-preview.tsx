@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { CallHoldControl, type CallPreview, type SeatingMutation } from '@/components/seating-controls';
 import { useRouter } from 'next/navigation';
 import type { FloorSnapshot, FloorTable } from '@/lib/floor';
 
-type Preview = { layoutVersion: number; entry: { ticketCode: string; partySize: number } | null; candidates: { tableIds: string[]; totalSeats: number; selectionReason: string }[]; skipped: { ticketCode: string; reasonCode: string }[]; availabilityReason: string | null };
-export function MatchingPreview({ queueId, floor, tables, stale }: { queueId: string; floor: FloorSnapshot; tables: FloorTable[]; stale: boolean }) {
+type Preview = CallPreview & { skipped: { ticketCode: string; reasonCode: string }[] };
+export function MatchingPreview({ queueId, floor, tables, stale, disabled, mutate }: { queueId: string; floor: FloorSnapshot; tables: FloorTable[]; stale: boolean; disabled: boolean; mutate: SeatingMutation }) {
   const router = useRouter();
   const [outcome, setOutcome] = useState<{ key: string; data?: Preview; error?: string } | null>(null);
   const selection = tables.map(t => `${t.id}:${t.version}`).join(',');
@@ -35,7 +36,8 @@ export function MatchingPreview({ queueId, floor, tables, stale }: { queueId: st
       {result.availabilityReason ? <p>{result.availabilityReason.toLowerCase().replaceAll('_', ' ')}.</p> : result.entry && <p><strong>{result.entry.ticketCode}</strong> · {result.entry.partySize} people · Ready</p>}
       {result.candidates.map(c => <p key={c.tableIds.join(':')}>{c.totalSeats} seats · {c.selectionReason === 'RECOMMENDED' ? 'Recommended set' : 'Alternative valid set'}</p>)}
       {result.skipped.map(s => <p key={s.ticketCode}>{s.ticketCode}: {s.reasonCode.toLowerCase().replaceAll('_', ' ')}</p>)}
-      <p className="text-sm">Preview only. Tables are not held.</p>
+      <p className="text-sm">Preview does not hold tables until you confirm.</p>
+      <CallHoldControl key={JSON.stringify([result.entry?.id, result.entryVersion, result.layoutVersion, result.candidates])} preview={result} floor={floor} disabled={disabled || stale} mutate={mutate} />
     </> : <p>Select available tables to preview a match.</p>}
   </aside>;
 }

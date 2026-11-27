@@ -18,6 +18,7 @@ var (
 )
 
 type HostQueue struct {
+	OperationsMode string `json:"operationsMode"`
 	ID             string `json:"id"`
 	Name           string `json:"name"`
 	RestaurantName string `json:"restaurantName"`
@@ -161,6 +162,13 @@ func (s *Service) CallNext(ctx context.Context, user auth.User, queueID string) 
 		if err := lockAuthorizedQueue(ctx, repository, user, queueID); err != nil {
 			return err
 		}
+		var mode string
+		if err := tx.Raw("SELECT operations_mode FROM service_queues WHERE id=?", queueID).Scan(&mode).Error; err != nil {
+			return err
+		}
+		if mode == "SEATING" {
+			return matchError("TABLE_SELECTION_REQUIRED")
+		}
 		called, err := repository.entriesByStatus(ctx, queueID, "CALLED")
 		if err != nil {
 			return err
@@ -212,6 +220,13 @@ func (s *Service) Complete(ctx context.Context, user auth.User, queueID, entryID
 		repository := NewRepository(tx)
 		if err := lockAuthorizedQueue(ctx, repository, user, queueID); err != nil {
 			return err
+		}
+		var mode string
+		if err := tx.Raw("SELECT operations_mode FROM service_queues WHERE id=?", queueID).Scan(&mode).Error; err != nil {
+			return err
+		}
+		if mode == "SEATING" {
+			return matchError("SEATING_ASSIGNMENT_REQUIRED")
 		}
 		rows, err := repository.entryForUpdate(ctx, queueID, entryID)
 		if err != nil {

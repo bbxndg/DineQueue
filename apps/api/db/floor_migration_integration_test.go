@@ -108,7 +108,11 @@ func TestFloorMigrationPreservesLegacyRows(t *testing.T) {
 	}
 	for table, want := range before {
 		var actual string
-		if err := database.Raw("SELECT jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text)::text FROM " + table + " t").Scan(&actual).Error; err != nil {
+		projection := "to_jsonb(t)"
+		if table == "queue_entries" {
+			projection = "to_jsonb(t) - ARRAY['cancelled_at','cancelled_by','no_show_at','no_show_by','no_show_reason']"
+		}
+		if err := database.Raw("SELECT jsonb_agg(" + projection + " ORDER BY (" + projection + ")::text)::text FROM " + table + " t").Scan(&actual).Error; err != nil {
 			t.Fatal(err)
 		}
 		if actual != want {
@@ -122,7 +126,15 @@ func TestFloorMigrationPreservesLegacyRows(t *testing.T) {
 	}
 	var versions int64
 	database.Table("schema_migrations").Count(&versions)
-	if versions != 4 {
+	if versions != 5 {
 		t.Fatalf("versions %d", versions)
 	}
+	var terminalFields int64
+	if err := database.Raw("SELECT count(*) FROM queue_entries WHERE cancelled_at IS NOT NULL OR cancelled_by IS NOT NULL OR no_show_at IS NOT NULL OR no_show_by IS NOT NULL OR no_show_reason IS NOT NULL").Scan(&terminalFields).Error; err != nil {
+		t.Fatal(err)
+	}
+	if terminalFields != 0 {
+		t.Fatal("legacy terminal fields were populated")
+	}
+
 }

@@ -21,6 +21,9 @@ const nextConfig = {
       { source: '/api/v1/host/queues/:queueId/floor', destination: `${backendOrigin}/api/v1/host/queues/:queueId/floor` },
       { source: '/api/v1/host/queues/:queueId/entries', destination: `${backendOrigin}/api/v1/host/queues/:queueId/entries` },
       { source: '/api/v1/host/queues/:queueId/current', destination: `${backendOrigin}/api/v1/host/queues/:queueId/current` },
+      { source: '/api/v1/host/queues/:queueId/match-and-call', destination: `${backendOrigin}/api/v1/host/queues/:queueId/match-and-call` },
+      { source: '/api/v1/host/queues/:queueId/seating-assignments/:assignmentId/seat', destination: `${backendOrigin}/api/v1/host/queues/:queueId/seating-assignments/:assignmentId/seat` },
+      { source: '/api/v1/host/queues/:queueId/expire-holds', destination: `${backendOrigin}/api/v1/host/queues/:queueId/expire-holds` },
       { source: '/api/v1/host/queues/:queueId/call-next', destination: `${backendOrigin}/api/v1/host/queues/:queueId/call-next` },
       { source: '/api/v1/host/queues/:queueId/entries/:entryId/complete', destination: `${backendOrigin}/api/v1/host/queues/:queueId/entries/:entryId/complete` },
     ];

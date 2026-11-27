@@ -37,8 +37,8 @@ type FloorSnapshot struct {
 	ServerNow      time.Time   `json:"serverNow"`
 	HoldTTLSeconds int         `json:"holdTtlSeconds"`
 	Zones          []FloorZone `json:"zones" gorm:"-"`
-	// Allocation schema belongs to #52. Inventory alone has no assignments.
-	Assignments []struct{} `json:"assignments" gorm:"-"`
+	// Only assignments belonging to the authorized path queue are exposed.
+	Assignments []Assignment `json:"assignments" gorm:"-"`
 }
 
 // Floor uses a read-only repeatable-read transaction, including its grant check.

@@ -20,6 +20,7 @@ func (h *HTTP) registerHost(router fiber.Router) {
 	group.Post("/:queueId/match-and-call", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.callHold)
 	group.Post("/:queueId/seating-assignments/:assignmentId/seat", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.seat)
 	group.Post("/:queueId/expire-holds", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.expireHolds)
+	group.Post("/:queueId/entries/:entryId/no-show", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.noShow)
 	group.Post("/:queueId/call-next", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.callNext)
 	group.Post("/:queueId/entries/:entryId/complete", h.auth.CSRF, h.auth.RequireQueue("queueId"), h.complete)
 }

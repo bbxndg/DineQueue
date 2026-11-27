@@ -28,6 +28,7 @@ func (h *HTTP) Register(router fiber.Router) {
 	meGroup.Get("/queue-entries/active", h.listActiveEntries)
 	meGroup.Get("/queue-entries/:entryId", h.getEntry)
 	meGroup.Patch("/queue-entries/:entryId/readiness", h.auth.CSRF, h.setReadiness)
+	meGroup.Post("/queue-entries/:entryId/cancel", h.auth.CSRF, h.cancel)
 
 	h.registerHost(router)
 }

@@ -15,6 +15,7 @@ const nextConfig = {
       { source: '/api/v1/queues/:queueId/entries', destination: `${backendOrigin}/api/v1/queues/:queueId/entries` },
       { source: '/api/v1/me/queue-entries/active', destination: `${backendOrigin}/api/v1/me/queue-entries/active` },
       { source: '/api/v1/me/queue-entries/:entryId/readiness', destination: `${backendOrigin}/api/v1/me/queue-entries/:entryId/readiness` },
+      { source: '/api/v1/me/queue-entries/:entryId/cancel', destination: `${backendOrigin}/api/v1/me/queue-entries/:entryId/cancel` },
       { source: '/api/v1/me/queue-entries/:entryId', destination: `${backendOrigin}/api/v1/me/queue-entries/:entryId` },
       { source: '/api/v1/host/queues', destination: `${backendOrigin}/api/v1/host/queues` },
       { source: '/api/v1/host/queues/:queueId/matching', destination: `${backendOrigin}/api/v1/host/queues/:queueId/matching` },
@@ -26,6 +27,7 @@ const nextConfig = {
       { source: '/api/v1/host/queues/:queueId/expire-holds', destination: `${backendOrigin}/api/v1/host/queues/:queueId/expire-holds` },
       { source: '/api/v1/host/queues/:queueId/call-next', destination: `${backendOrigin}/api/v1/host/queues/:queueId/call-next` },
       { source: '/api/v1/host/queues/:queueId/entries/:entryId/complete', destination: `${backendOrigin}/api/v1/host/queues/:queueId/entries/:entryId/complete` },
+      { source: '/api/v1/host/queues/:queueId/entries/:entryId/no-show', destination: `${backendOrigin}/api/v1/host/queues/:queueId/entries/:entryId/no-show` },
     ];
   },
   async headers() {

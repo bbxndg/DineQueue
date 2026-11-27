@@ -21,7 +21,7 @@ export function CallHoldControl({ preview, floor, disabled, mutate }: { preview:
   </div>;
 }
 function HeldAssignment({ assignment: a, floor, disabled, mutate }: { assignment: Assignment; floor: FloorSnapshot; disabled: boolean; mutate: SeatingMutation }) {
- const [confirming, setConfirming] = useState(false);
+ const [confirming, setConfirming] = useState<'seat' | 'no-show' | null>(null);
  const [now, setNow] = useState(() => Date.parse(floor.serverNow));
  useEffect(() => {
    if (a.status !== 'HELD') return;
@@ -43,11 +43,18 @@ function HeldAssignment({ assignment: a, floor, disabled, mutate }: { assignment
    <h3 className="font-semibold">{names} · {a.status === 'HELD' ? 'Held' : 'Occupied'}</h3>
    {a.status === 'HELD' && <>
      <p>Hold deadline: {new Date(a.holdExpiresAt).toLocaleString()} · {Math.max(0, Math.ceil((Date.parse(a.holdExpiresAt) - now) / 1000))} seconds remaining</p>
-     {expired ? <><p>The hold deadline has passed. Release the expired hold to update the ticket and tables.</p><button className={button} disabled={disabled} onClick={() => mutate('/expire-holds', { idempotencyKey: crypto.randomUUID() })}>Release expired holds</button></> : confirming ? <div role="group" aria-label="Confirm seating">
+     {expired ? <><p>The hold deadline has passed. Release the expired hold to update the ticket and tables.</p><button className={button} disabled={disabled} onClick={() => mutate('/expire-holds', { idempotencyKey: crypto.randomUUID() })}>Release expired holds</button></> : confirming === 'seat' ? <div role="group" aria-label="Confirm seating">
        <p>Confirm the party has arrived and seat them at all selected tables?</p>
        <button className={button} disabled={disabled} onClick={() => mutate(`/seating-assignments/${a.id}/seat`, { expectedVersion: a.version, idempotencyKey: crypto.randomUUID() })}>Confirm Seat</button>
-       <button className={button} disabled={disabled} onClick={() => setConfirming(false)}>Cancel</button>
-     </div> : <button className={button} disabled={disabled} onClick={() => setConfirming(true)}>Seat</button>}
+       <button className={button} disabled={disabled} onClick={() => setConfirming(null)}>Cancel</button>
+     </div> : confirming === 'no-show' ? <div role="group" aria-label="Confirm no-show">
+       <p>Mark ticket <strong>{a.ticketCode}</strong> as not present? The ticket becomes No-show and every held table ({names}) is released. This cannot be undone.</p>
+       <button className={button} disabled={disabled} onClick={() => mutate(`/entries/${encodeURIComponent(a.entryId)}/no-show`, { expectedVersion: a.version, reasonCode: 'CUSTOMER_ABSENT', idempotencyKey: crypto.randomUUID() })}>Confirm No-show</button>
+       <button className={button} disabled={disabled} onClick={() => setConfirming(null)}>Keep hold</button>
+     </div> : <div className="flex flex-wrap gap-3">
+       <button className={button} disabled={disabled} onClick={() => setConfirming('seat')}>Seat</button>
+       <button className={button} disabled={disabled} onClick={() => setConfirming('no-show')}>No-show</button>
+     </div>}
    </>}
  </article>;
 }

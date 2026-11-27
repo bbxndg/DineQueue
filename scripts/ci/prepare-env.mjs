@@ -19,7 +19,7 @@ mkdirSync(root, { recursive: true });
 const directory = mkdtempSync(join(resolve(root), 'dinequeue-ep4-'));
 const password = randomBytes(24).toString('hex');
 const seed = randomBytes(24).toString('hex');
-const goURL = `postgres://dinequeue_ci:ci-service-only@127.0.0.1:${port}/dinequeue_ci?sslmode=disable`;
+const goURL = `postgres://dinequeue_ci:ci-service-only@127.0.0.1:${port}/dinequeue_ci_test?sslmode=disable`;
 const appURL = `postgres://dinequeue_browser:${password}@db:5432/dinequeue_browser?sslmode=disable`;
 const fixtureURL = `postgres://dinequeue_browser:${password}@127.0.0.1:${dbPort}/dinequeue_browser?sslmode=disable`;
 if (process.env.GITHUB_ACTIONS === 'true') {

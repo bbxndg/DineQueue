@@ -26,6 +26,8 @@ func (h *HTTP) Register(router fiber.Router) {
 
 	meGroup := router.Group("/api/v1/me", deadline, h.auth.Authenticate, h.auth.RequireRole("CUSTOMER"))
 	meGroup.Get("/queue-entries/active", h.listActiveEntries)
+	// Static history route before the dynamic :entryId route (S3 #56).
+	meGroup.Get("/queue-entries/history", h.listHistory)
 	meGroup.Get("/queue-entries/:entryId", h.getEntry)
 	meGroup.Patch("/queue-entries/:entryId/readiness", h.auth.CSRF, h.setReadiness)
 	meGroup.Post("/queue-entries/:entryId/cancel", h.auth.CSRF, h.cancel)

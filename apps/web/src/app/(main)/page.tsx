@@ -29,6 +29,7 @@ export default async function Home() {
             <span>{session.user.displayName}</span>
             <nav aria-label="Customer account" className="flex flex-col items-end gap-2">
               <Link href="/my-queue" prefetch={false} className="font-semibold underline">My Queue</Link>
+              <Link href="/my-queue/history" prefetch={false} className="font-semibold underline">Ticket history</Link>
               <SignOut csrfToken={session.csrfToken} />
             </nav>
           </div>

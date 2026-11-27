@@ -247,6 +247,9 @@ func TestF08HostNoShowReleasesWholeGroup(t *testing.T) {
 	entry := res.body["entry"].(map[string]any)
 	assignment := res.body["assignment"].(map[string]any)
 	tables := res.body["tables"].([]any)
+	if assignment["ticketCode"] != entry["ticketCode"] || assignment["ticketCode"] == "" {
+		t.Fatalf("assignment must name the party by ticket code: %v", assignment)
+	}
 	if entry["status"] != "NO_SHOW" || assignment["status"] != "RELEASED" || assignment["releaseReason"] != "CUSTOMER_ABSENT" || len(tables) != 2 {
 		t.Fatalf("no-show response %v", res.body)
 	}
@@ -546,4 +549,29 @@ func TestF08RollbackOnEventFailure(t *testing.T) {
 			t.Fatal("partial event")
 		}
 	})
+}
+
+// releaseHold misuse is an internal invariant violation (500), never VALIDATION_ERROR,
+// and must not change anything.
+func TestF08ReleaseHoldRejectsInvalidReasonAsInternal(t *testing.T) {
+	f, r := seatingFixture(t)
+	held := mustHold(t, f, r)
+	hostID := host
+	repo := NewRepository(f.db)
+	at := time.Now().UTC()
+	for _, c := range []struct {
+		actor  *string
+		reason string
+	}{{nil, "CUSTOMER_ABSENT"}, {&hostID, "HOLD_EXPIRED"}, {&hostID, "OTHER"}} {
+		err := repo.releaseHold(auth.DemoQueueID, held.Assignment, c.actor, c.reason, at)
+		if err != errInvalidRelease || err == ErrValidation {
+			t.Fatalf("%s: %v", c.reason, err)
+		}
+	}
+	if n := countSQL(t, f, "SELECT count(*) FROM dining_tables WHERE id IN ? AND status='HELD'", r.TableIDs); n != 2 {
+		t.Fatal("misuse changed tables")
+	}
+	if held.Assignment.TicketCode == "" {
+		t.Fatal("held assignment lacks ticket code")
+	}
 }

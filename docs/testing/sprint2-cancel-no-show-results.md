@@ -42,3 +42,10 @@ The browser spec was written after the API was GREEN, so it has no recorded RED 
 | 056, 057 (subset) | Browser: cancel observed on the Host board and no-show observed on the visible owner detail without reload; cancel in an inactive queue; foreign detail/cancel 404; customer on the Host route 403. Hidden-tab and 401 behaviour rely on the existing Lab 7 polling specs, which passed in the full run |
 
 Not covered here: deployed acceptance, S2-T-055 (cloud cleanup timing), #54 turnover/activation and teammate review.
+
+## Review follow-up (PR review by bbxndg, 27 November 2026)
+
+- `cancel_noshow.go`: comments now state that the unlocked foreign-entry check only rejects early (the locked `entryForUpdate` is the real scope check), and why an entry has at most one assignment (call only from WAITING, terminal states never return; `seating_one_outstanding_entry` enforces one HELD/ACTIVE).
+- `seating.go` `releaseHold`: an invalid reason/actor combination now returns an internal error (HTTP 500) instead of `ErrValidation` (400). New test `TestF08ReleaseHoldRejectsInvalidReasonAsInternal`.
+- Assignment DTO gains `ticketCode` (ticket code only); the web floor parser requires it and the Host No-show confirmation names the ticket. `TestF08HostNoShowReleasesWholeGroup` and `cancel-no-show.spec.ts` assert it.
+- Rerun after the changes (still uncommitted at the time): Go `-race` unit + vet + all integration PASS (95 top-level / 55 subtests); web lint, typecheck, 14 unit tests, build PASS; full Playwright suite after DB reset PASS 43/43.

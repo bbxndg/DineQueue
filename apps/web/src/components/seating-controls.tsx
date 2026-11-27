@@ -48,7 +48,7 @@ function HeldAssignment({ assignment: a, floor, disabled, mutate }: { assignment
        <button className={button} disabled={disabled} onClick={() => mutate(`/seating-assignments/${a.id}/seat`, { expectedVersion: a.version, idempotencyKey: crypto.randomUUID() })}>Confirm Seat</button>
        <button className={button} disabled={disabled} onClick={() => setConfirming(null)}>Cancel</button>
      </div> : confirming === 'no-show' ? <div role="group" aria-label="Confirm no-show">
-       <p>Mark this called party as not present? The ticket becomes No-show and every held table ({names}) is released. This cannot be undone.</p>
+       <p>Mark ticket <strong>{a.ticketCode}</strong> as not present? The ticket becomes No-show and every held table ({names}) is released. This cannot be undone.</p>
        <button className={button} disabled={disabled} onClick={() => mutate(`/entries/${encodeURIComponent(a.entryId)}/no-show`, { expectedVersion: a.version, reasonCode: 'CUSTOMER_ABSENT', idempotencyKey: crypto.randomUUID() })}>Confirm No-show</button>
        <button className={button} disabled={disabled} onClick={() => setConfirming(null)}>Keep hold</button>
      </div> : <div className="flex flex-wrap gap-3">

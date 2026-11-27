@@ -90,7 +90,9 @@ func (s *Service) NoShow(ctx context.Context, u auth.User, q, entryID string, re
 	if found, err := s.prior(ctx, u, q, "no-show", request.IdempotencyKey, hash, &out); err != nil || found {
 		return out, err
 	}
-	// Reject foreign targets before independent housekeeping.
+	// Early rejection only: a foreign or unknown entry must not trigger the
+	// independent expiry cleanup below. This unlocked read is NOT the ownership
+	// check; entryForUpdate inside the transaction rechecks queue scope under lock.
 	var inQueue int64
 	if err := s.repository.db.WithContext(ctx).Raw("SELECT count(*) FROM queue_entries WHERE queue_id=? AND id=?", q, entryID).Scan(&inQueue).Error; err != nil {
 		return out, err
@@ -119,7 +121,11 @@ func (s *Service) NoShow(ctx context.Context, u auth.User, q, entryID string, re
 		if len(rows) != 1 {
 			return ErrNotFound
 		}
-		// The entry's latest assignment; at most one is HELD/ACTIVE per entry.
+		// An entry has at most one assignment: it can be called only from WAITING,
+		// and no terminal status returns to WAITING (a rejoin is a new entry). The
+		// 0005 partial unique index seating_one_outstanding_entry also enforces at
+		// most one HELD/ACTIVE row per entry. ORDER BY/LIMIT only keeps this
+		// deterministic; it does not expect several rows.
 		var ids []string
 		if err := tx.Raw("SELECT id FROM seating_assignments WHERE queue_id=? AND entry_id=? ORDER BY held_at DESC, id DESC LIMIT 1", q, entryID).Scan(&ids).Error; err != nil {
 			return err

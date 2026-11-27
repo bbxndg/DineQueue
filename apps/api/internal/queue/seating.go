@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"sort"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ type Assignment struct {
 	TurnoverPhase     *string    `json:"turnoverPhase"`
 	Version           int64      `json:"version"`
 	TableIDs          []string   `json:"tableIds" gorm:"-"`
+	TicketCode        string     `json:"ticketCode" gorm:"-"` // Host confirmations name the party; code only, no identity
 	HeldAt            time.Time  `json:"heldAt"`
 	HoldExpiresAt     time.Time  `json:"holdExpiresAt"`
 	SeatedAt          *time.Time `json:"seatedAt"`
@@ -164,8 +166,18 @@ func (r *Repository) assignment(q, id string) (Assignment, error) {
 	}
 	a := rows[0]
 	a.TableIDs = []string{}
-	err := r.db.Raw("SELECT table_id FROM seating_assignment_tables WHERE assignment_id=? ORDER BY table_id", id).Scan(&a.TableIDs).Error
-	return a, err
+	if err := r.db.Raw("SELECT table_id FROM seating_assignment_tables WHERE assignment_id=? ORDER BY table_id", id).Scan(&a.TableIDs).Error; err != nil {
+		return a, err
+	}
+	var code struct {
+		TicketPrefix   string
+		SequenceNumber int
+	}
+	if err := r.db.Raw("SELECT q.ticket_prefix,e.sequence_number FROM queue_entries e JOIN service_queues q ON q.id=e.queue_id WHERE e.id=? AND e.queue_id=?", a.EntryID, q).Scan(&code).Error; err != nil {
+		return a, err
+	}
+	a.TicketCode = TicketCode(code.TicketPrefix, code.SequenceNumber)
+	return a, nil
 }
 func (r *Repository) lockMembers(ctx context.Context, ids []string) error {
 	var locked []string
@@ -207,6 +219,7 @@ func (r *Repository) seatingResult(ctx context.Context, q, id string) (SeatingRe
 	err = r.db.Raw("SELECT id,code,capacity,status,position_x,position_y,version FROM dining_tables WHERE id IN ? ORDER BY id", a.TableIDs).Scan(&out.Tables).Error
 	return out, err
 }
+
 // event appends an audit row; assignment is nil only for CUSTOMER_CANCEL (0006 CHECK).
 func (r *Repository) event(q, entry string, assignment, actor *string, action, from, to string, metadata any, at time.Time) error {
 	data, err := json.Marshal(metadata)
@@ -216,6 +229,9 @@ func (r *Repository) event(q, entry string, assignment, actor *string, action, f
 	return r.db.Exec("INSERT INTO operation_events(id,queue_id,entry_id,assignment_id,actor_id,action,from_state,to_state,metadata,occurred_at) VALUES(?,?,?,?,?,?,?,?,?::jsonb,?)", uuid.NewString(), q, entry, assignment, actor, action, from, to, string(data), at).Error
 }
 
+// errInvalidRelease is an internal invariant violation, deliberately not ErrValidation.
+var errInvalidRelease = errors.New("queue: invalid hold release reason/actor")
+
 // releaseHold is the single release coordinator shared by server expiry (#52) and
 // Host no-show (#53). The caller already holds floor -> queue -> entry -> member
 // locks and has verified a HELD assignment. The whole group changes together:
@@ -224,7 +240,9 @@ func (r *Repository) event(q, entry string, assignment, actor *string, action, f
 func (r *Repository) releaseHold(q string, a Assignment, actor *string, reason string, at time.Time) error {
 	action := map[string]string{"HOLD_EXPIRED": "EXPIRE_HOLD", "CUSTOMER_ABSENT": "NO_SHOW"}[reason]
 	if action == "" || (reason == "CUSTOMER_ABSENT") != (actor != nil) {
-		return ErrValidation
+		// Only reachable through a caller bug, never client input: surface as 500,
+		// not VALIDATION_ERROR, and roll the transaction back.
+		return errInvalidRelease
 	}
 	if err := checked(r.db.Exec("UPDATE queue_entries SET status='NO_SHOW',no_show_at=?,no_show_by=?,no_show_reason=?,version=version+1 WHERE id=? AND queue_id=? AND status='CALLED'", at, actor, reason, a.EntryID, q), 1); err != nil {
 		return err

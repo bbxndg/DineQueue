@@ -83,6 +83,7 @@ test('F-08 Host marks a held ten-person group no-show; whole group released and 
 
     await assignments.getByRole('button', { name: 'No-show', exact: true }).click();
     const confirm = page.getByRole('group', { name: 'Confirm no-show' });
+    await expect(confirm).toContainText(ticket.ticketCode);
     await expect(confirm).toContainText('T4 + T5');
     await confirm.getByRole('button', { name: 'Keep hold', exact: true }).click();
     await expect(assignments).toContainText('T4 + T5 · Held');

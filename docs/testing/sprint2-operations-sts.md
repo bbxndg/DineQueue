@@ -1,6 +1,6 @@
 # Sprint 2 software test specification
 
-Version DQ-S2-STS-2.1, 27 November 2026. Related [contract](../features/sprint2-restaurant-operations-contracts.md), [interfaces](../features/sprint2-ui-api-data.md) and [traceability](sprint2-traceability.md). Cases are planned specifications; local inventory execution for #50 is recorded in [floor results](sprint2-floor-results.md). Uncovered portions and later lifecycle cases remain NOT RUN. A reserved ID alone does not establish a passing test.
+Version DQ-S2-STS-2.1, 27 November 2026. Related [contract](../features/sprint2-restaurant-operations-contracts.md), [interfaces](../features/sprint2-ui-api-data.md) and [traceability](sprint2-traceability.md). Cases are planned specifications; local inventory execution for #50 is recorded in [floor results](sprint2-floor-results.md). Local #53 cancellation/no-show execution (uncommitted, unreviewed) is recorded in [cancel/no-show results](sprint2-cancel-no-show-results.md). Uncovered portions and later lifecycle cases remain NOT RUN. A reserved ID alone does not establish a passing test.
 
 ## 1 Test data and isolation
 

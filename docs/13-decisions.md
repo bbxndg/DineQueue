@@ -255,3 +255,12 @@ Queue-scoped Host routes reuse existing grants. Seating transactions lock restau
 Keep membership claims through CLOSED/DIRTY and CLOSED/CLEANING, releasing on finish-cleaning; an explicit CLEANED turnover phase stops an old group changing a later allocation. This replaces the older release-at-checkout sketch while preserving its historical design in Git. The interface contract defines the additive schema, strict DTOs, provisioning/activation and error semantics; STS 014/046–048/053–054 test these invariants.
 
 Benjamin Garforth (bbxndg) and Kawinpop Churari (softkoi) will assign an implementation owner and independent reviewer before each feature starts. The user's response was to decide the split later; this draft does not assign work on their behalf. Record actual review PR/SHA/date before freezing this protocol; none is recorded yet.
+
+## DEC-039 — F-08 cancellation/no-show details (#53), 27 November 2026 — pending team review
+
+Status: **PROPOSED; implemented locally on `feat5/sprint2-cancellation-no-show`, uncommitted and not reviewed**.
+
+- New migration `0006_cancel_event_without_assignment.sql` makes `operation_events.assignment_id` nullable only for a `CUSTOMER_CANCEL` WAITING→CANCELLED row with an actor (CHECK). Reason: S2-T-020 requires one owner event, a never-held ticket has no assignment, and 0005 declared `assignment_id NOT NULL`. 0001–0005 are unchanged. Alternative if rejected: record no event for cancellation and revise S2-T-020.
+- Customer Cancel takes an empty body (non-empty → 400 VALIDATION_ERROR) and no idempotency key; a repeat is 409 INVALID_TRANSITION. It locks queue→entry and never the floor.
+- Host No-show `expectedVersion` is the HELD assignment version. Request keys use the operation name `no-show`, hashed with the entry path. An entry without a HELD assignment (WAITING, seated/COMPLETED, manual CALLED) returns 409 INVALID_TRANSITION; a MANUAL queue returns SEATING_NOT_ENABLED; an already-expired hold returns HOLD_EXPIRED after the independent system cleanup.
+- Expiry and no-show share one repository coordinator (`releaseHold`); only reason (HOLD_EXPIRED/CUSTOMER_ABSENT), actor (system/Host) and event action (EXPIRE_HOLD/NO_SHOW) differ.

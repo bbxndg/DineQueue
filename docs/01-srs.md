@@ -176,3 +176,19 @@ Acceptance requires demonstrable working UI → API → persistent DB, meaningfu
 - Is Sprint 2 table assignment acceptable within Topic 9? (It is a queue-specific extension, but confirm decisions if needed.)
 
 All answers must be documented in `13-decisions.md`. Do not present draft assumptions as stakeholder-approved facts.
+
+## Sprint 3 proposed requirement refinement — DQ-S3-1.0 (#55)
+
+The [Sprint 3 contracts](features/sprint3-contracts.md) and [interface definitions](features/sprint3-ui-api-data.md) refine remaining requirements before implementation. Existing FR/BR IDs remain; these proposals await teammate review under DEC-041–044.
+
+| Existing requirement / feature | Proposed refinement and retained boundary |
+|---|---|
+| FR-010 / F-03 and customer extension of F-11 | CUSTOMER can list only their own COMPLETED/CANCELLED/NO_SHOW tickets with bounded stable pagination and owned detail. This explicitly adds Customer history; FR-018 still covers staff history. |
+| FR-017 / F-10 | Additional queue uses explicit grants and independent numbering; shared restaurant floor claims remain exclusive. |
+| FR-018/032, BR-014 / F-11/F-18 | Scoped staff event history and measured counts/durations; configuration coverage and shared-floor limits determine whether utilization can be calculated. Null results explain missing evidence. |
+| FR-019, NFR-010/013 / F-12 | Explicitly enabled public slug exposes only called code/status, with no private identifiers. |
+| FR-031, BR-024 / F-17 | MANUAL Ready position uses eligible joined_at/id order; SEATING and non-WAITING positions are unavailable with reason. Numeric ETA remains unavailable until an independently reviewed model is supported by data. |
+| FR-033-S3-v1 / F-19 | Proposed actor revision: HOST with explicit restaurant configuration grant, rather than a new Manager role. Safe versioned web floor setup and separate seating activation; queue grants alone are insufficient. |
+| NFR-006/007/009 / F-13 | Accessible states, meaningful linked tests and measured p95 reads under 20 documented local concurrent users; actual execution/review/release required. |
+
+FR-033's earlier Manager wording is retained above as the prior design; the proposed S3 actor refinement must be reviewed before coding. No matching/lifecycle BR is changed by this checkpoint. The [S3 traceability matrix](testing/sprint3-traceability.md) records missing ACs, dependencies, accountable owners and dated targets.

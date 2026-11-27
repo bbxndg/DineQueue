@@ -253,3 +253,7 @@ seeded environment. Customer home links to Join Waitlist and My Ticket; joining
 redirects to `/my-queue`. Refresh status loads persisted WAITING/CALLED entries.
 Owners may bookmark `/my-queue/{entryId}` for details, including COMPLETED.
 F-03 does not add Host transitions, cancellation, history listing or ETA.
+
+## Sprint 3 contract checkpoint — #55
+
+The Sprint 3 pre-implementation package starts from Sprint 2 release `602cd50566dd3480f600af9d879cd4436c9d8c55`: [feature contracts](docs/features/sprint3-contracts.md), [UI/API/data](docs/features/sprint3-ui-api-data.md), [STS](docs/testing/sprint3-sts.md) and [traceability/completion plan](docs/testing/sprint3-traceability.md). It retains Customer/staff history, status, measured reports, additional queue, public display, web floor setup and release quality. #56 Customer Ticket History is the planned first increment. These documents propose the reviewed implementation boundary; they do not report new implementation, test success or acceptance. Earlier dated worktree statements above remain historical checkpoints.

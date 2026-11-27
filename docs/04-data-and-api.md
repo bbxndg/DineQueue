@@ -267,7 +267,7 @@ Queue-scoped Host routes replace the earlier proposed restaurant-only floor and 
 
 ### Proposed S3 extensions
 
-`GET /host/restaurants/{restaurantId}/analytics?from=...&to=...&zoneId=...`, `GET /me/queue-entries/history`, `GET /public/queues/{queueId}/now-serving`. Public endpoint returns number/status only; no names or emails.
+The earlier restaurant-wide analytics/private-UUID public route sketch is superseded for the proposed S3 implementation by [DQ-S3-1.0 UI/API/data](features/sprint3-ui-api-data.md). It specifies queue-granted staff history/reports, owner-scoped Customer history, public slug-only display, configuration-granted floor setup and separate activation. No S3 endpoint is claimed implemented. New grants/display settings/configuration audit require explicit migrations; Customer history/status use existing ticket data.
 
 ## 4. Seed and validation plan
 
@@ -288,3 +288,7 @@ Queue-scoped Host routes replace the earlier proposed restaurant-only floor and 
 - `waitingCount`: currently WAITING, not sum of history; analytics never counts canceled as served.
 
 No unverified “live” or AI-generated wait time claims. ETA is optional, must be explicitly labelled estimate with insufficient-data fallback.
+
+### S3 analytical coverage refinement
+
+The formulas above describe intended metrics. [The S3 interface contract](features/sprint3-ui-api-data.md#cohorts-and-formulas) freezes the proposed date cohorts, nullable metrics, exclusions and coverage rules before implementation. Unknown historical in-service table-time and shared-floor queue denominators yield unavailable utilization with a reason. Never reconstruct opening hours or backdate inventory snapshots. Ticket COMPLETED is not proof of dining checkout.

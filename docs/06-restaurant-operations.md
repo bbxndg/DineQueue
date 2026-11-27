@@ -164,3 +164,9 @@ The `seating_assignments` record moves `HELD → ACTIVE → CLOSED` or `HELD →
 - [ ] Team/TA approves oldest-eligible skip behavior and override audit requirements.
 - [ ] Team agrees server hold expiry semantics and service-day/timezone handling.
 - [ ] Sprint 2 feature contracts and STS are committed **before** corresponding implementation.
+
+## Sprint 3 proposed refinements (#55)
+
+[The S3 contracts](features/sprint3-contracts.md) and [UI/API/data rules](features/sprint3-ui-api-data.md) retain all existing floor/matching/lifecycle invariants. DEC-042 proposes replacing the optional Manager actor for F-19 with HOST plus a separately provisioned restaurant configuration grant. Queue-operation access never implies configuration access. Edits lock/version the floor, preserve busy groups and historical membership, and record forward-effective configuration coverage; Save and Enable Seating remain separate. Existing Manager/seed-only wording above describes the earlier design and does not satisfy the new web-setup AC.
+
+S3 history distinguishes COMPLETED waitlist tickets from dining checkout. F-17 numeric position applies only to Ready WAITING in MANUAL mode; selected-table SEATING has no single rank. Analytics exposes sample counts/exclusions and cannot invent historical occupancy denominators. These are review proposals under DEC-041–044, not acceptance evidence.

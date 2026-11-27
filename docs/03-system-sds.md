@@ -175,3 +175,11 @@ Validate DTOs, keep domain logic in services, do not trust status/number from cl
 ## 10. Backend stack decision and version caution
 
 The team explored Go Fiber; DEC-023 originally proposed **Go Fiber v3 + pgx/sqlc**. User-authorized DEC-026 supersedes its access layer with **GORM + PostgreSQL driver**, retaining Fiber v3 and explicit SQL migrations. Current Fiber v3 docs require Go 1.26+. Both team members must approve toolchain/framework and ensure versions are pinned. Session middleware ordering (session before CSRF) matters if using Fiber-provided sessions. Fiber request-scoped buffer values must not escape request lifetime. See `16-security-quality-review.md`.
+
+## Sprint 3 module and permission refinement (#55)
+
+The [S3 UI/API/data contract](features/sprint3-ui-api-data.md) supplies concrete paths, DTOs, validators, read cohorts and transactional boundaries. Extend owned queue reads for Customer history/status; extend existing floor/seating services for safe configuration and activation; use read-only reporting over persisted lifecycle records. Retain handler → service → repository and explicit migrations.
+
+Proposed authorization additions: owned history requires CUSTOMER; staff history/report requires queue-granted HOST; floor configuration requires a separate restaurant configuration grant; seating activation/public display settings require both configuration and queue grants. Grants are provisioned only by an operator. Public display reads only explicitly enabled slug DTOs. The broad public-current-number matrix entry above is conditional on that enablement, not access to private queue data.
+
+Use the shared floor serialization lock for configuration/seating interactions and verify optimistic versions after locking. Configuration audit/snapshots and grants persist in reviewed new migrations; existing sessions/secret handling remain unchanged. DEC-042's Host actor revision requires review before implementation.

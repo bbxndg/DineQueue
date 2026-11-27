@@ -3,7 +3,7 @@ import type { ReadOutcome } from '@/lib/poll-coordinator';
 export const tableStates = ['AVAILABLE', 'HELD', 'OCCUPIED', 'DIRTY', 'CLEANING', 'OUT_OF_SERVICE'] as const;
 export type FloorTable = { id: string; code: string; capacity: number; status: typeof tableStates[number]; positionX: number; positionY: number; version: number };
 export type FloorZone = { id: string; name: string; isActive: boolean; tables: FloorTable[]; connections: { tableIds: [string, string] }[] };
-export type Assignment = { id: string; queueId: string; entryId: string; ticketCode: string; status: 'HELD' | 'ACTIVE' | 'CLOSED' | 'RELEASED'; version: number; tableIds: string[]; holdExpiresAt: string };
+export type Assignment = { id: string; queueId: string; entryId: string; ticketCode: string; status: 'HELD' | 'ACTIVE' | 'CLOSED' | 'RELEASED'; turnoverPhase: 'DIRTY' | 'CLEANING' | 'CLEANED' | null; version: number; tableIds: string[]; holdExpiresAt: string };
 export type FloorSnapshot = { queueId: string; restaurantId: string; operationsMode: 'MANUAL' | 'SEATING'; layoutVersion: number; serverNow: string; holdTtlSeconds: number; zones: FloorZone[]; assignments: Assignment[] };
 
 const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
@@ -41,6 +41,7 @@ export function parseFloor(value: unknown, queueId: string): FloorSnapshot {
   for (const assignment of value.assignments) {
     if (!record(assignment) || typeof assignment.id !== 'string' || assignment.queueId !== queueId
       || typeof assignment.entryId !== 'string' || typeof assignment.ticketCode !== 'string' || assignment.ticketCode === '' || !['HELD', 'ACTIVE', 'CLOSED', 'RELEASED'].includes(String(assignment.status))
+      || !(assignment.turnoverPhase === null || ['DIRTY', 'CLEANING', 'CLEANED'].includes(String(assignment.turnoverPhase)))
       || !positive(assignment.version) || !Array.isArray(assignment.tableIds) || assignment.tableIds.length < 1 || assignment.tableIds.length > 3
       || new Set(assignment.tableIds).size !== assignment.tableIds.length || assignment.tableIds.some(id => typeof id !== 'string' || !ids.has(id))
       || typeof assignment.holdExpiresAt !== 'string' || !Number.isFinite(Date.parse(assignment.holdExpiresAt))) return invalid();

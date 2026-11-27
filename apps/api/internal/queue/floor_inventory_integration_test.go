@@ -47,8 +47,17 @@ func TestFloorInventoryAndReadOnlySnapshot(t *testing.T) {
 	want := map[string]int{"T1": 2, "T2": 4, "T3": 8, "T4": 6, "T5": 4, "T6": 2, "T7": 8}
 	codes := map[string]string{}
 	edges := []string{}
-	for _, zone := range before.Zones {
-		for _, table := range zone.Tables {
+	for i, zone := range before.Zones {
+		if i > 0 && before.Zones[i-1].ID >= zone.ID {
+			t.Fatal("zones must remain ordered by stable ID")
+		}
+		for j, table := range zone.Tables {
+			if j > 0 {
+				previous := zone.Tables[j-1]
+				if previous.Code > table.Code || (previous.Code == table.Code && previous.ID >= table.ID) {
+					t.Fatal("tables must remain ordered by code then ID")
+				}
+			}
 			if want[table.Code] != table.Capacity || table.Status != "AVAILABLE" || table.Version != 1 {
 				t.Fatalf("table: %+v", table)
 			}
@@ -57,7 +66,13 @@ func TestFloorInventoryAndReadOnlySnapshot(t *testing.T) {
 		}
 	}
 	for _, zone := range before.Zones {
-		for _, edge := range zone.Connections {
+		for i, edge := range zone.Connections {
+			if i > 0 {
+				previous := zone.Connections[i-1].TableIDs
+				if previous[0] > edge.TableIDs[0] || (previous[0] == edge.TableIDs[0] && previous[1] >= edge.TableIDs[1]) {
+					t.Fatal("connections must remain ordered by canonical endpoint IDs")
+				}
+			}
 			pair := []string{codes[edge.TableIDs[0]], codes[edge.TableIDs[1]]}
 			if pair[0] > pair[1] {
 				pair[0], pair[1] = pair[1], pair[0]
@@ -106,6 +121,23 @@ func TestFloorInventoryAndReadOnlySnapshot(t *testing.T) {
 	if r.status != 200 || len(r.body["assignments"].([]any)) != 0 || !strings.Contains(fmt.Sprint(r.body), "OCCUPIED") {
 		t.Fatalf("shared snapshot %v", r)
 	}
+	emptyZoneID := uuid.NewString()
+	if err := f.db.Exec("INSERT INTO floor_zones(id,restaurant_id,name) VALUES (?,?,'Empty zone fixture')", emptyZoneID, before.RestaurantID).Error; err != nil {
+		t.Fatal(err)
+	}
+	withEmptyZone := floorRead(t, f)
+	found := false
+	for _, zone := range withEmptyZone.Zones {
+		if zone.ID == emptyZoneID {
+			found = true
+			if zone.Tables == nil || len(zone.Tables) != 0 || zone.Connections == nil || len(zone.Connections) != 0 {
+				t.Fatal("empty zone must expose empty arrays rather than null")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("snapshot omitted the empty zone")
+	}
 }
 
 func TestFloorProvisionPreservesLiveDataAndRejectsConflicts(t *testing.T) {
@@ -117,11 +149,21 @@ func TestFloorProvisionPreservesLiveDataAndRejectsConflicts(t *testing.T) {
 	}
 	before := floorRead(t, f)
 	var hashesBefore, hashesAfter []string
-	f.db.Raw("SELECT password_hash FROM users ORDER BY id").Scan(&hashesBefore)
+	if err := f.db.Raw("SELECT password_hash FROM users ORDER BY id").Scan(&hashesBefore).Error; err != nil {
+		t.Fatalf("read password hashes before provisioning: %v", err)
+	}
+	if len(hashesBefore) == 0 {
+		t.Fatal("password-preservation fixture must contain users")
+	}
 	if err := ProvisionFloor(context.Background(), f.db, auth.DemoQueueID, name); err != nil {
 		t.Fatal(err)
 	}
-	f.db.Raw("SELECT password_hash FROM users ORDER BY id").Scan(&hashesAfter)
+	if err := f.db.Raw("SELECT password_hash FROM users ORDER BY id").Scan(&hashesAfter).Error; err != nil {
+		t.Fatalf("read password hashes after provisioning: %v", err)
+	}
+	if len(hashesAfter) == 0 {
+		t.Fatal("provisioning must preserve existing users")
+	}
 	after := floorRead(t, f)
 	after.ServerNow = before.ServerNow
 	if !reflect.DeepEqual(before, after) || !reflect.DeepEqual(hashesBefore, hashesAfter) {

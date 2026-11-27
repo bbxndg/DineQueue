@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+
 	"dinequeue.local/api/internal/auth"
 )
 
@@ -30,20 +31,23 @@ func (r *Repository) floorSnapshot(ctx context.Context, queueID string) (FloorSn
 	if err := r.db.WithContext(ctx).Raw(`SELECT zone_id,table_low_id,table_high_id FROM table_connections WHERE restaurant_id=? AND is_active ORDER BY table_low_id,table_high_id`, snapshot.RestaurantID).Scan(&edges).Error; err != nil {
 		return snapshot, err
 	}
+	tablesByZone := make(map[string][]FloorTable, len(snapshot.Zones))
+	connectionsByZone := make(map[string][]FloorConnection, len(snapshot.Zones))
+	for _, zone := range snapshot.Zones {
+		tablesByZone[zone.ID] = []FloorTable{}
+		connectionsByZone[zone.ID] = []FloorConnection{}
+	}
+	// Append in query order so grouping preserves the public response ordering.
+	for _, table := range tables {
+		tablesByZone[table.ZoneID] = append(tablesByZone[table.ZoneID], table.FloorTable)
+	}
+	for _, edge := range edges {
+		connectionsByZone[edge.ZoneID] = append(connectionsByZone[edge.ZoneID], FloorConnection{[2]string{edge.TableLowID, edge.TableHighID}})
+	}
 	for i := range snapshot.Zones {
 		zone := &snapshot.Zones[i]
-		zone.Tables = []FloorTable{}
-		zone.Connections = []FloorConnection{}
-		for _, table := range tables {
-			if table.ZoneID == zone.ID {
-				zone.Tables = append(zone.Tables, table.FloorTable)
-			}
-		}
-		for _, edge := range edges {
-			if edge.ZoneID == zone.ID {
-				zone.Connections = append(zone.Connections, FloorConnection{[2]string{edge.TableLowID, edge.TableHighID}})
-			}
-		}
+		zone.Tables = tablesByZone[zone.ID]
+		zone.Connections = connectionsByZone[zone.ID]
 	}
 	snapshot.ServerNow = snapshot.ServerNow.UTC()
 	if snapshot.Zones == nil {

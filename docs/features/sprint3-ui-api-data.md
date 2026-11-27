@@ -1,0 +1,110 @@
+# Sprint 3 UI, API and data contract
+
+DQ-S3-1.0 proposed for [#55](https://github.com/bbxndg/DineQueue/issues/55), 27 November 2026 ICT. Implements the design detail for [AC-01–10](sprint3-contracts.md); no endpoints or migrations below are claimed implemented. Prefix all API paths with `/api/v1`. Next.js must proxy only the exact reviewed same-origin paths; never add an unrestricted backend proxy.
+
+## Shared protocol and responsibilities
+
+Handlers authenticate, enforce role, parse strict bounded inputs and map errors; services authorize scope and own business rules/transactions; repositories execute parameterized owner/scope-filtered queries using the passed transaction. Private responses use `Cache-Control: no-store`. Existing error envelope `{error:{code,message,requestId}}` remains. Use 400 VALIDATION_ERROR, 401 UNAUTHENTICATED, 403 FORBIDDEN, 404 NOT_FOUND, 409 STALE_PREVIEW/INVALID_TRANSITION as appropriate, and generic 500 INTERNAL_ERROR without SQL or secrets. Match the existing auth middleware's exact code strings where it already defines them.
+
+Queries allow only documented keys, each once. Reject malformed UUIDs/dates, impossible calendar dates, unknown keys, duplicate keys and range violations. Bounded read timeout and existing request/rate controls remain. Cookie-authenticated writes require exact Origin and CSRF; hiding a button is not authorization. Check grants before querying private target records, including idempotency replay. Reuse existing session, logout and secret configuration.
+
+Dates are stored restaurant-local service dates, not browser-local days. Return instants as RFC3339 UTC with PostgreSQL microsecond precision; the UI formats them in the restaurant's IANA timezone. Never serialize a date-only value through a browser UTC conversion. Changing filters resets cursor/list; reset after authorization/session changes too.
+
+## 1. Customer history and status
+
+| Method/path | Inputs | Success / access |
+|---|---|---|
+| GET `/me/queue-entries/history` | limit default 20, integer 1–50; optional cursor | 200 `{tickets:Ticket[],nextCursor:string|null}`; CUSTOMER session only |
+| GET `/me/queue-entries/{entryId}` | Existing owned detail | Existing Ticket, foreign/missing 404; unchanged access |
+| GET `/me/queue-entries/active` | Existing active-list contract | Existing list extended with own status fields after F-17 implementation |
+
+History Ticket retains `id,queueId,ticketCode,serviceDate,partySize,isReady,status,joinedAt,queueName,restaurantName,timezone`. IDs support owned navigation and are permitted only in authenticated private responses. No owner ID, email, password/session data or staff-only notes. Lists are arrays, never null. Return only COMPLETED/CANCELLED/NO_SHOW. Register `history` before `:entryId` to avoid dynamic-route capture.
+
+Pagination: cursor is an opaque base64url encoding of `{v:1,joinedAt:<RFC3339 microsecond instant>,id:<canonical UUID>}`; maximum encoded length 512 bytes. Reject unknown/missing/duplicate cursor properties, unsupported version, invalid timestamps, noncanonical UUID and invalid encoding. Preserve all DB timestamp precision in the server-generated boundary; JS Date millisecond truncation must not define the cursor. Owner + terminal predicate applies before `(joined_at,id) < (:time,:id)`, ordered descending on both. Fetch limit+1 and construct nextCursor from the last returned item only when an extra row exists. This is keyset traversal, not a frozen snapshot: rows becoming terminal above the boundary require a fresh first page. Cursor possession confers no access to the row it names. Do not hold a database transaction across HTTP requests.
+
+F-17 adds `position:number|null`, `positionReason:READY_ORDER|NOT_READY|TABLE_DEPENDENT|NOT_WAITING`, `estimate:{available:false,minutes:null,reason:INSUFFICIENT_DATA}`, and server `observedAt` to owned reads. A Ready WAITING MANUAL row receives the 1-based count defined by AC-06; compute rank and the ticket from one consistent read snapshot. All other cases use null and the specified reason. No new status, readiness policy or database columns are needed.
+
+UI `/my-queue/history`: heading, terminal status text, code, party size, queue/restaurant, service date and joined time; newest joined first; Load more; link to existing owned detail; Back to My Ticket. An initial failure shows Retry. A later page failure keeps already loaded rows and the same cursor for retry. Disable duplicate requests and discard results after unmount, auth change or a newer reset. On 401 clear protected data and route to login; on 403 clear the view. No history polling is required. `/my-queue` keeps the existing visible-page refresh coordinator and shows position/estimate explanatory text without announcing every poll to screen readers.
+
+Data: read existing queue_entries and joins. No event, terminal timestamp or index backfill is required. Consider an owner/status/joined_at/id index only after an isolated populated-data query-plan check; use a new SQL migration if justified. Never rewrite 0001–0006 or startup AutoMigrate.
+
+## 2. Additional queue/counter
+
+Reuse authenticated queue list, Customer join and Host queue/floor routes. Operator setup takes restaurant, queue name, distinct prefix and explicit Host grants. Validate ownership, active restaurant and unique queue identity. Rerun finds the same provisioned queue and preserves its sequence/grants; any requested incompatible existing configuration must fail for explicit review, not silently overwrite. Proposed operator interface: `db provision-queue --queue-id=<UUID> --restaurant-id=<UUID> --name=<name> --prefix=<prefix> --host-id=<UUID> --confirm-database=<name>` with an explicit production acknowledgement, following existing DB-tool safeguards. This command does not exist yet; implement/test it before publishing runnable setup instructions. The fixed queue UUID is the idempotent identity; reject incompatible existing values without updating them. UI queue selection changes the scoped data source and clears old selections/pending previews. No new anonymous discovery, ownership parameter or Host self-grant route. Existing counter and grant schema stays authoritative.
+
+## 3. Staff history and metrics
+
+| Method/path | Inputs | Success |
+|---|---|---|
+| GET `/host/queues/{queueId}/history` | from, to, optional zoneId, limit default20 range1–50, cursor | `{items:OperationHistoryItem[],nextCursor,timezone,from,to}` |
+| GET `/host/queues/{queueId}/operations-report` | from, to, optional zoneId | `{queueId,timezone,from,to,zoneId,generatedAt,counts,metrics,coverage}` |
+
+Both require a current queue grant. from/to are required inclusive YYYY-MM-DD, from<=to, maximum 31 local calendar days. Resolve timezone from the queue's restaurant. Compute `[from local midnight, day-after-to local midnight)` as instants using timezone rules, not a fixed 24-hour assumption. Invalid filters return 400; ungranted queue 403; a well-formed foreign/missing zone returns generic 404 after queue authorization. Reject cursors from another filter set; include normalized filter scope in the validated cursor envelope. History is descending occurrence time + stable event key, with a keyset cursor and limit+1 as for Customer history.
+
+OperationHistoryItem: `eventKey,ticketCode,partySize,action,occurredAt,tableCodes,origin`. No customer identity or free text. Events retain their stored action/time; `origin=EVENT`. Legacy terminal tickets lacking events get at most one explicitly labelled `LEGACY_TICKET` outcome item using joinedAt as the available record time, never called an inferred completion time. Stable key includes source kind plus record UUID. Zone-filtered history excludes legacy/unassigned items and says so. Private event keys are not returned by public display. Pagination must not duplicate an event via member joins.
+
+UI `/host/history` and `/host/analytics`: granted queue selector, explicit date range, optional zone, filter/reset, history Load more, counts, durations with units/sample counts/exclusions, coverage explanation, no-data and retry. No automatic export or cross-queue aggregation. Failed reload retains a labelled stale snapshot; scope denial clears protected data. Dates/filter choices remain visible with the result.
+
+### Cohorts and formulas
+
+Ticket outcomes use stored service_date in the range, selected queue and terminal state as of generatedAt. Zone-filtered ticket/assignment metrics require an assignment to that zone; unassigned manual/cancelled records are excluded and disclosed. Count distinct tickets/groups before joining table members. Operational event history uses event time within the local interval instead of the ticket-service-date cohort; the UI labels these different filters/cohorts. Current waitingCount is a separate as-of count, not historical throughput.
+
+| Metric | Formula / denominator and omissions |
+|---|---|
+| counts.completed/cancelled/noShow | Distinct tickets per terminal status in service-date cohort. COMPLETED is not dining checkout. |
+| counts.seatedGroups / closedGroups | Distinct assignments with seated_at / closed_at respectively in the local instant interval; a 2-table group counts once. |
+| waitSeconds | called_at − joined_at for called cohort tickets; valid nonnegative complete pairs only. |
+| holdToSeatSeconds | seated_at − held_at for groups seated in the interval; valid nonnegative pairs only. |
+| diningSeconds | closed_at − seated_at for groups closed in the interval; valid nonnegative pairs only. |
+| cleaningSeconds | cleaned_at − cleaning_started_at for groups cleaned in the interval; active cleaning not completed is excluded. |
+| turnoverSeconds | cleaned_at − closed_at for groups cleaned in the interval, including DIRTY delay. |
+| noShowRate | NO_SHOW tickets that were called / called tickets with known terminal disposition in the service-date cohort; null if denominator zero. |
+| occupiedTableSeconds | Per assignment member, overlap of `[seated_at, closed_at or generatedAt)` with local interval, summed once per physical table; never count HELD as occupied. |
+| utilization | occupiedTableSeconds / in-serviceTableSeconds only with complete configuration coverage and a nonzero denominator. Otherwise null with explicit reason. This is wall-clock in-service table utilization, not opening-hours or revenue utilization. |
+
+Duration result is `{meanSeconds:number|null,sampleCount,excludedCount}`; omit invalid/incomplete pairs from the mean and count exclusions explicitly. No samples gives null, not zero. Rate includes numerator/denominator. Percent is fraction ×100 displayed with a percent label; never divide by zero.
+
+Coverage: persist forward-effective table inventory snapshots from the configuration migration and every accepted edit, including restaurant, table identity, zone, in/out-of-service state, effective instant and layout version. A removed/retired resource is preserved as history. For any reporting interval preceding the earliest complete restaurant snapshot, `coverage.complete=false`, utilization=null and reason=HISTORICAL_CONFIGURATION_UNAVAILABLE. Do not backdate snapshots to pretend the denominator is known. For complete coverage, sum time when each table was in service and in the selected zone. A queue-specific utilization report returns null reason=SHARED_FLOOR_DENOMINATOR_UNDEFINED while floor tables are shared by multiple queues; occupiedTableSeconds remains queue-scoped. A later restaurant report would need a separately reviewed cross-queue grant.
+
+Reconciliation fixture: two called tickets wait 120/240 seconds and one cancelled uncalled ticket produce wait mean180, sampleCount2, excludedCount1. One ten-person assignment across T4/T5 occupied for600 seconds gives seatedGroups1, occupiedTableSeconds1200. If the only two in-service tables are both covered for1200 seconds, denominator2400 and utilization50%; missing configuration history produces null. A group closed at10:00 and cleaned at10:10 with cleaning starting10:06 yields turnover600 seconds and cleaning240 seconds.
+
+## 4. Public display
+
+| Method/path | Inputs | Success / access |
+|---|---|---|
+| GET `/public/displays/{slug}/now-serving` | slug `[a-z0-9][a-z0-9-]{2,63}` | 200 `{tickets:[{ticketCode,status:"CALLED"}]}`; no auth required; disabled/missing404 |
+| PUT `/host/queues/{queueId}/display-settings` | expectedVersion, enabled, slug | Configuration grant + queue grant; 200 `{enabled,slug,version}` |
+
+Page `/public/now-serving/{slug}`. Distinct globally unique slugs and enable flag/version live in a new queue-display configuration table, disabled by default. Claiming a slug is not an authorization mechanism. Enable settings require CSRF/Origin, current version and scoped permission. Duplicate slug/stale version returns409. Public reads use a dedicated field allowlist, no cookies/CSRF token/private DTO fields. No store/cache of current-call data in the browser or shared HTTP caches. Rate and timeout controls still apply. No matching display is publicly discoverable from a private queue ID.
+
+## 5. Floor setup and seating activation
+
+| Method/path | Inputs | Success / access |
+|---|---|---|
+| GET `/host/restaurants/{restaurantId}/floor-configuration` | Restaurant UUID | 200 `{restaurantId,layoutVersion,zones,tables,connections}`; configuration-granted HOST |
+| PUT same path | expectedLayoutVersion, zones, tables, connections | 200 complete committed snapshot with advanced layoutVersion |
+| POST `/host/queues/{queueId}/enable-seating` | expectedLayoutVersion, idempotencyKey | 200 `{queueId,operationsMode:"SEATING",layoutVersion}`; configuration + queue grants |
+
+Configuration response includes zones `{id,name,isActive}`, tables `{id,zoneId,code,capacity,status,positionX,positionY,version}` and canonical connections `{zoneId,tableLowId,tableHighId,isActive}`. The PUT replaces the submitted configuration snapshot atomically but does not delete omitted resources: reject omissions with 400 and require explicit retirement. New rows omit ID and use a request-local key; connection endpoints/zone references may use those keys. Existing rows use immutable UUIDs. Reject ambiguous/missing refs and duplicate logical rows. The server generates UUIDs; response resolves keys into canonical IDs. Do not permit client-defined operational status: editable table field is `inService:boolean`, mapped by service to AVAILABLE/OUT_OF_SERVICE only when idle. Never accept HELD/OCCUPIED/DIRTY/CLEANING or version values as authoritative state.
+
+Limits: JSON 128 KiB, at most 20 zones / 200 tables / 1000 edges per restaurant in this UI version. Reject unknown/duplicate fields, nonintegral version/capacity, blank or overlong names/codes (zone 100, table 20), duplicate trimmed names/codes, capacity outside 1–8, nonfinite or out-of-range 0–100 coordinates, self/duplicate/cross-zone/cross-restaurant edges and inactive endpoint approvals. Canonicalize UUIDs and low/high edge order; adjacency is always explicitly confirmed by Host, not inferred from positions. New tables start AVAILABLE only in active zones; inactive-zone tables start OUT_OF_SERVICE. Layout can contain disconnected tables; only an attempted combined set must be connected, so do not reject every isolated table in setup.
+
+Busy policy: if a table has an unreleased member claim or operational state HELD/OCCUPIED/DIRTY/CLEANING, reject edits to that table's capacity/code/zone/in-service state and edits to its incident approved edges; position-only changes and zone display-name changes are allowed under the layout lock. Deactivating a zone is refused if any member is busy. Never hard-delete a table/zone/connection referenced by history. Retire idle tables to OUT_OF_SERVICE; retain identities, member capacity snapshots and historical edge/configuration snapshots. Queue actions with a prior layoutVersion must refetch even after position-only edits.
+
+Transaction order: recheck grants inside transaction; create/find the restaurant floor serialization row; lock floor → affected queues in UUID order when activation/queue policy is involved → entries/assignments → tables in UUID order. Follow the existing seating coordinator order; inspect any path taking more than one lock before implementation. Check expected layout version after lock; validate the entire final graph and busy membership from DB. Update only configuration fields and affected table versions, increment layout version once and record audit/snapshot in the same transaction. On any validation/update/audit failure roll back all writes. Two edits with the same version permit one winner; an overlapping call/edit cannot leave a partial group or invalid claim.
+
+The exact PUT body is `{expectedLayoutVersion,zones,tables,connections}`. An existing zone is `{id,name,isActive}`; a new zone is `{key,name,isActive}`. An existing table is `{id,zoneRef,code,capacity,inService,positionX,positionY}`; a new table substitutes `key` for `id`. A reference is exactly one of `{id:<UUID>}` or `{key:<request-local-key>}`. Connections are `{zoneRef,tableARef,tableBRef,isActive}`. New keys match `[a-z][a-z0-9-]{0,31}`, are unique within the request and resolve only within the same resource type/restaurant. Neither `id` plus `key` nor server-only status/version is accepted in a write row. Existing resource rows must all be submitted, including retired ones. Return the committed configuration plus `created:{zones:[{key,id}],tables:[{key,id}]}` so the UI replaces temporary keys without guessing. Table membership and operational status are always reread from DB.
+
+The exact PUT body is `{expectedLayoutVersion,zones,tables,connections}`. An existing zone is `{id,name,isActive}`; a new zone is `{key,name,isActive}`. An existing table is `{id,zoneRef,code,capacity,inService,positionX,positionY}`; a new table substitutes `key` for `id`. A reference is exactly one of `{id:<UUID>}` or `{key:<request-local-key>}`. Connections are `{zoneRef,tableARef,tableBRef,isActive}`. New keys match `[a-z][a-z0-9-]{0,31}`, are unique within the request and resolve only within the same resource type/restaurant. Neither `id` plus `key` nor server-only status/version is accepted in a write row. Existing resource rows must all be submitted, including retired ones. Return the committed configuration plus `created:{zones:[{key,id}],tables:[{key,id}]}` so the UI replaces temporary keys without guessing. Table membership and operational status are always reread from DB.
+
+The exact PUT body is `{expectedLayoutVersion,zones,tables,connections}`. An existing zone is `{id,name,isActive}`; a new zone is `{key,name,isActive}`. An existing table is `{id,zoneRef,code,capacity,inService,positionX,positionY}`; a new table substitutes `key` for `id`. A reference is exactly one of `{id:<UUID>}` or `{key:<request-local-key>}`. Connections are `{zoneRef,tableARef,tableBRef,isActive}`. New keys match `[a-z][a-z0-9-]{0,31}`, are unique within the request and resolve only within the same resource type/restaurant. Neither `id` plus `key` nor server-only status/version is accepted in a write row. Existing resource rows must all be submitted, including retired ones. Return the committed configuration plus `created:{zones:[{key,id}],tables:[{key,id}]}` so the UI replaces temporary keys without guessing. Table membership and operational status are always reread from DB.
+
+Activation is a separate confirmation displaying queue, restaurant and irreversible MANUAL→SEATING policy. Reuse existing CLI service checks: floor exists with a usable active-zone table, queue grant and no CALLED ticket. New route also checks configuration grant and expected layout version. Never auto-enable on Save. Recheck authorization, replay a successful identical action key before version validation, then validate a new intent against the current layout. Already-SEATING is an authorized idempotent no-op; no disable route or rollback to old incompatible binaries is introduced. Use the existing scoped action-key semantics for activation; changed intent with same key 409. No claim that the CLI already exposes this HTTP service.
+
+Data migrations: new `restaurant_configuration_grants` with restaurant/user FKs, unique pair, active flag and audit timestamps; grant provisioning is operator-only and assigns no one by default. New append-only configuration audit/snapshot storage records actor, action, layoutVersion and effective time; no passwords/tokens/free-text customer data. Floor inventory remains in existing tables. All mutations use explicit versioned SQL migrations with populated S1/S2 preservation tests, no edits of applied migrations, no startup AutoMigrate. Grant/enablement/configuration changes persist across restart and must be part of backup/compatible-deploy review.
+
+UI `/host/floor/setup?restaurantId=...`: Configured Host navigation; form/list for zones and tables, explicit connection picker with capacity preview, dirty-state warning and Save. Show busy restrictions before submission but enforce them on server. Successful save replaces local versions with returned snapshot. Stale 409 keeps local edits for inspection, fetches current data and requires user reconciliation; no silent overwrite/retry. Activation has a distinct confirmation and requires current queue/floor state. A normal queue Host sees operations without setup permission, with no self-grant action.
+
+## 6. Verification and deployment boundary
+
+Use existing Go unit/integration/race, web unit/lint/type/build and production-built browser regression paths. Isolated disposable `_test` database and synthetic credentials only; no destructive integration test against public Cloud SQL. Record exact commands, date, tested SHA, counts, exit code and CI URL after execution. A proposed test name is not a result. Load testing stays local with documented workload/hardware; public smoke checks only authorized synthetic workflows and persistence. Layout/grant migrations and public display default-off behavior require reviewed deploy/forward-fix procedures before enabling them on Cloud Run.

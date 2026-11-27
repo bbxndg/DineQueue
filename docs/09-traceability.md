@@ -94,7 +94,7 @@ The [complete S2 review matrix](testing/sprint2-traceability.md) maps S2-AC-001�
 | NFR-011,015 | F-01,F-07,F-15 | S2 | S2-AC-006 auth/CSRF/parallel locks | S2-T-028,029,030,031,033 | Planned |
 | NFR-005,NFR-012 | F-07,F-15 | S2 | S2-AC-005 persisted group after restart | S2-T-032 | Planned |
 
-S2 and S3 IDs are the proposed contracts in `features/sprint2-restaurant-operations-contracts.md` and `testing/sprint2-operations-sts.md`. Final `PASS` requires actual test execution and evidence.
+The preceding S3-AC-001–004/S3-T-001–008 are legacy planning IDs, not execution records. Their expanded mappings are in [S3 contract section10](features/sprint3-contracts.md#10-review-and-handoff-record). S2 uses its versioned contract/STS; S3 uses the dedicated [S3 contracts](features/sprint3-contracts.md), [interfaces](features/sprint3-ui-api-data.md), [STS](testing/sprint3-sts.md) and [remaining-work matrix](testing/sprint3-traceability.md). Final PASS requires actual execution evidence, and acceptance additionally requires review.
 
 
 ## Lab 7 CR #44 — BR-003-L7-v1
@@ -111,3 +111,7 @@ Local worktree evidence is not CI, feature approval, release or deployment evide
 ## Sprint 2 review handoff for issue 49
 
 Read [the versioned contract](features/sprint2-restaurant-operations-contracts.md), [typed UI/API/data definitions](features/sprint2-ui-api-data.md), [60 planned STS cases](testing/sprint2-operations-sts.md) and [full S2 traceability/status matrix](testing/sprint2-traceability.md) together. These preserve old IDs and add explicit readiness, expiry, MANUAL/SEATING compatibility, group-turnover and actual-evidence obligations. No actual test file/run is substituted by a proposed module path. The complete current S1/S2/S3 matrix and real candidate results are still required for Deliverable 2.
+
+## Sprint 3 current review matrix (#55)
+
+[The S3 matrix](testing/sprint3-traceability.md) covers F-10..F-13/F-17..F-19, owner-only Customer history as an explicit F-11/F-03 extension, relevant FR/BR/NFR, S3-AC-01–10, planned test cases, existing foundations, exact remaining work, owners and dates. No new S3 PASS or accepted state is established. FR-033-S3-v1 proposes configuration-granted HOST instead of Manager; DEC-042 requires review. NFR-013 maps to public privacy; FR-032/BR-014 govern report calculations. Preserve all earlier IDs/evidence with the documented crosswalk.

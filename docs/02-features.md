@@ -17,7 +17,7 @@ historical references and is not counted as a separate feature. Scope and AC/tes
 | F-08 | Cancel and No-show | FR-014,015, BR-012 | 2 | P1 | F-02, F-04 | Approved terminal transitions |
 | F-09 | Group checkout → dirty/cleaning → availability | FR-016 | 2 | P1 | F-07 | All related tables become available after cleaning |
 | F-10 | Additional authorized queue/counter | FR-017 | 2/3 | P2 | F-04 | Permission-scoped separate waitlist |
-| F-11 | Operations history, analytics and measured metrics | FR-018, BR-014 | 3 | P1 | F-04 (completion, legacy F-05), F-08 | Counts, time summaries, audit entries |
+| F-11 | Staff history/metrics; proposed owner-scoped Customer history extension | FR-018, BR-014; FR-010 for Customer ownership | 3 | P1 | F-04 (completion, legacy F-05), F-08 | Counts, time summaries, audit entries |
 | F-12 | Non-private public display | FR-019, NFR-010 | 3 | P2 | F-04 | No personal identifiers shown |
 | F-13 | Quality/usability hardening, regression | NFR-006,007,009 | 3 | P0 | All flows | Final verified release |
 | F-L5 | Container + CI/CD + GCP | FR-020, NFR-008 | Lab 5 | Mandatory | Sprint1 release | Deployed repeatable workflow |
@@ -42,7 +42,7 @@ F-06..F-19 or remove the original F-05 history.
 | F-15 | Combined adjacent-table allocation | FR-023,025,026,027,028,034; BR-015..020,025 | 2 | P0 | 10 guests at T4(6)+T5(4), cannot allocate nonadjacent set |
 | F-16 | Interactive floor zones + state transitions | FR-024,029,035; BR-022,025 | 2 | P0 | Staff picks tables, sees HELD/OCCUPIED/DIRTY/CLEANING, recovers from conflicts |
 | F-17 | Customer queue experience + wait estimate | FR-031, BR-024 | 3 | P1 | Live status, position or explicitly unavailable estimate |
-| F-18 | Restaurant operating analytics | FR-032, NFR-013 | 3 | P1 | Persisted metrics by day/zone/service and verified report calculations |
+| F-18 | Restaurant operating analytics | FR-032, BR-014, NFR-007/009 | 3 | P1 | Persisted metrics by day/zone/service and verified report calculations |
 | F-19 | Table/connection administration | FR-033, BR-016,025 | 3 | P2 | Validated connection edits and floor layout positions |
 
 **Priority:** P0 core deliverables (not optional for selected v2 product), P1 planned enhancement, P2 deferrable only by recorded scope change. Avoid building floor drag-and-drop before atomic group seating.
@@ -61,3 +61,7 @@ F-06..F-19 or remove the original F-05 history.
 The [DQ-S2-CONTRACT-2.1 review draft](features/sprint2-restaurant-operations-contracts.md) groups the seven retained S2 IDs into five implementation issues: #50 F-06/F-16 inventory, #51 F-14 matching, #52 F-07/F-15 call/hold/seat, #53 F-08 cancellation/no-show, and #54 F-09/F-16 turnover. Issue #49 is engineering documentation, not a product feature. All seven S2 feature IDs remain required; a lower historical priority label does not authorize dropping them.
 
 Implementation and verification for this S2 increment are pending. See [nineteen ACs and their actual-status columns](testing/sprint2-traceability.md). F-10 and remaining S3 baseline allocations must be resolved in #55; #56 is the selected Customer-history progress issue, not a replacement for all S3 contracts. Both students will assign feature ownership before implementation; no owner has been invented in this draft.
+
+## Sprint 3 review allocation (#55)
+
+The [S3 contracts](features/sprint3-contracts.md) and [status/work matrix](testing/sprint3-traceability.md) cover every remaining F-10..F-13/F-17..F-19 item. F-12 and F-19 remain proposed retained scope, with no approved deferral. F-11 Customer history is the first increment (#56) alongside retained staff history. F-19 proposes configuration-granted HOST access (DEC-042). F-17 explicitly withholds numerical ETA under BR-024. NFR-013 remains mapped to public-display privacy; it is not the report-calculation requirement. No new S3 feature is marked implemented or tested by this inventory update.
